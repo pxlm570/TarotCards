@@ -1,0 +1,37 @@
+[
+  { "id": "single", "name": "单张指引", "difficulty": "新手", "cardCount": 1,
+    "positions": [{ "key": "guide", "label": "指引", "meaning": "此刻你最需要听见的信息", "x": 50, "y": 50 }] },
+  { "id": "time-flow", "name": "时间之流", "difficulty": "新手", "cardCount": 3,
+    "positions": [
+      { "key": "past", "label": "过去", "meaning": "影响现状的过往因素", "x": 20, "y": 50 },
+      { "key": "present", "label": "现在", "meaning": "当前的处境与能量", "x": 50, "y": 50 },
+      { "key": "future", "label": "未来", "meaning": "若保持现状的可能走向", "x": 80, "y": 50 }
+    ] },
+  { "id": "holy-trinity", "name": "圣三角", "difficulty": "新手", "cardCount": 3,
+    "positions": [
+      { "key": "body", "label": "身", "meaning": "物质与身体层面的状态", "x": 30, "y": 70 },
+      { "key": "mind", "label": "心", "meaning": "情绪与心理层面的状态", "x": 70, "y": 70 },
+      { "key": "spirit", "label": "灵", "meaning": "精神与高层的指引", "x": 50, "y": 25 }
+    ] },
+  { "id": "two-choice", "name": "二选一", "difficulty": "进阶", "cardCount": 5,
+    "positions": [
+      { "key": "self", "label": "现状", "meaning": "你当下的立足点", "x": 50, "y": 78 },
+      { "key": "a-result", "label": "选择 A 的结果", "meaning": "走向 A 的可能局面", "x": 22, "y": 50 },
+      { "key": "a-advice", "label": "A 的建议", "meaning": "若选 A 需要注意什么", "x": 32, "y": 22 },
+      { "key": "b-result", "label": "选择 B 的结果", "meaning": "走向 B 的可能局面", "x": 78, "y": 50 },
+      { "key": "b-advice", "label": "B 的建议", "meaning": "若选 B 需要注意什么", "x": 68, "y": 22 }
+    ] },
+  { "id": "celtic-cross", "name": "凯尔特十字", "difficulty": "进阶", "cardCount": 10,
+    "positions": [
+      { "key": "heart", "label": "核心", "meaning": "问题的核心", "x": 38, "y": 50 },
+      { "key": "cross", "label": "阻碍", "meaning": "横亘的挑战", "x": 38, "y": 50, "rotate": 90 },
+      { "key": "root", "label": "根基", "meaning": "深层原因", "x": 38, "y": 82 },
+      { "key": "crown", "label": "目标", "meaning": "显意识的目标", "x": 38, "y": 18 },
+      { "key": "past", "label": "过去", "meaning": "正在退场的影响", "x": 14, "y": 50 },
+      { "key": "future", "label": "近未来", "meaning": "正在靠近的影响", "x": 62, "y": 50 },
+      { "key": "self", "label": "自我", "meaning": "你对自己与处境的看法", "x": 88, "y": 82 },
+      { "key": "env", "label": "环境", "meaning": "周围人与环境的影响", "x": 88, "y": 60 },
+      { "key": "hope", "label": "希望与恐惧", "meaning": "内心的期待与担忧", "x": 88, "y": 38 },
+      { "key": "outcome", "label": "结果", "meaning": "综合能量的可能走向", "x": 88, "y": 16 }
+    ] }
+]
