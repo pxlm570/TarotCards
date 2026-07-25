@@ -9,6 +9,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
+        lang: 'zh-CN',
         name: '星语塔罗',
         short_name: '星语塔罗',
         description: '私人塔罗空间：占卜、学习、记录',

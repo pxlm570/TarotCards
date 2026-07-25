@@ -8,6 +8,7 @@
   --violet: #7F77DD;
   --moon: #E8E3D3;        /* 主文字 */
   --moon-dim: #9A97B8;    /* 次文字 */
+  --on-gold: #14162E;     /* 金色按钮上的文字（勿硬编码，浅色主题会换值） */
   --serif: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; /* 系统衬线优先，不依赖 Google Fonts（国内网络与 PWA 离线均不可靠）；如需 Noto Serif SC 则用本地 woff2 子集 @font-face */
   --sans: "PingFang SC", "Microsoft YaHei", sans-serif;
   --radius-card: 12px;
@@ -22,4 +23,5 @@
   --violet: #5A51B8; /* 深化：#7F77DD 在浅底上对比度仅 ~3.2:1，不达 WCAG AA */
   --moon: #2C2C2A;
   --moon-dim: #6B6A63;
+  --on-gold: #FFFFFF; /* 浅色主题金底 #8C6D1F 上白字对比 ~4.9:1 */
 }
