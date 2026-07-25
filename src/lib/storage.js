@@ -33,6 +33,25 @@ function safeParse(json) {
   }
 }
 
+// 裸 localStorage 在 iOS「阻止所有 Cookie」等场景会直接抛 SecurityError——
+// 所有非 settings/flow 的零散标记位（visited/引导浮层等）也必须走这两个函数
+export function safeGetItem(key) {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+export function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function loadSettings() {
   let raw = null
   try {

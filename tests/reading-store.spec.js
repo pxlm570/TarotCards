@@ -66,12 +66,23 @@ describe('reading store：状态机', () => {
     store.pickCard(5)
     store.pickCard(12)
     expect(store.phase).toBe('revealing')
-    store.revealCard()
-    store.revealCard()
-    store.revealCard()
+    store.revealCard('past')
+    store.revealCard('future')
+    store.revealCard('present')
     expect(store.revealedCount).toBe(3)
     store.goInterpret()
     expect(store.phase).toBe('interpreting')
+  })
+
+  it('revealCard 记录具体位置：拒绝重复与未知位置，乱序合法', () => {
+    const store = useReadingStore()
+    walkToPicking(store)
+    store.pickAll()
+    store.revealCard('future')
+    expect(store.revealedKeys).toEqual(['future'])
+    expect(store.revealedCount).toBe(1)
+    expect(() => store.revealCard('future')).toThrow()
+    expect(() => store.revealCard('no-such-key')).toThrow()
   })
 
   it('非法跳转抛错', () => {
@@ -134,7 +145,7 @@ describe('reading store：状态机', () => {
     const store = useReadingStore()
     walkToPicking(store)
     store.pickAll()
-    store.revealCard()
+    store.revealCard('present')
     expect(() => store.goInterpret()).toThrow()
     store.revealAll()
     expect(store.revealedCount).toBe(3)
@@ -153,11 +164,11 @@ describe('reading store：状态机', () => {
     expect(sessionStorage.getItem(FLOW_KEY)).toBeNull()
   })
 
-  it('流程态持久化到 sessionStorage 且新 store 可恢复（防误刷新）', () => {
+  it('流程态持久化到 sessionStorage 且新 store 可恢复（防误刷新，含乱序翻牌记录）', () => {
     const store = useReadingStore()
     walkToPicking(store)
     store.pickAll()
-    store.persistNow()
+    store.revealCard('future')
     const saved = sessionStorage.getItem(FLOW_KEY)
     expect(saved).toBeTruthy()
 
@@ -168,6 +179,7 @@ describe('reading store：状态机', () => {
     expect(restored.spreadId).toBe(SPREAD_3)
     expect(restored.question).toBe('测试问题')
     expect(restored.drawn).toEqual(store.drawn)
+    expect(restored.revealedKeys).toEqual(['future'])
   })
 
   it('sessionStorage 无数据时 tryRestore 返回 false', () => {

@@ -32,7 +32,7 @@ function initialState() {
     pending: [], // 预抽结果 [{ id, reversed }]，长度 = cardCount
     pickedIndices: [], // 用户点过的牌背下标（UI 动画 + 防重复点选）
     drawn: [], // 已落位 [{ cardId, reversed, positionKey }]
-    revealedCount: 0,
+    revealedKeys: [], // 实际翻开的 positionKey（保序）——只存计数会让刷新恢复错位
     snapshot: null // finishShuffle 时的设置快照 { reversalsEnabled, autoDraw }
   }
 }
@@ -44,7 +44,8 @@ export const useReadingStore = defineStore('reading', {
     spread: (s) => spreadsData.find((sp) => sp.id === s.spreadId) ?? null,
     cardCount() {
       return this.spread ? this.spread.cardCount : 0
-    }
+    },
+    revealedCount: (s) => s.revealedKeys.length
   },
 
   actions: {
@@ -129,15 +130,21 @@ export const useReadingStore = defineStore('reading', {
       if (this.drawn.length === this.cardCount) this.phase = 'revealing'
     },
 
-    revealCard() {
+    revealCard(positionKey) {
       this._assert('revealing', 'revealCard')
-      if (this.revealedCount < this.cardCount) this.revealedCount++
+      if (!this.drawn.some((d) => d.positionKey === positionKey)) {
+        throw new Error(`[reading] 未知位置：${positionKey}`)
+      }
+      if (this.revealedKeys.includes(positionKey)) {
+        throw new Error(`[reading] 位置 ${positionKey} 已翻开`)
+      }
+      this.revealedKeys.push(positionKey)
       this.persistNow()
     },
 
     revealAll() {
       this._assert('revealing', 'revealAll')
-      this.revealedCount = this.cardCount
+      this.revealedKeys = this.drawn.map((d) => d.positionKey)
       this.persistNow()
     },
 
@@ -156,8 +163,8 @@ export const useReadingStore = defineStore('reading', {
     },
 
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedCount, snapshot } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedCount, snapshot })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页
