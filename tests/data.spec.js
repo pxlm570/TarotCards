@@ -101,3 +101,72 @@ describe('spreads.json', () => {
     }
   })
 })
+
+// 2026-07-25 接手固化：内容规范此前只靠人工把关，补 56 张小牌 domains 时容易被打破
+describe('内容规范', () => {
+  const SUIT_ELEMENT = { wands: '火', cups: '水', swords: '风', pentacles: '土' }
+  const COURT_ELEMENT = { 11: '土', 12: '火', 13: '水', 14: '风' }
+  const countSentences = (text) => Math.max(1, (text.match(/[。！？]/g) || []).length)
+  const allTexts = (card) => {
+    const list = [card.meaning.upright, card.meaning.reversed, ...card.keywords.upright, ...card.keywords.reversed]
+    // symbols 单独校验：允许大写字母（牌面真实绘制的字母如命运之轮 TARO，及形状描述如倒吊人"T 形"）
+    if (card.symbols) list.push(card.symbols.replace(/[A-Z]+/g, ''))
+    if (card.domains) {
+      for (const d of Object.values(card.domains)) list.push(d.upright, d.reversed)
+    }
+    return list
+  }
+
+  it('关键词正逆位各 ≥3 个', () => {
+    for (const card of cards) {
+      expect(card.keywords.upright.length, `${card.id} 正位关键词数`).toBeGreaterThanOrEqual(3)
+      expect(card.keywords.reversed.length, `${card.id} 逆位关键词数`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('牌意句数上限：大牌 ≤3 句、小牌 ≤2 句', () => {
+    for (const card of cards) {
+      const cap = card.arcana === 'major' ? 3 : 2
+      expect(countSentences(card.meaning.upright), `${card.id} 正位牌意句数`).toBeLessThanOrEqual(cap)
+      expect(countSentences(card.meaning.reversed), `${card.id} 逆位牌意句数`).toBeLessThanOrEqual(cap)
+    }
+  })
+
+  it('domains 短句每条 ≤2 句', () => {
+    for (const card of cards) {
+      if (!card.domains) continue
+      for (const [key, d] of Object.entries(card.domains)) {
+        expect(countSentences(d.upright), `${card.id} domains.${key}.upright 句数`).toBeLessThanOrEqual(2)
+        expect(countSentences(d.reversed), `${card.id} domains.${key}.reversed 句数`).toBeLessThanOrEqual(2)
+      }
+    }
+  })
+
+  it('无桩数据残留、无英文混排（全中文定位，nameEn 除外）', () => {
+    for (const card of cards) {
+      for (const t of allTexts(card)) {
+        expect(t.trim(), `${card.id} 空文案`).toBeTruthy()
+        expect(t, `${card.id} 桩数据残留: ${t}`).not.toMatch(/TODO|^\s*…+\s*$/)
+        expect(t, `${card.id} 英文混排: ${t}`).not.toMatch(/[a-zA-Z]/)
+      }
+    }
+  })
+
+  it('22 张大牌必须有完整 domains 与 symbols（当前完成度锁定，防回退）', () => {
+    for (const card of cards.filter((c) => c.arcana === 'major')) {
+      expect(card.domains, `${card.id} domains`).toBeDefined()
+      expect(card.symbols, `${card.id} symbols`).toBeTruthy()
+    }
+  })
+
+  it('element 格式：数字牌=花色元素；宫廷牌=「花色元素之宫廷元素」', () => {
+    for (const card of cards.filter((c) => c.arcana !== 'major')) {
+      const main = SUIT_ELEMENT[card.arcana]
+      if (card.number <= 10) {
+        expect(card.element, `${card.id} element`).toBe(main)
+      } else {
+        expect(card.element, `${card.id} element`).toBe(`${main}之${COURT_ELEMENT[card.number]}`)
+      }
+    }
+  })
+})
