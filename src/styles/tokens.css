@@ -1,0 +1,24 @@
+:root {
+  /* 暗夜主题（默认） */
+  --bg-deep: #14162E;
+  --bg-card: #232850;
+  --bg-inset: #1B1F3B;
+  --gold: #B8912F;        /* 古铜金 */
+  --gold-bright: #D4AF37;
+  --violet: #7F77DD;
+  --moon: #E8E3D3;        /* 主文字 */
+  --moon-dim: #9A97B8;    /* 次文字 */
+  --serif: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; /* 系统衬线优先，不依赖 Google Fonts（国内网络与 PWA 离线均不可靠）；如需 Noto Serif SC 则用本地 woff2 子集 @font-face */
+  --sans: "PingFang SC", "Microsoft YaHei", sans-serif;
+  --radius-card: 12px;
+  --tabbar-h: 64px;
+}
+[data-theme="light"] {
+  --bg-deep: #F5F3EC;
+  --bg-card: #FFFFFF;
+  --bg-inset: #ECE9DF;
+  --gold: #8C6D1F;
+  --gold-bright: #B8912F;
+  --moon: #2C2C2A;
+  --moon-dim: #6B6A63;
+}
