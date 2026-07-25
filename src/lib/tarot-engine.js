@@ -20,6 +20,9 @@ export function shuffleDeck(deck) {
 }
 
 export function drawCards(deck, n, { allowReversed = true } = {}) {
+  if (!Number.isInteger(n) || n < 0 || n > deck.length) {
+    throw new RangeError(`drawCards: n 须为 0 到 ${deck.length} 的整数，收到 ${n}`)
+  }
   const shuffled = shuffleDeck(deck)
   return shuffled.slice(0, n).map((id) => ({
     id,

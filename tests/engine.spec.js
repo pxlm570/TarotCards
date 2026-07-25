@@ -66,4 +66,20 @@ describe('tarot-engine', () => {
     drawCards(deck, 5, { allowReversed: true })
     expect(deck).toHaveLength(78)
   })
+
+  it('n 为负数或非整数时抛 RangeError', () => {
+    const deck = Array.from({ length: 78 }, (_, i) => i)
+    expect(() => drawCards(deck, -1)).toThrow(RangeError)
+    expect(() => drawCards(deck, 1.5)).toThrow(RangeError)
+  })
+
+  it('n 超过牌堆长度时抛 RangeError', () => {
+    const deck = Array.from({ length: 78 }, (_, i) => i)
+    expect(() => drawCards(deck, 79)).toThrow(RangeError)
+    expect(() => drawCards([], 1)).toThrow(RangeError)
+  })
+
+  it('空牌堆 shuffle 返回空数组', () => {
+    expect(shuffleDeck([])).toEqual([])
+  })
 })

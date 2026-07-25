@@ -19,6 +19,7 @@
   --bg-inset: #ECE9DF;
   --gold: #8C6D1F;
   --gold-bright: #B8912F;
+  --violet: #5A51B8; /* 深化：#7F77DD 在浅底上对比度仅 ~3.2:1，不达 WCAG AA */
   --moon: #2C2C2A;
   --moon-dim: #6B6A63;
 }

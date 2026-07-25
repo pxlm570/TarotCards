@@ -26,5 +26,7 @@ export default defineConfig({
       }
     })
   ],
-  test: { environment: 'jsdom' }
+  // threads+isolate:false：forks 池在本机高负载下 worker 启动超时；复用单 worker 保证任何负载下可跑，
+  // 且省去每文件 ~35s 的 jsdom 环境重复启动。测试自身用 beforeEach 清理共享状态（localStorage 等）。
+  test: { environment: 'jsdom', pool: 'threads', isolate: false }
 })
