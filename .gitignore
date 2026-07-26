@@ -26,5 +26,8 @@ dist-ssr
 # WorkBuddy local secrets
 .workbuddy/local-secrets.md
 
+# E2E 截图输出
+.e2e-shots/
+
 # 韦特牌扫描原图（处理后删除，不提交）
 public/decks/rws/raw/
