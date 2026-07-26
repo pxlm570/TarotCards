@@ -152,10 +152,14 @@ describe('内容规范', () => {
     }
   })
 
-  it('22 张大牌必须有完整 domains 与 symbols（当前完成度锁定，防回退）', () => {
-    for (const card of cards.filter((c) => c.arcana === 'major')) {
+  it('78 张全部必须有完整 domains 与 symbols（2026-07-26 小牌批次补齐后锁定）', () => {
+    for (const card of cards) {
       expect(card.domains, `${card.id} domains`).toBeDefined()
-      expect(card.symbols, `${card.id} symbols`).toBeTruthy()
+      for (const key of ['love', 'career', 'wealth', 'study']) {
+        expect(card.domains?.[key]?.upright?.trim(), `${card.id} domains.${key}.upright`).toBeTruthy()
+        expect(card.domains?.[key]?.reversed?.trim(), `${card.id} domains.${key}.reversed`).toBeTruthy()
+      }
+      expect(card.symbols?.trim(), `${card.id} symbols`).toBeTruthy()
     }
   })
 
