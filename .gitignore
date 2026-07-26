@@ -23,8 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# WorkBuddy local secrets
-.workbuddy/local-secrets.md
+# 本地工作资料，不入库（2026-07-26 用户决定：远端只留核心代码与素材）
+# 计划/交接文档与 AI 工作记录保留在本地磁盘，勿 git add
+.workbuddy/
+docs/
+CLAUDE.md
 
 # E2E 截图输出
 .e2e-shots/
