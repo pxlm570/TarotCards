@@ -73,10 +73,11 @@ function onTap(card) {
         :style="card.position.rotate ? { transform: `rotate(${card.position.rotate}deg)` } : undefined"
       >
         <div class="inner">
-          <div class="face back">
+          <!-- 皮肤未就位时是骨架占位，不是空白渐变（等待也要有反馈） -->
+          <div class="face back" :class="{ skeleton: !manifest }">
             <img v-if="manifest" :src="backUrl()" alt="牌背" draggable="false" />
           </div>
-          <div class="face front" :class="{ reversed: card.reversed }">
+          <div class="face front" :class="{ reversed: card.reversed, skeleton: !manifest }">
             <img v-if="manifest && cardUrl(card.cardId)" :src="cardUrl(card.cardId)" :alt="card.cardId" draggable="false" />
           </div>
         </div>

@@ -95,8 +95,16 @@ function pickTheme(value) {
   justify-content: space-between;
   align-items: center;
   gap: var(--sp-2);
-  padding: 10px 0;
+  padding: 10px;
+  margin: 0 -10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-press);
+}
+
+.row:active {
+  background: var(--sunk);
 }
 
 .row-name {

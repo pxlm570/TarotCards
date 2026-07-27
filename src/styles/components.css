@@ -21,6 +21,7 @@
   letter-spacing: 0.05em;
   line-height: 1.4;
   cursor: pointer;
+  -webkit-user-select: none; /* iOS Safari 长按不弹选择菜单 */
   user-select: none;
   -webkit-tap-highlight-color: transparent; /* 用位移反馈替代系统灰块 */
   transition: transform var(--t-press) var(--ease-out),
@@ -217,8 +218,129 @@
   outline-offset: 2px;
 }
 
+/* ---------- 按钮等待态（M2 的测验提交 / M4 的 AI 流式复用） ---------- */
+.is-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid currentColor;
+  border-top-color: transparent;
+  color: var(--on-gold);
+  animation: spin 0.7s linear infinite;
+}
+
+.btn-ghost.is-loading::after {
+  color: var(--dim);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   动效原语（M1.5 Task 4.5）——完成时刻与入场，M2 成就/M3 打卡直接复用
+   ============================================================ */
+
+/* 完成时刻的轻弹：加上类即播放一次 */
+.pop {
+  animation: pop var(--t-mid) var(--ease-pop) both;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.88);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 荣誉时刻的金色脉冲（持续引导下一步） */
+.glow-pulse {
+  animation: glow-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--gold-glow);
+  }
+  50% {
+    box-shadow: 0 0 24px var(--gold-glow);
+  }
+}
+
+/* 列表 stagger 入场：元素上写 style="--i: 序号" */
+.stagger-item {
+  animation: rise-in var(--t-mid) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* ---------- 路由转场（out-in：先走后进，两屏不共存） ---------- */
+.page-enter-active {
+  transition: opacity var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
+}
+
+.page-leave-active {
+  transition: opacity var(--t-press) var(--ease-out), transform var(--t-press) var(--ease-out);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ============================================================
+   动效降级：媒体查询管系统偏好，[data-motion="reduced"] 管 app 内设置
+   （settings.reducedMotion，见 lib/feedback.js）
+   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
+  .skeleton,
+  .pop,
+  .glow-pulse,
+  .stagger-item,
+  .is-loading::after {
     animation: none;
   }
+  .stagger-item {
+    opacity: 1;
+  }
+  .page-enter-active,
+  .page-leave-active {
+    transition: none;
+  }
+}
+
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }

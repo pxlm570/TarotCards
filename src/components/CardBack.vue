@@ -11,7 +11,7 @@ const { backUrl, manifest } = useDeck()
 <template>
   <div class="card-back" :class="{ selected }">
     <img v-if="manifest" :src="backUrl()" alt="" draggable="false" />
-    <div v-else class="fallback" />
+    <div v-else class="fallback skeleton" />
   </div>
 </template>
 

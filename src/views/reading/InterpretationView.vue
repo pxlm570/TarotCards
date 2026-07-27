@@ -8,6 +8,7 @@ import { useReadingStore } from '../../stores/reading.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { tap, success, toast } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
 
@@ -55,6 +56,7 @@ function toggle(key) {
   const next = new Set(expanded.value)
   next.has(key) ? next.delete(key) : next.add(key)
   expanded.value = next
+  tap()
 }
 
 async function jumpTo(card) {
@@ -73,6 +75,8 @@ function startPractice() {
 
 function saveNote() {
   noteSaved.value = true // M1 仅内存留存；M3 落日记库
+  success()
+  toast('已记下 · M3 起会存进日记', 'success')
 }
 
 function again() {
@@ -122,7 +126,13 @@ function again() {
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="cards">
-      <article v-for="item in items" :id="`pos-${item.positionKey}`" :key="item.positionKey" class="pos-card card">
+      <article
+        v-for="(item, i) in items"
+        :id="`pos-${item.positionKey}`"
+        :key="item.positionKey"
+        class="pos-card card stagger-item"
+        :style="{ '--i': i }"
+      >
         <button class="pos-head" @click="toggle(item.positionKey)">
           <img v-if="cardUrl(item.cardId)" class="thumb" :src="cardUrl(item.cardId)" :class="{ reversed: item.reversed }" alt="" />
           <div v-else class="thumb thumb-fallback skeleton" />
@@ -170,7 +180,12 @@ function again() {
       <h2 class="note-title"><AppIcon name="note" :size="19" /> 此刻的感想</h2>
       <textarea v-model="note" rows="3" class="note-input" placeholder="记录此刻的直觉与情绪（日记功能将在 M3 保存它们）" @input="noteSaved = false" />
       <div class="note-actions">
-        <button class="note-save btn-ghost" :disabled="!note.trim() || noteSaved" @click="saveNote">
+        <button
+          class="note-save btn-ghost"
+          :class="{ pop: noteSaved }"
+          :disabled="!note.trim() || noteSaved"
+          @click="saveNote"
+        >
           {{ noteSaved ? '已记下' : '记下' }}
         </button>
         <button class="again btn-solid" @click="again">再来一次</button>

@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
+import { tap, success } from '../../lib/feedback.js'
 
 const router = useRouter()
 const store = useReadingStore()
@@ -17,12 +18,15 @@ const big = computed(() => store.cardCount > 5)
 function flip(card) {
   if (store.phase !== 'revealing' || revealed.value.has(card.positionKey)) return
   store.revealCard(card.positionKey)
-  if (navigator.vibrate) navigator.vibrate(10)
+  // 最后一张翻开 = 完成时刻
+  if (store.revealedCount === store.cardCount) success()
+  else tap()
 }
 
 function flipAll() {
   if (store.phase !== 'revealing') return
   store.revealAll()
+  success()
 }
 
 function interpret() {
@@ -34,7 +38,9 @@ function interpret() {
 
 <template>
   <div class="reveal">
-    <p class="tip">{{ allRevealed ? '牌面已全部揭晓' : '点击牌背，逐张翻开' }}</p>
+    <p class="tip" :class="{ done: allRevealed }">
+      {{ allRevealed ? '牌面已全部揭晓' : '点击牌背，逐张翻开' }}
+    </p>
 
     <div class="canvas-wrap">
       <SpreadCanvas
@@ -75,6 +81,13 @@ function interpret() {
   transition: color var(--t-fast);
 }
 
+/* 全部揭晓：文案转金并轻弹一下 */
+.tip.done {
+  color: var(--gold-text);
+  font-weight: var(--w-strong);
+  animation: pop var(--t-mid) var(--ease-pop) both;
+}
+
 .canvas-wrap {
   flex: 1;
   display: flex;
@@ -113,7 +126,8 @@ function interpret() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .primary {
+  .primary,
+  .tip.done {
     animation: none;
   }
 }

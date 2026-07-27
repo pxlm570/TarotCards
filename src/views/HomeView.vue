@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import spreads from '../data/spreads.json'
 import AppIcon from '../components/AppIcon.vue'
+import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
 import { PHASE_ROUTE } from '../router/index.js'
 
@@ -15,6 +16,7 @@ reading.hasActiveReading()
 const activeReading = computed(() => reading.phase !== 'idle' && PHASE_ROUTE[reading.phase])
 
 function resumeReading() {
+  tap()
   router.push(PHASE_ROUTE[reading.phase])
 }
 
@@ -31,6 +33,7 @@ function startReading(spreadId) {
   if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
     return
   }
+  tap()
   reading.reset()
   router.push({ path: '/reading/breathe', query: { spread: spreadId } })
 }
@@ -62,9 +65,10 @@ function startReading(spreadId) {
     <section class="spreads">
       <h2 class="section-title">选择牌阵</h2>
       <button
-        v-for="spread in spreads"
+        v-for="(spread, i) in spreads"
         :key="spread.id"
-        class="spread-card card-press"
+        class="spread-card card-press stagger-item"
+        :style="{ '--i': i }"
         @click="startReading(spread.id)"
       >
         <span class="spread-n">
@@ -220,6 +224,13 @@ function startReading(spreadId) {
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: var(--w-medium);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out), border-color var(--t-press);
+}
+
+.learn-card:active {
+  transform: scale(0.98);
+  border-color: var(--gold-deep);
 }
 
 .learn-text b {

@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import TabBar from './components/TabBar.vue'
+import AppToast from './components/AppToast.vue'
 
 const route = useRoute()
 // 占卜动线与引导页沉浸式展示，不显示 TabBar
@@ -11,9 +12,15 @@ const showTabBar = computed(() => !route.path.startsWith('/reading') && route.pa
 <template>
   <div class="app-shell">
     <main class="app-content" :class="{ 'with-tabbar': showTabBar }">
-      <router-view />
+      <!-- out-in：两屏永不同时存在，避免转场期出现重复内容 -->
+      <router-view v-slot="{ Component }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </router-view>
     </main>
     <TabBar v-if="showTabBar" />
+    <AppToast />
   </div>
 </template>
 

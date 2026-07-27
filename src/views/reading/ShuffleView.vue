@@ -5,6 +5,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import { safeGetItem, safeSetItem } from '../../lib/storage.js'
+import { tap } from '../../lib/feedback.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
@@ -74,7 +75,7 @@ function listenShake() {
     if (magnitude > 40 && Date.now() - lastShake > 800) {
       lastShake = Date.now()
       scatter()
-      if (navigator.vibrate) navigator.vibrate(10)
+      tap()
     }
   }
   window.addEventListener('devicemotion', motionHandler)
@@ -109,7 +110,7 @@ function onPointerMove(e) {
 function cut() {
   // 切牌：视觉上分三段重新聚拢再散开
   scatter()
-  if (navigator.vibrate) navigator.vibrate(10)
+  tap()
 }
 
 function done() {

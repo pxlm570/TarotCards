@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { tap, success } from '../../lib/feedback.js'
 
 const TOTAL = 78
 
@@ -22,8 +23,13 @@ function toReveal() {
 function pick(index) {
   if (store.pickedIndices.includes(index) || store.phase !== 'picking') return
   store.pickCard(index)
-  if (navigator.vibrate) navigator.vibrate(10)
-  if (store.phase === 'revealing') toReveal()
+  // 选满即完成时刻：手感与普通点选区分
+  if (store.phase === 'revealing') {
+    success()
+    toReveal()
+  } else {
+    tap()
+  }
 }
 
 function pickRest() {
@@ -167,11 +173,13 @@ function pickRest() {
   transition: opacity var(--t-fast), border-color var(--t-fast), background var(--t-fast);
 }
 
+/* 刚落位的槽位轻弹一下：这一张确实放进去了 */
 .dest.filled {
   border-style: solid;
   border-color: var(--gold-deep);
   background: var(--gold-soft);
   opacity: 1;
+  animation: pop var(--t-mid) var(--ease-pop) both;
 }
 
 /* 下一张的目的地：呼吸描边指路 */
@@ -209,7 +217,8 @@ function pickRest() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dest.active {
+  .dest.active,
+  .dest.filled {
     animation: none;
   }
 }
