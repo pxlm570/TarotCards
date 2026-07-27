@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   persona: 'gentle', // gentle | direct | scholar
   reversalsEnabled: false, // 逆位默认关：新手解读负担减半，M2 第 5 章后引导开启
   autoDraw: false,
-  theme: 'dark',
+  theme: 'auto', // auto = 跟随系统 prefers-color-scheme（M1.5 定稿）| light | dark
   sound: false,
   haptics: true,
   deckId: 'rws',

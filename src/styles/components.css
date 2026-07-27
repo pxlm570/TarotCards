@@ -1,0 +1,224 @@
+/* ============================================================
+   组件基类 v1 · M1.5（多邻国式「实体按压」语言）
+   ------------------------------------------------------------
+   全项目按钮/卡片/chip 不再各写各的：先用这里的基类，
+   只有位置与尺寸差异才在 SFC 的 scoped <style> 里补。
+   结构约定：2px 描边 + 4px 底边（像实体键），:active 位移、底边变薄。
+   ============================================================ */
+
+/* ---------- 按压按钮 ---------- */
+.btn-solid,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 20px;
+  border-radius: var(--radius-btn);
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: var(--w-title);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent; /* 用位移反馈替代系统灰块 */
+  transition: transform var(--t-press) var(--ease-out),
+    border-bottom-width var(--t-press) var(--ease-out), background var(--t-press),
+    color var(--t-press);
+}
+
+.btn-solid {
+  color: var(--on-gold);
+  background: var(--gold);
+  border: 0;
+  border-bottom: var(--press-depth) solid var(--gold-deep);
+}
+
+.btn-solid:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+}
+
+.btn-ghost {
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom-width: var(--press-depth);
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.btn-solid:disabled,
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 整行按钮（移动端主流形态） */
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+
+/* 文字型按钮：无框，只靠颜色与按压缩放 */
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-family: var(--sans);
+  font-size: var(--fs-note);
+  font-weight: var(--w-medium);
+  cursor: pointer;
+  padding: 12px; /* 触控目标 ≥44px */
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out), color var(--t-press);
+}
+
+.btn-text:active {
+  transform: scale(0.94);
+  color: var(--ink);
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+/* 可点卡片：同按压结构 */
+.card-press {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom-width: var(--press-depth);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out),
+    border-bottom-width var(--t-press) var(--ease-out), border-color var(--t-press);
+}
+
+.card-press:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* 虚线卡片：空状态与「还没开始」的引导入口 */
+.card-dashed {
+  background: none;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-card);
+  color: var(--dim);
+}
+
+/* ---------- chip（胶囊，可点） ---------- */
+.chip {
+  font-family: var(--sans);
+  font-size: var(--fs-body);
+  font-weight: var(--w-strong);
+  padding: 10px 18px; /* 触控目标 ≥44px */
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom-width: 3px;
+  color: var(--dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out),
+    border-bottom-width var(--t-press) var(--ease-out), color var(--t-press),
+    background var(--t-press), border-color var(--t-press);
+}
+
+.chip:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.chip.on {
+  border-color: var(--gold-deep);
+  background: var(--gold-soft);
+  color: var(--gold-text);
+}
+
+/* ---------- 徽标（不可点，只标状态） ---------- */
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: var(--w-strong);
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--gold-soft);
+  color: var(--gold-text);
+  white-space: nowrap;
+}
+
+/* 中性徽标：非「行动/荣誉/当前项」的一律用它（金色纪律） */
+.badge-plain {
+  background: none;
+  border: 2px solid var(--line);
+  color: var(--dim);
+  padding: 2px 9px;
+}
+
+/* ---------- 关键词标签（纯展示，中性色） ---------- */
+.tag-kw {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: var(--w-medium);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  color: var(--dim);
+}
+
+/* ---------- 字标（唯一使用衬线体的地方） ---------- */
+.wordmark {
+  font-family: var(--serif);
+  font-weight: var(--w-strong);
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.wordmark em {
+  font-style: normal;
+  color: var(--gold-text);
+}
+
+/* ---------- 加载骨架（替代空白渐变） ---------- */
+.skeleton {
+  background: var(--skeleton);
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.4s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+/* ---------- 键盘可达性：按压组件统一焦点环 ---------- */
+.btn-solid:focus-visible,
+.btn-ghost:focus-visible,
+.btn-text:focus-visible,
+.card-press:focus-visible,
+.chip:focus-visible {
+  outline: 2px solid var(--gold-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

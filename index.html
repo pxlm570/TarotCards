@@ -5,10 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/manifest-icons/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#14162E" />
+    <meta name="theme-color" content="#FAF6ED" />
     <title>星语塔罗</title>
+    <!-- 首帧防闪（M1.5 双主题）：CSS 先按系统偏好定底色，脚本再按用户锁定的主题覆盖。
+         色值与 src/styles/tokens.css 的 --bg、src/lib/theme.js 的 THEME_BG 必须一致。 -->
+    <style>
+      html { background: #FAF6ED; }
+      @media (prefers-color-scheme: dark) { html { background: #0F1523; } }
+    </style>
+    <script>
+      (function () {
+        try {
+          var pref = (JSON.parse(localStorage.getItem('tarot.settings.v1') || '{}') || {}).theme || 'auto';
+          var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var bg = dark ? '#0F1523' : '#FAF6ED';
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+          document.documentElement.style.background = bg;
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+        } catch (e) {
+          /* 存储被禁 / 老浏览器：留给 CSS 媒体查询兜底 */
+        }
+      })();
+    </script>
   </head>
-  <body style="background:#14162E">
+  <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -1,27 +1,119 @@
+/* ============================================================
+   设计令牌 v2 · M1.5 定稿（2026-07-26 用户拍板：B 浅色 + A 暗夜 双主题混搭）
+   ------------------------------------------------------------
+   全局纪律（两主题共享，改动前先读 M1.5 计划）：
+   1. 金色只给「行动 / 荣誉 / 当前项」——CTA、active tab、正位标签、当前牌高亮；
+      装饰一律不用金。
+   2. 紫色（旧 --violet）永久废除，不得复活；关键词 chips 用中性色。
+   3. 按压组件：2px 描边 + 4px 底边，:active 位移 2-3px、底边变薄。
+   4. 字重只有三档 800/700/600，字号只有四档（--fs-*）。
+   5. 颜色/圆角/间距/时长一律引用本文件的令牌，禁止散写魔法数。
+
+   对比度自查（WCAG AA：正文 ≥4.5:1、大字 ≥3:1）——三处较用户定稿表微调，
+   原因写在旁边，视觉上不可辨但让小字达标：
+     浅色 ink   #2B3245 on bg  = 11.8:1 ✓   dark ink   #F1EDE2 on bg = 15.6:1 ✓
+     浅色 dim   #676C7B on bg  =  4.9:1 ✓   dark dim   #96A0B4 on bg =  6.9:1 ✓
+       （定稿 #6E7382 在 #FAF6ED 上仅 4.39:1，未达 AA，故加深两档）
+     浅色 gold-text #7E6011 on bg = 5.5:1 ✓ / on chip 底 #F6E7C1 = 4.8:1 ✓
+       （定稿 #8A6A14 在 chip 底上 4.12:1，未达 AA，故加深）
+     on-gold #2B3245 on #E8B93E = 7.0:1 ✓   dark #0F1523 on #D9B24A = 9.0:1 ✓
+     dark gold #D9B24A 作文字 on #1A2233 = 7.7:1 ✓
+   ============================================================ */
+
 :root {
-  /* 暗夜主题（默认） */
-  --bg-deep: #14162E;
-  --bg-card: #232850;
-  --bg-inset: #1B1F3B;
-  --gold: #B8912F;        /* 古铜金 */
-  --gold-bright: #D4AF37;
-  --violet: #7F77DD;
-  --moon: #E8E3D3;        /* 主文字 */
-  --moon-dim: #9A97B8;    /* 次文字 */
-  --on-gold: #14162E;     /* 金色按钮上的文字（勿硬编码，浅色主题会换值） */
-  --serif: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; /* 系统衬线优先，不依赖 Google Fonts（国内网络与 PWA 离线均不可靠）；如需 Noto Serif SC 则用本地 woff2 子集 @font-face */
+  color-scheme: light;
+
+  /* ---- 色板 · 浅色主题（默认基准 = 方案 B「暖白桌面」） ---- */
+  --bg: #faf6ed; /* 暖白桌面 */
+  --surface: #ffffff; /* 卡面 */
+  --sunk: #f3eee2; /* 凹面：输入框/关键词底，比 surface 沉一档 */
+  --line: #e7dfcc; /* 描边与分隔（分层靠它，不靠投影） */
+  --gold: #e8b93e; /* 行动主色 */
+  --gold-deep: #c0921c; /* 按压底边 / 描边强调 */
+  --gold-text: #7e6011; /* 金色系文字与图标（浅底上达 AA） */
+  --gold-soft: #f6e7c1; /* 金色系浅底（徽标/当前项） */
+  --gold-glow: rgba(192, 146, 28, 0.3); /* 荣誉时刻的光晕 */
+  --ink: #2b3245; /* 深蓝墨 · 主文 */
+  --dim: #676c7b; /* 次文 */
+  --on-gold: #2b3245; /* 金底上的文字，勿硬编码 */
+  --coral: #f0655a; /* 品牌暖红（星瞳之眼泪滴）· 仅少量强调 */
+  --overlay: rgba(43, 50, 69, 0.5); /* 弹层遮罩 */
+  --shadow-card: 0 3px 10px rgba(43, 50, 69, 0.18); /* 只给「实体牌」用 */
+  --shadow-pop: 0 12px 32px rgba(43, 50, 69, 0.2); /* 只给弹层用 */
+  --skeleton: linear-gradient(100deg, #efeadc 28%, #f9f5ea 48%, #efeadc 68%);
+
+  /* ---- 字体 ---- */
+  --serif: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; /* 仅字标使用；不引 Google Fonts */
   --sans: "PingFang SC", "Microsoft YaHei", sans-serif;
-  --radius-card: 12px;
+
+  /* ---- 字重（三档） ---- */
+  --w-title: 800;
+  --w-strong: 700;
+  --w-medium: 600;
+
+  /* ---- 字号（四档，收敛自 M1 的七档） ---- */
+  --fs-title: 1.375rem; /* 22px 页面主标题 */
+  --fs-head: 1.0625rem; /* 17px 区块标题 / 牌名 */
+  --fs-body: 0.9375rem; /* 15px 正文 */
+  --fs-note: 0.8125rem; /* 13px 说明与标签 */
+  /* 输入类控件固定 1rem：<16px 会触发 iOS 聚焦自动放大且不回弹 */
+
+  /* ---- 圆角 ---- */
+  --radius-card: 16px;
+  --radius-btn: 14px;
+  --radius-sm: 10px;
+  --radius-img: 7px; /* 牌面图 */
+  --radius-pill: 999px;
+
+  /* ---- 间距（8 的倍数） ---- */
+  --sp-1: 8px;
+  --sp-2: 16px;
+  --sp-3: 24px;
+  --sp-4: 32px;
+
+  /* ---- 动效（禁止各处散写魔法数） ---- */
+  --t-press: 120ms; /* 按压反馈 */
+  --t-fast: 240ms; /* 转场 / 状态切换 */
+  --t-mid: 400ms; /* 入场 / 展开 */
+  --t-slow: 600ms; /* 翻牌等大动作 */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1); /* 完成时刻的轻弹 */
+
+  /* ---- 结构 ---- */
+  --press-depth: 4px; /* 按压组件底边厚度 */
   --tabbar-h: 64px;
 }
-[data-theme="light"] {
-  --bg-deep: #F5F3EC;
-  --bg-card: #FFFFFF;
-  --bg-inset: #ECE9DF;
-  --gold: #8C6D1F;
-  --gold-bright: #B8912F;
-  --violet: #5A51B8; /* 深化：#7F77DD 在浅底上对比度仅 ~3.2:1，不达 WCAG AA */
-  --moon: #2C2C2A;
-  --moon-dim: #6B6A63;
-  --on-gold: #FFFFFF; /* 浅色主题金底 #8C6D1F 上白字对比 ~4.9:1 */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ---- 色板 · 暗夜主题（基准 = 方案 A「中性藏青」，无紫偏） ---- */
+  --bg: #0f1523;
+  --surface: #1a2233;
+  --sunk: #141b2b;
+  --line: #273047;
+  --gold: #d9b24a;
+  --gold-deep: #96762a;
+  --gold-text: #d9b24a; /* 暗底上直接用亮金 */
+  --gold-soft: rgba(217, 178, 74, 0.16);
+  --gold-glow: rgba(217, 178, 74, 0.42);
+  --ink: #f1ede2;
+  --dim: #96a0b4;
+  --on-gold: #0f1523;
+  --coral: #f5786c; /* 暗底上提亮一档，保持 ≥4.5:1 */
+  --overlay: rgba(4, 7, 14, 0.72);
+  --shadow-card: 0 3px 12px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 14px 34px rgba(0, 0, 0, 0.6);
+  --skeleton: linear-gradient(100deg, #1c2434 28%, #27314a 48%, #1c2434 68%);
+}
+
+/* ---- 过渡期兼容别名：M1 视图还在引用旧名，Task 3 重样式完成后整块删除 ---- */
+:root {
+  --bg-deep: var(--bg);
+  --bg-card: var(--surface);
+  --bg-inset: var(--sunk);
+  --gold-bright: var(--gold-text);
+  --moon: var(--ink);
+  --moon-dim: var(--dim);
+  --violet: var(--dim); /* 紫色已废除，临时兜底为中性色 */
 }

@@ -13,8 +13,9 @@ export default defineConfig({
         name: '星语塔罗',
         short_name: '星语塔罗',
         description: '私人塔罗空间：占卜、学习、记录',
-        theme_color: '#14162E',
-        background_color: '#14162E',
+        // M1.5 定稿双主题：manifest 不支持媒体查询，取默认基准（浅色 --bg）
+        theme_color: '#FAF6ED',
+        background_color: '#FAF6ED',
         display: 'standalone',
         icons: [
           { src: 'manifest-icons/icon-192.png', sizes: '192x192', type: 'image/png' },

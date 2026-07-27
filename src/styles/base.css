@@ -6,13 +6,15 @@
 
 html {
   font-size: 16px;
+  background: var(--bg);
 }
 
 body {
-  background: var(--bg-deep);
-  color: var(--moon);
+  background: var(--bg);
+  color: var(--ink);
   font-family: var(--sans);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 ul,
@@ -21,10 +23,29 @@ ol {
   list-style: none;
 }
 
+/* 标题一律无衬线粗字重（衬线只留给 .wordmark 字标），层级靠字重与字号 */
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
-  font-weight: 600;
-  color: var(--moon);
+  font-family: var(--sans);
+  font-weight: var(--w-title);
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+/* 表单控件默认继承系统字体，逐个改容易漏 */
+button,
+input,
+textarea,
+select {
+  font-family: var(--sans);
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--gold-soft);
+  color: var(--ink);
 }
