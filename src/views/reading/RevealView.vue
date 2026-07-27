@@ -14,6 +14,8 @@ const revealed = computed(() => new Set(store.revealedKeys))
 const allRevealed = computed(() => store.revealedCount === store.cardCount)
 // 大牌阵用竖版画布 + 缩小牌宽，避免溢出与右列遮挡
 const big = computed(() => store.cardCount > 5)
+// 牌越少牌越大：单张牌阵用 18% 会是一张小邮票孤零零躺在空画布中央
+const cardPct = computed(() => (big.value ? 14 : store.cardCount === 1 ? 32 : 18))
 
 function flip(card) {
   if (store.phase !== 'revealing' || revealed.value.has(card.positionKey)) return
@@ -49,7 +51,7 @@ function interpret() {
         :cards="store.drawn"
         :revealed="revealed"
         :portrait="big"
-        :card-width-pct="big ? 14 : 18"
+        :card-width-pct="cardPct"
         @flip="flip"
       />
     </div>

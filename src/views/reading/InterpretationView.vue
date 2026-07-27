@@ -44,6 +44,11 @@ const items = computed(() =>
   })
 )
 
+// 缩略全景同理：单张牌阵放大，否则一张小邮票躺在空卡片里
+const overviewPct = computed(() =>
+  store.cardCount > 5 ? 12 : store.cardCount === 1 ? 26 : 14
+)
+
 const expanded = ref(new Set())
 const practiceMode = ref(false)
 const practiceText = ref('')
@@ -104,7 +109,7 @@ function again() {
         :revealed="null"
         readonly
         :portrait="store.cardCount > 5"
-        :card-width-pct="store.cardCount > 5 ? 12 : 14"
+        :card-width-pct="overviewPct"
         @inspect="jumpTo"
       />
       <p class="overview-hint">点牌面跳到对应解读</p>
