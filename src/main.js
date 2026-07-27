@@ -7,6 +7,7 @@ import App from './App.vue'
 import { createAppRouter } from './router/index.js'
 import { initTheme } from './lib/theme.js'
 import { applyMotionPreference } from './lib/feedback.js'
+import { setupUpdateReload } from './lib/sw-refresh.js'
 
 // index.html 头部内联脚本已定首帧主题（防白闪）；这里接管运行期切换与系统偏好联动
 initTheme()
@@ -24,6 +25,9 @@ window.addEventListener('vite:preloadError', (e) => {
   e.preventDefault()
   location.reload()
 })
+
+// 部署新版后「首次打开仍是旧界面」的根治：新 SW 接管时自动刷一次（细节见 sw-refresh.js）
+setupUpdateReload()
 
 const app = createApp(App)
 app.use(createPinia())
