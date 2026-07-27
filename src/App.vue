@@ -21,7 +21,7 @@ const showTabBar = computed(() => !route.path.startsWith('/reading') && route.pa
 .app-shell {
   min-height: 100vh;
   min-height: 100dvh; /* 移动端动态地址栏；旧浏览器回退上一行 */
-  background: var(--bg-deep);
+  background: var(--bg);
 }
 
 .app-content {

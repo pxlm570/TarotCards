@@ -39,32 +39,41 @@ function startReading(spreadId) {
   <div class="home">
     <header class="home-header">
       <div>
-        <h1 class="title">星语塔罗</h1>
+        <h1 class="title wordmark">星语<em>塔罗</em></h1>
         <p class="greeting">{{ greeting }}</p>
       </div>
-      <router-link to="/welcome" class="help" aria-label="重看新手引导">?</router-link>
+      <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">?</router-link>
     </header>
 
-    <button v-if="activeReading" class="resume" @click="resumeReading">
-      <span>🌙 有一局{{ reading.spread?.name ?? '' }}占卜正在进行</span>
+    <button v-if="activeReading" class="resume card-press" @click="resumeReading">
+      <span class="resume-text">🌙 有一局{{ reading.spread?.name ?? '' }}占卜正在进行</span>
       <span class="resume-cta">继续 →</span>
     </button>
 
     <section class="spreads">
       <h2 class="section-title">选择牌阵</h2>
-      <button v-for="spread in spreads" :key="spread.id" class="spread-card" @click="startReading(spread.id)">
-        <div class="spread-info">
+      <button
+        v-for="spread in spreads"
+        :key="spread.id"
+        class="spread-card card-press"
+        @click="startReading(spread.id)"
+      >
+        <span class="spread-n">
+          {{ spread.cardCount }}
+          <small>张</small>
+        </span>
+        <span class="spread-info">
           <span class="spread-name">{{ spread.name }}</span>
-          <span class="spread-count">{{ spread.cardCount }} 张牌</span>
-        </div>
-        <span class="badge" :class="{ advanced: spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
+          <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
+        </span>
+        <span class="badge" :class="{ 'badge-plain': spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
       </button>
     </section>
 
     <section class="learn-entry">
-      <router-link to="/learn" class="learn-card">
-        <span>🎓 从零学塔罗</span>
-        <span class="learn-hint">7 章新手课程 · 敬请期待</span>
+      <router-link to="/learn" class="learn-card card-dashed">
+        <span class="learn-icon">🎓</span>
+        <span class="learn-text"><b>从零学塔罗</b> · 7 章新手课程</span>
       </router-link>
     </section>
   </div>
@@ -72,61 +81,54 @@ function startReading(spreadId) {
 
 <style scoped>
 .home {
-  padding: 24px 20px;
+  padding: var(--sp-3) 20px var(--sp-4);
 }
 
 .home-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 28px;
+  margin-bottom: var(--sp-4);
 }
 
 .title {
-  font-size: 1.5rem;
-  letter-spacing: 0.12em;
-  color: var(--gold-bright);
+  font-size: 1.625rem;
   margin-bottom: 6px;
 }
 
 .greeting {
-  color: var(--moon-dim);
-  font-size: 0.9375rem;
+  color: var(--dim);
+  font-size: var(--fs-body);
 }
 
 .help {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--moon-dim);
-  color: var(--moon-dim);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  font-size: 0.9375rem;
-  /* 视觉 32px、命中区扩到 44px */
-  box-sizing: content-box;
-  padding: 6px;
-  margin: -6px;
-  background-clip: content-box;
+  color: var(--dim);
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+  flex-shrink: 0;
 }
 
+/* 续局：唯一允许抢眼的入口——金框 + 金底 */
 .resume {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  border: 1px solid var(--gold);
-  border-radius: var(--radius-card);
-  background: rgba(184, 145, 47, 0.1);
-  color: var(--gold-bright);
+  gap: var(--sp-1);
+  border-color: var(--gold-deep);
+  background: var(--gold-soft);
+  color: var(--gold-text);
   padding: 14px 16px;
-  margin-bottom: 20px;
-  font-family: var(--sans);
-  font-size: 0.9375rem;
-  cursor: pointer;
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-body);
+  font-weight: var(--w-strong);
 }
 
 .resume-cta {
@@ -134,76 +136,83 @@ function startReading(spreadId) {
 }
 
 .section-title {
-  font-size: 1.0625rem;
+  font-size: var(--fs-head);
   margin-bottom: 14px;
 }
 
 .spread-card {
   width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: var(--bg-card);
-  border: none;
-  border-radius: var(--radius-card);
-  padding: 18px 16px;
+  gap: 14px;
+  padding: 16px;
   margin-bottom: 12px;
-  cursor: pointer;
-  color: var(--moon);
-  font-family: var(--sans);
-  transition: transform 0.15s;
 }
 
-.spread-card:active {
-  transform: scale(0.98);
+/* 牌阵张数：大号数字是牌阵卡的识别锚点（定稿保留） */
+.spread-n {
+  min-width: 44px;
+  text-align: center;
+  font-size: 1.625rem;
+  font-weight: var(--w-title);
+  color: var(--gold-text);
+  line-height: 1;
+}
+
+.spread-n small {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: var(--w-medium);
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  margin-top: 3px;
 }
 
 .spread-info {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
 }
 
 .spread-name {
-  font-size: 1rem;
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
 }
 
-.spread-count {
-  font-size: 0.8125rem;
-  color: var(--moon-dim);
-}
-
-.badge {
-  font-size: 0.75rem;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(184, 145, 47, 0.16);
-  color: var(--gold-bright);
-}
-
-.badge.advanced {
-  background: rgba(127, 119, 221, 0.18);
-  color: var(--violet);
+/* 位置串（过去 · 现在 · 未来）：大牌阵会超长，截断而不换行撑高卡片 */
+.spread-desc {
+  max-width: 100%;
+  font-size: var(--fs-note);
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .learn-entry {
-  margin-top: 28px;
+  margin-top: var(--sp-4);
 }
 
 .learn-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--bg-inset);
-  border-radius: var(--radius-card);
-  padding: 16px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 16px;
   text-decoration: none;
-  color: var(--moon);
+  font-size: 0.875rem;
+  font-weight: var(--w-medium);
 }
 
-.learn-hint {
-  font-size: 0.8125rem;
-  color: var(--moon-dim);
+.learn-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.learn-text b {
+  color: var(--ink);
+  font-weight: var(--w-title);
 }
 </style>

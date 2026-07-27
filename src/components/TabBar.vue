@@ -26,8 +26,8 @@ const tabs = [
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   display: flex;
-  background: var(--bg-inset);
-  border-top: 1px solid rgba(184, 145, 47, 0.18);
+  background: var(--surface);
+  border-top: 2px solid var(--line); /* 扁平分层：靠描边不靠投影 */
   z-index: 10;
 }
 
@@ -37,15 +37,22 @@ const tabs = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   text-decoration: none;
-  color: var(--moon-dim);
+  color: var(--dim);
   font-size: 0.6875rem;
-  transition: color 0.2s;
+  font-weight: var(--w-strong);
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--t-fast), transform var(--t-press) var(--ease-out);
 }
 
+/* 当前项——金色纪律允许的三种用途之一 */
 .tab.active {
-  color: var(--gold-bright);
+  color: var(--gold-text);
+}
+
+.tab:active {
+  transform: scale(0.92);
 }
 
 .tab-icon {
@@ -67,8 +74,8 @@ const tabs = [
     justify-content: center;
     gap: 8px;
     border-top: none;
-    border-right: 1px solid rgba(184, 145, 47, 0.18);
-    background: transparent;
+    border-right: 2px solid var(--line);
+    background: var(--bg);
   }
 
   .tab {

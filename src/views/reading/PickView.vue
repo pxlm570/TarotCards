@@ -43,6 +43,19 @@ function pickRest() {
       </p>
     </header>
 
+    <!-- 目标槽位放在牌堆之前：抽的时候始终看得见「这张要去哪」 -->
+    <div class="slots">
+      <div
+        v-for="(pos, i) in store.spread?.positions ?? []"
+        :key="pos.key"
+        class="dest"
+        :class="{ filled: i < picked, active: i === picked }"
+      >
+        <span class="dest-label">{{ pos.label }}</span>
+        <span v-if="i < picked" class="dest-check">✓</span>
+      </div>
+    </div>
+
     <div class="strip-wrap">
       <div class="strip">
         <button
@@ -57,18 +70,7 @@ function pickRest() {
       </div>
     </div>
 
-    <div class="slots">
-      <div
-        v-for="(pos, i) in store.spread?.positions ?? []"
-        :key="pos.key"
-        class="dest"
-        :class="{ filled: i < picked }"
-      >
-        <span class="dest-label">{{ pos.label }}</span>
-      </div>
-    </div>
-
-    <button class="auto" @click="pickRest">帮我抽完</button>
+    <button class="auto btn-ghost btn-block" @click="pickRest">帮我抽完</button>
   </div>
 </template>
 
@@ -84,22 +86,24 @@ function pickRest() {
 .head {
   text-align: center;
   padding: 0 20px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .progress {
-  font-size: 1.0625rem;
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
   letter-spacing: 0.1em;
 }
 
 .gold {
-  color: var(--gold-bright);
+  color: var(--gold-text);
+  font-size: 1.25rem;
 }
 
 .pos-hint {
-  margin-top: 6px;
-  font-size: 0.8125rem;
-  color: var(--moon-dim);
+  margin-top: 5px;
+  font-size: var(--fs-note);
+  color: var(--dim);
   min-height: 1.2em;
 }
 
@@ -109,7 +113,8 @@ function pickRest() {
   align-items: center;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 0;
+  /* 上下留白给选中牌的上浮与金辉，避免被裁切 */
+  padding: 28px 0 20px;
 }
 
 .strip {
@@ -135,7 +140,7 @@ function pickRest() {
 /* 保留 pointer-events：点已抽的牌由 pick() 静默忽略。
    若设 pointer-events:none 点击会穿透到被压在下面的邻牌，静默误耗名额 */
 .slot.taken {
-  opacity: 0.25;
+  opacity: 0.32; /* 上浮+金边仍隐约可见：这张已经进入牌阵 */
   cursor: default;
 }
 
@@ -143,44 +148,68 @@ function pickRest() {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 16px 20px 20px;
+  gap: var(--sp-1);
+  padding: 0 20px;
 }
 
 .dest {
-  min-width: 52px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px dashed var(--moon-dim);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--line);
   text-align: center;
-  opacity: 0.55;
-  transition: all 0.3s;
+  opacity: 0.6;
+  transition: opacity var(--t-fast), border-color var(--t-fast), background var(--t-fast);
 }
 
 .dest.filled {
-  border: 1px solid var(--gold);
-  background: rgba(184, 145, 47, 0.14);
+  border-style: solid;
+  border-color: var(--gold-deep);
+  background: var(--gold-soft);
   opacity: 1;
 }
 
-.dest-label {
-  font-size: 0.6875rem;
-  color: var(--moon-dim);
+/* 下一张的目的地：呼吸描边指路 */
+.dest.active {
+  border-color: var(--gold);
+  opacity: 1;
+  animation: pulse-line 1.6s ease-in-out infinite;
 }
 
-.dest.filled .dest-label {
-  color: var(--gold-bright);
+@keyframes pulse-line {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--gold-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--gold-glow);
+  }
+}
+
+.dest-label,
+.dest-check {
+  font-size: 0.6875rem;
+  font-weight: var(--w-strong);
+  color: var(--dim);
+}
+
+.dest.filled .dest-label,
+.dest.filled .dest-check,
+.dest.active .dest-label {
+  color: var(--gold-text);
 }
 
 .auto {
   margin: 0 20px;
-  padding: 13px;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--gold);
-  background: none;
-  color: var(--gold-bright);
-  font-size: 0.9375rem;
-  font-family: var(--sans);
-  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dest.active {
+    animation: none;
+  }
 }
 </style>

@@ -49,8 +49,8 @@ function interpret() {
     </div>
 
     <div class="actions">
-      <button v-if="!allRevealed" class="ghost" @click="flipAll">全部翻开</button>
-      <button v-else class="primary" @click="interpret">查看解读</button>
+      <button v-if="!allRevealed" class="wide btn-ghost" @click="flipAll">全部翻开</button>
+      <button v-else class="wide primary btn-solid" @click="interpret">查看解读</button>
     </div>
   </div>
 </template>
@@ -66,10 +66,13 @@ function interpret() {
 
 .tip {
   text-align: center;
-  color: var(--moon-dim);
-  font-size: 0.875rem;
-  letter-spacing: 0.1em;
+  color: var(--dim);
+  font-size: var(--fs-note);
+  font-weight: var(--w-medium);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
   margin-bottom: 12px;
+  transition: color var(--t-fast);
 }
 
 .canvas-wrap {
@@ -89,36 +92,23 @@ function interpret() {
   justify-content: center;
 }
 
-.ghost,
-.primary {
+.wide {
   min-width: 200px;
   padding: 14px 32px;
-  border-radius: var(--radius-card);
-  font-size: 1rem;
-  font-family: var(--sans);
-  cursor: pointer;
 }
 
-.ghost {
-  background: none;
-  border: 1px solid var(--gold);
-  color: var(--gold-bright);
-}
-
+/* 全部翻开后的下一步引导：金辉脉冲（仪式链定稿 ⑤） */
 .primary {
-  background: var(--gold);
-  border: none;
-  color: var(--on-gold);
-  animation: glow 1.6s ease-in-out infinite;
+  animation: glowpulse 1.8s ease-in-out infinite;
 }
 
-@keyframes glow {
+@keyframes glowpulse {
   0%,
   100% {
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+    box-shadow: 0 0 10px var(--gold-glow);
   }
   50% {
-    box-shadow: 0 0 26px rgba(212, 175, 55, 0.5);
+    box-shadow: 0 0 24px var(--gold-glow);
   }
 }
 

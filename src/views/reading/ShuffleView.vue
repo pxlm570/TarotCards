@@ -140,19 +140,22 @@ function done() {
           transitionDelay: c.delay + 'ms'
         }"
       >
-        <CardBack class="back" />
+        <!-- 位移（散牌）与缓浮（呼吸感）分两层：内层动画不会被外层内联 transform 覆盖 -->
+        <div class="bob" :style="{ animationDelay: (c.id % 8) * 0.45 + 's' }">
+          <CardBack class="back" />
+        </div>
       </div>
     </div>
 
     <div class="actions">
-      <button class="ghost" @click="cut">切牌</button>
-      <button class="primary" @click="done">洗好了</button>
+      <button class="btn-ghost" @click="cut">切牌</button>
+      <button class="btn-solid" @click="done">洗好了</button>
     </div>
 
     <div v-if="showHint" class="hint" @click="dismissHint">
-      <div class="hint-card">
+      <div class="hint-card card">
         <span class="hint-icon">👋</span>
-        <p>拖动我，或摇一摇</p>
+        <p class="hint-title">拖动我，或摇一摇</p>
         <p class="hint-sub">点击任意处开始</p>
       </div>
     </div>
@@ -170,9 +173,11 @@ function done() {
 
 .tip {
   text-align: center;
-  color: var(--moon-dim);
-  font-size: 0.875rem;
-  letter-spacing: 0.1em;
+  color: var(--dim);
+  font-size: var(--fs-note);
+  font-weight: var(--w-medium);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
 }
 
 .pool {
@@ -188,8 +193,23 @@ function done() {
 .fly {
   position: absolute;
   width: 88px;
-  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition: transform 0.9s var(--ease-out);
   pointer-events: none;
+}
+
+/* 仪式链 ③ 洗牌：牌堆缓浮（逐张错拍），静止时也是「活」的 */
+.bob {
+  animation: bob 3.6s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(2.5deg);
+  }
 }
 
 .actions {
@@ -197,32 +217,14 @@ function done() {
   gap: 14px;
 }
 
-.ghost,
-.primary {
+.actions > button {
   flex: 1;
-  padding: 14px;
-  border-radius: var(--radius-card);
-  font-size: 1rem;
-  font-family: var(--sans);
-  cursor: pointer;
-}
-
-.ghost {
-  background: none;
-  border: 1px solid var(--gold);
-  color: var(--gold-bright);
-}
-
-.primary {
-  background: var(--gold);
-  border: none;
-  color: var(--on-gold);
 }
 
 .hint {
   position: fixed;
   inset: 0;
-  background: rgba(10, 11, 26, 0.72);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,13 +232,12 @@ function done() {
 }
 
 .hint-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-card);
-  padding: 32px 40px;
+  padding: var(--sp-4) 40px;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-1);
+  box-shadow: var(--shadow-pop);
 }
 
 .hint-icon {
@@ -254,16 +255,22 @@ function done() {
   }
 }
 
+.hint-title {
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+}
+
 .hint-sub {
-  font-size: 0.8125rem;
-  color: var(--moon-dim);
+  font-size: var(--fs-note);
+  color: var(--dim);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fly {
     transition: none;
   }
-  .hint-icon {
+  .hint-icon,
+  .bob {
     animation: none;
   }
 }

@@ -54,7 +54,7 @@ function onTap(card) {
 </script>
 
 <template>
-  <div class="canvas" :class="{ portrait }">
+  <div class="canvas" :class="{ portrait, readonly }">
     <button
       v-for="card in placed"
       :key="card.positionKey"
@@ -82,13 +82,17 @@ function onTap(card) {
         </div>
       </div>
       <!-- 旋转牌（横压位）的标签移到牌上方，避免与同坐标竖牌的标签重叠 -->
-      <span v-if="!readonly" class="pos-label" :class="{ top: card.position.rotate }">
+      <span
+        v-if="!readonly"
+        class="pos-label"
+        :class="{ top: card.position.rotate, 'flipped-label': isRevealed(card.positionKey) }"
+      >
         {{ card.position.label }}
       </span>
     </button>
 
     <div v-if="error && !manifest" class="load-error">
-      <button class="retry" @click="retry">牌面加载失败，点此重试</button>
+      <button class="retry btn-ghost" @click="retry">牌面加载失败，点此重试</button>
     </div>
   </div>
 </template>
@@ -138,9 +142,10 @@ function onTap(card) {
   position: absolute;
   inset: 0;
   backface-visibility: hidden;
-  border-radius: 6px;
+  border-radius: var(--radius-img);
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-card);
+  background: var(--sunk); /* 图未到位时是牌形占位，不是空洞 */
 }
 
 .face img {
@@ -158,10 +163,37 @@ function onTap(card) {
   transform: rotate(180deg);
 }
 
+/* 翻牌落定后的「金光斜扫」——揭示的荣誉时刻（仪式链定稿 ⑤，全站庆祝动效原型）。
+   解读页（readonly，进场即全开）不放，否则每次渲染都闪一遍。 */
+.face.front::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 224, 120, 0.55) 50%, transparent 70%);
+  transform: translateX(-130%);
+}
+
+.canvas:not(.readonly) .flipper.flipped .face.front::after {
+  animation: shine 0.7s 0.5s both;
+}
+
+@keyframes shine {
+  to {
+    transform: translateX(130%);
+  }
+}
+
 .pos-label {
   font-size: 0.6875rem;
-  color: var(--moon-dim);
+  font-weight: var(--w-medium);
+  color: var(--dim);
   white-space: nowrap;
+}
+
+/* 已翻开 = 当前有效项，用金色标出 */
+.flipped-label {
+  color: var(--gold-text);
+  font-weight: var(--w-strong);
 }
 
 .pos-label.top {
@@ -178,19 +210,16 @@ function onTap(card) {
 }
 
 .retry {
-  padding: 12px 20px;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--gold);
-  background: var(--bg-inset);
-  color: var(--gold-bright);
-  font-family: var(--sans);
-  font-size: 0.875rem;
-  cursor: pointer;
+  font-size: var(--fs-note);
+  padding: 12px 18px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .inner {
     transition: none;
+  }
+  .canvas:not(.readonly) .flipper.flipped .face.front::after {
+    animation: none;
   }
 }
 </style>

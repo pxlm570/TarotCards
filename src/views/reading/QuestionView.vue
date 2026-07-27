@@ -41,7 +41,7 @@ function confirm() {
       maxlength="200"
       placeholder="例如：接下来三个月，我该把重心放在哪里？"
     />
-    <p class="privacy">你的问题和记录只保存在这台设备上</p>
+    <p class="privacy"><span class="privacy-icon">🔒</span>你的问题和记录只保存在这台设备上</p>
 
     <div class="chips">
       <button
@@ -55,89 +55,79 @@ function confirm() {
       </button>
     </div>
 
-    <button class="confirm" @click="confirm">开始洗牌</button>
+    <button class="confirm btn-solid btn-block" @click="confirm">开始洗牌</button>
   </div>
 </template>
 
 <style scoped>
+/* 仪式链 ② 提问：「纸上落墨」——输入框是一张纸，不催促 */
 .question {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 15vh 24px 32px;
+  padding: 13vh 24px calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
 }
 
 .title {
-  font-size: 1.375rem;
+  font-size: var(--fs-title);
   margin-bottom: 10px;
 }
 
 .subtitle {
-  color: var(--moon-dim);
-  font-size: 0.875rem;
+  color: var(--dim);
+  font-size: var(--fs-note);
   line-height: 1.8;
-  margin-bottom: 28px;
+  margin-bottom: var(--sp-3);
 }
 
 .input {
   width: 100%;
-  background: var(--bg-card);
-  border: 1px solid transparent;
-  border-radius: var(--radius-card);
+  min-height: 96px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-btn);
   padding: 14px;
-  color: var(--moon);
-  font-family: var(--sans);
+  color: var(--ink);
   font-size: 1rem; /* ≥16px：15px 会触发 iOS 聚焦自动放大且不回弹 */
-  line-height: 1.7;
+  line-height: 1.8;
   resize: none;
+  transition: border-color var(--t-fast);
+}
+
+.input::placeholder {
+  color: var(--dim);
+  opacity: 0.7;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--gold);
+  border-color: var(--gold-deep);
 }
 
 .privacy {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
-  color: var(--moon-dim);
-  margin: 8px 2px 24px;
+  color: var(--dim);
+  margin: var(--sp-1) 2px var(--sp-3);
+}
+
+.privacy-icon {
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 40px;
-}
-
-.chip {
-  padding: 11px 18px; /* 触控目标 ≥44px */
-  border-radius: 999px;
-  border: 1px solid var(--bg-card);
-  background: var(--bg-card);
-  color: var(--moon-dim);
-  font-size: 0.875rem;
-  font-family: var(--sans);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.chip.on {
-  border-color: var(--gold);
-  color: var(--gold-bright);
-  background: rgba(184, 145, 47, 0.12);
+  margin-bottom: var(--sp-4);
 }
 
 .confirm {
   margin-top: auto;
-  padding: 14px;
-  border: none;
-  border-radius: var(--radius-card);
-  background: var(--gold);
-  color: var(--on-gold);
-  font-size: 1rem;
-  font-family: var(--sans);
-  cursor: pointer;
+  padding: 15px;
 }
 </style>

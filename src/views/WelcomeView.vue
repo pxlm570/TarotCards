@@ -46,7 +46,7 @@ function next() {
       <div class="dots">
         <span v-for="(s, i) in screens" :key="i" class="dot" :class="{ on: i === step }" />
       </div>
-      <button class="next" @click="next">
+      <button class="next btn-solid btn-block" @click="next">
         {{ step < screens.length - 1 ? '下一步' : '开始体验' }}
       </button>
     </div>
@@ -74,17 +74,25 @@ function next() {
 }
 
 .icon {
-  font-size: 3.5rem;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--gold-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: var(--gold-text);
 }
 
 .title {
-  font-size: 1.375rem;
-  color: var(--gold-bright);
-  letter-spacing: 0.06em;
+  font-size: var(--fs-title);
+  letter-spacing: 0.04em;
 }
 
 .body {
-  color: var(--moon-dim);
+  color: var(--dim);
+  font-size: var(--fs-body);
   line-height: 1.9;
   max-width: 300px;
 }
@@ -93,36 +101,29 @@ function next() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: var(--sp-3);
 }
 
 .dots {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-1);
 }
 
+/* 当前页点 = 当前项，金色；未到的用中性描边色 */
 .dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  transition: background 0.3s;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background var(--t-fast), width var(--t-fast) var(--ease-out);
 }
 
 .dot.on {
-  background: var(--gold-bright);
+  width: 22px;
+  background: var(--gold);
 }
 
 .next {
-  width: 100%;
   max-width: 320px;
-  padding: 14px;
-  border: none;
-  border-radius: var(--radius-card);
-  background: var(--gold);
-  color: var(--on-gold);
-  font-size: 1rem;
-  font-family: var(--sans);
-  cursor: pointer;
 }
 </style>

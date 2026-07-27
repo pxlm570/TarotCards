@@ -18,15 +18,20 @@ const { backUrl, manifest } = useDeck()
 <style scoped>
 .card-back {
   aspect-ratio: 300 / 527; /* 韦特牌面比例 */
-  border-radius: 6px;
+  border-radius: var(--radius-img);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-card); /* 实体牌的落影——UI 其余部分不用投影 */
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast),
+    outline-color var(--t-fast);
+  outline: 3px solid transparent;
+  outline-offset: -1px;
 }
 
+/* 选中即「上浮 + 金边 + 金辉」（仪式链定稿 ④ 的即时反馈） */
 .card-back.selected {
-  box-shadow: 0 0 0 2px var(--gold-bright), 0 2px 12px rgba(212, 175, 55, 0.35);
-  transform: translateY(-6px);
+  transform: translateY(-14px) scale(1.04);
+  outline-color: var(--gold);
+  box-shadow: var(--shadow-card), 0 0 14px var(--gold-glow);
 }
 
 .card-back img,
@@ -38,6 +43,15 @@ const { backUrl, manifest } = useDeck()
 }
 
 .fallback {
-  background: linear-gradient(135deg, var(--bg-card), var(--bg-inset));
+  background: var(--sunk);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-back {
+    transition: none;
+  }
+  .card-back.selected {
+    transform: none;
+  }
 }
 </style>

@@ -91,7 +91,7 @@ function again() {
       <p v-if="store.question" class="question">「{{ store.question }}」</p>
     </header>
 
-    <div class="overview">
+    <div class="overview card">
       <SpreadCanvas
         v-if="store.spread"
         :spread="store.spread"
@@ -106,32 +106,35 @@ function again() {
     </div>
 
     <div class="practice-bar">
-      <button v-if="!practiceMode" class="practice-btn" @click="startPractice">
-        ✍️ 练习模式：先写下我的理解
+      <button v-if="!practiceMode" class="practice-btn card-dashed" @click="startPractice">
+        <span class="practice-icon">✍️</span>
+        <span>练习模式：先写下我的理解</span>
       </button>
     </div>
 
-    <section v-if="practiceMode" class="practice">
+    <section v-if="practiceMode" class="practice card">
       <p class="practice-tip">先凭直觉写下你对这组牌的理解，再展开官方解读对比：</p>
       <textarea v-model="practiceText" rows="4" class="practice-input" placeholder="我看到的画面是……我的直觉是……" />
-      <button v-if="!practiceRevealed" class="practice-reveal" @click="practiceRevealed = true">
+      <button v-if="!practiceRevealed" class="practice-reveal btn-solid btn-block" @click="practiceRevealed = true">
         写好了，展开官方解读
       </button>
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="cards">
-      <article v-for="item in items" :id="`pos-${item.positionKey}`" :key="item.positionKey" class="pos-card">
+      <article v-for="item in items" :id="`pos-${item.positionKey}`" :key="item.positionKey" class="pos-card card">
         <button class="pos-head" @click="toggle(item.positionKey)">
           <img v-if="cardUrl(item.cardId)" class="thumb" :src="cardUrl(item.cardId)" :class="{ reversed: item.reversed }" alt="" />
-          <div v-else class="thumb thumb-fallback" />
+          <div v-else class="thumb thumb-fallback skeleton" />
           <div class="pos-main">
             <p class="pos-label">{{ item.position.label }} · {{ item.position.meaning }}</p>
             <p class="card-name">
               {{ item.card.name }}
-              <span class="orientation" :class="{ rev: item.reversed }">{{ item.reversed ? '逆位' : '正位' }}</span>
+              <span class="orientation badge" :class="{ 'badge-plain': item.reversed }">
+                {{ item.reversed ? '逆位' : '正位' }}
+              </span>
             </p>
             <div class="kw">
-              <span v-for="k in item.keywords" :key="k" class="kw-chip">{{ k }}</span>
+              <span v-for="k in item.keywords" :key="k" class="tag-kw">{{ k }}</span>
             </div>
             <p class="brief" v-if="!expanded.has(item.positionKey)">{{ item.brief }}</p>
           </div>
@@ -141,14 +144,14 @@ function again() {
         <div v-if="expanded.has(item.positionKey)" class="pos-body">
           <p class="meaning">{{ item.meaning }}</p>
           <p v-if="item.domainText" class="domain">
-            <span class="domain-tag">{{ DOMAIN_LABEL[store.domain] }}</span>{{ item.domainText }}
+            <span class="domain-tag badge">{{ DOMAIN_LABEL[store.domain] }}</span>{{ item.domainText }}
           </p>
-          <button class="more" @click="detail = item">查看这张牌的完整资料</button>
+          <button class="more btn-text" @click="detail = item">查看这张牌的完整资料</button>
         </div>
       </article>
     </section>
 
-    <section v-show="!practiceMode || practiceRevealed" class="synthesis">
+    <section v-show="!practiceMode || practiceRevealed" class="synthesis card">
       <h2 class="syn-title">🕯️ 整体串联</h2>
       <p class="syn-body">
         先看每个位置的含义，再找牌与牌之间的呼应：同花色多，说明能量集中在一个领域；大牌多，说明这件事对你意义重大；
@@ -161,10 +164,10 @@ function again() {
       <h2 class="note-title">📝 此刻的感想</h2>
       <textarea v-model="note" rows="3" class="note-input" placeholder="记录此刻的直觉与情绪（日记功能将在 M3 保存它们）" @input="noteSaved = false" />
       <div class="note-actions">
-        <button class="note-save" :disabled="!note.trim() || noteSaved" @click="saveNote">
+        <button class="note-save btn-ghost" :disabled="!note.trim() || noteSaved" @click="saveNote">
           {{ noteSaved ? '已记下' : '记下' }}
         </button>
-        <button class="again" @click="again">再来一次</button>
+        <button class="again btn-solid" @click="again">再来一次</button>
       </div>
     </section>
 
@@ -189,7 +192,7 @@ function again() {
           <h4>牌面符号</h4>
           <p>{{ detail.card.symbols }}</p>
         </div>
-        <button class="modal-close" @click="detail = null">关闭</button>
+        <button class="modal-close btn-ghost btn-block" @click="detail = null">关闭</button>
       </div>
     </div>
   </div>
@@ -197,7 +200,7 @@ function again() {
 
 <style scoped>
 .interp {
-  padding: 32px 18px calc(40px + env(safe-area-inset-bottom, 0px));
+  padding: var(--sp-4) 18px calc(40px + env(safe-area-inset-bottom, 0px));
 }
 
 .head {
@@ -206,18 +209,16 @@ function again() {
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
 }
 
 .question {
-  margin-top: 8px;
-  color: var(--moon-dim);
-  font-size: 0.875rem;
+  margin-top: var(--sp-1);
+  color: var(--dim);
+  font-size: var(--fs-note);
 }
 
 .overview {
-  background: var(--bg-inset);
-  border-radius: var(--radius-card);
   padding: 12px;
   margin-bottom: 18px;
 }
@@ -225,7 +226,7 @@ function again() {
 .overview-hint {
   text-align: center;
   font-size: 0.75rem;
-  color: var(--moon-dim);
+  color: var(--dim);
   margin-top: 6px;
 }
 
@@ -235,58 +236,63 @@ function again() {
 
 .practice-btn {
   width: 100%;
-  padding: 12px;
-  border-radius: var(--radius-card);
-  border: 1px dashed var(--violet);
-  background: none;
-  color: var(--violet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  padding: 13px;
   font-family: var(--sans);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
+  font-weight: var(--w-medium);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out), border-color var(--t-press);
+}
+
+.practice-btn:active {
+  transform: scale(0.98);
+  border-color: var(--gold-deep);
+}
+
+.practice-icon {
+  line-height: 1;
 }
 
 .practice {
-  background: var(--bg-card);
-  border-radius: var(--radius-card);
-  padding: 16px;
+  padding: var(--sp-2);
   margin-bottom: 18px;
 }
 
 .practice-tip {
-  font-size: 0.875rem;
-  color: var(--moon-dim);
+  font-size: var(--fs-note);
+  color: var(--dim);
   margin-bottom: 10px;
   line-height: 1.8;
 }
 
 .practice-input {
   width: 100%;
-  background: var(--bg-inset);
-  border: none;
-  border-radius: 8px;
+  background: var(--sunk);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
   padding: 12px;
-  color: var(--moon);
-  font-family: var(--sans);
+  color: var(--ink);
   font-size: 1rem; /* ≥16px 防 iOS 聚焦自动放大 */
-  line-height: 1.7;
+  line-height: 1.8;
   resize: none;
+  transition: border-color var(--t-fast);
+}
+
+.practice-input:focus {
+  outline: none;
+  border-color: var(--gold-deep);
 }
 
 .practice-reveal {
   margin-top: 12px;
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--violet);
-  color: var(--bg-deep); /* 暗色 #14162E/#7F77DD ≈4.8:1，浅色 #F5F3EC/#5A51B8 ≈5.2:1 */
-  font-family: var(--sans);
-  cursor: pointer;
 }
 
 .pos-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-card);
   margin-bottom: 14px;
   overflow: hidden;
 }
@@ -300,15 +306,23 @@ function again() {
   border: none;
   cursor: pointer;
   text-align: left;
-  color: var(--moon);
-  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-press);
 }
 
+.pos-head:active {
+  background: var(--sunk);
+}
+
+/* 签名元素：缩略牌像实体牌摊在桌上——微旋 + 落影 */
 .thumb {
-  width: 52px;
-  border-radius: 4px;
+  width: 54px;
+  border-radius: var(--radius-img);
   align-self: flex-start;
   flex-shrink: 0;
+  transform: rotate(-2.5deg);
+  box-shadow: var(--shadow-card);
 }
 
 .thumb.reversed,
@@ -318,8 +332,6 @@ function again() {
 
 .thumb-fallback {
   aspect-ratio: 300 / 527;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--bg-inset), var(--bg-deep));
 }
 
 .pos-main {
@@ -329,54 +341,41 @@ function again() {
 
 .pos-label {
   font-size: 0.75rem;
-  color: var(--moon-dim);
+  font-weight: var(--w-medium);
+  color: var(--dim);
   margin-bottom: 4px;
 }
 
 .card-name {
-  font-size: 1.0625rem;
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
   margin-bottom: 6px;
 }
 
+/* 正位 = 金（荣誉/当前项）；逆位 = 中性（紫色已废除） */
 .orientation {
   font-size: 0.6875rem;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(184, 145, 47, 0.16);
-  color: var(--gold-bright);
+  padding: 2px 9px;
   vertical-align: 2px;
   margin-left: 6px;
-}
-
-.orientation.rev {
-  background: rgba(127, 119, 221, 0.18);
-  color: var(--violet);
 }
 
 .kw {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
-}
-
-.kw-chip {
-  font-size: 0.6875rem;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bg-inset);
-  color: var(--moon-dim);
+  margin-bottom: var(--sp-1);
 }
 
 .brief {
-  font-size: 0.875rem;
-  color: var(--moon-dim);
+  font-size: var(--fs-note);
+  color: var(--dim);
   line-height: 1.7;
 }
 
 .chevron {
-  color: var(--moon-dim);
-  transition: transform 0.25s;
+  color: var(--dim);
+  transition: transform var(--t-fast) var(--ease-out);
   align-self: center;
 }
 
@@ -385,85 +384,83 @@ function again() {
 }
 
 .pos-body {
-  padding: 0 14px 16px 78px;
+  padding: 0 14px 16px 80px;
 }
 
 .meaning {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   line-height: 1.9;
   margin-bottom: 10px;
 }
 
 .domain {
-  font-size: 0.875rem;
+  font-size: var(--fs-note);
   line-height: 1.8;
-  color: var(--moon-dim);
-  margin-bottom: 10px;
+  color: var(--dim);
+  margin-bottom: 6px;
 }
 
 .domain-tag {
-  display: inline-block;
   font-size: 0.6875rem;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--gold);
-  color: var(--gold-bright);
+  padding: 1px 9px;
   margin-right: 6px;
 }
 
 .more {
-  background: none;
-  border: none;
-  color: var(--violet);
-  font-size: 0.8125rem;
-  font-family: var(--sans);
-  cursor: pointer;
+  color: var(--gold-text);
   padding: 12px 0; /* 触控目标：唯一的详情弹层入口 */
 }
 
+.more:active {
+  color: var(--gold-deep);
+}
+
 .synthesis {
-  background: var(--bg-inset);
-  border-radius: var(--radius-card);
-  padding: 16px;
+  padding: var(--sp-2);
   margin: 20px 0;
 }
 
 .syn-title {
-  font-size: 1rem;
+  font-size: var(--fs-head);
   margin-bottom: 10px;
 }
 
 .syn-body {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   line-height: 1.9;
   margin-bottom: 10px;
 }
 
 .syn-hint {
   font-size: 0.75rem;
-  color: var(--moon-dim);
+  color: var(--dim);
 }
 
 .note-area {
-  margin-top: 8px;
+  margin-top: var(--sp-1);
 }
 
 .note-title {
-  font-size: 1rem;
+  font-size: var(--fs-head);
   margin-bottom: 10px;
 }
 
 .note-input {
   width: 100%;
-  background: var(--bg-card);
-  border: none;
-  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-btn);
   padding: 12px;
-  color: var(--moon);
-  font-family: var(--sans);
+  color: var(--ink);
   font-size: 1rem; /* ≥16px 防 iOS 聚焦自动放大 */
-  line-height: 1.7;
+  line-height: 1.8;
   resize: none;
+  transition: border-color var(--t-fast);
+}
+
+.note-input:focus {
+  outline: none;
+  border-color: var(--gold-deep);
 }
 
 .note-actions {
@@ -472,41 +469,22 @@ function again() {
   margin-top: 12px;
 }
 
-.note-save {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid var(--gold);
-  border-radius: var(--radius-card);
-  background: none;
-  color: var(--gold-bright);
-  font-family: var(--sans);
-  cursor: pointer;
-}
-
-.note-save:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
+.note-save,
 .again {
   flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: var(--radius-card);
-  background: var(--gold);
-  color: var(--on-gold);
-  font-family: var(--sans);
-  cursor: pointer;
+  padding: 13px;
+  font-size: var(--fs-body);
 }
 
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(10, 11, 26, 0.78);
+  background: var(--overlay);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 30;
+  animation: fade-in var(--t-fast) var(--ease-out);
 }
 
 .modal-card {
@@ -514,16 +492,33 @@ function again() {
   max-width: 480px;
   max-height: 86vh;
   overflow-y: auto;
-  background: var(--bg-card);
-  border-radius: 16px 16px 0 0;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom: none;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  padding: var(--sp-3) 20px calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
   text-align: center;
+  box-shadow: var(--shadow-pop);
+  animation: sheet-up var(--t-fast) var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+  }
 }
 
 .modal-img {
-  width: 110px;
-  border-radius: 6px;
+  width: 112px;
+  border-radius: var(--radius-img);
   margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
 }
 
 .modal-name {
@@ -532,9 +527,9 @@ function again() {
 }
 
 .modal-meta {
-  font-size: 0.8125rem;
-  color: var(--moon-dim);
-  margin-bottom: 16px;
+  font-size: var(--fs-note);
+  color: var(--dim);
+  margin-bottom: var(--sp-2);
 }
 
 .modal-sec {
@@ -543,25 +538,25 @@ function again() {
 }
 
 .modal-sec h4 {
-  font-size: 0.875rem;
-  color: var(--gold-bright);
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  color: var(--gold-text);
   margin-bottom: 6px;
 }
 
 .modal-sec p {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   line-height: 1.9;
 }
 
 .modal-close {
-  margin-top: 8px;
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: var(--radius-card);
-  background: var(--bg-inset);
-  color: var(--moon);
-  font-family: var(--sans);
-  cursor: pointer;
+  margin-top: var(--sp-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal-card {
+    animation: none;
+  }
 }
 </style>
