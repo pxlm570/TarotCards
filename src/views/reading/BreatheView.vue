@@ -4,6 +4,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import spreads from '../../data/spreads.json'
 import { useReadingStore } from '../../stores/reading.js'
+import AppIcon from '../../components/AppIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,7 +48,7 @@ function proceed() {
     <div class="ring-wrap">
       <div class="ring" />
       <div class="ring echo" />
-      <div class="ring-star">✦</div>
+      <div class="ring-star"><AppIcon name="star" :size="26" /></div>
     </div>
     <div class="words">
       <p class="text">深呼吸，默念你的问题</p>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import spreads from '../data/spreads.json'
+import AppIcon from '../components/AppIcon.vue'
 import { useReadingStore } from '../stores/reading.js'
 import { PHASE_ROUTE } from '../router/index.js'
 
@@ -42,12 +43,20 @@ function startReading(spreadId) {
         <h1 class="title wordmark">星语<em>塔罗</em></h1>
         <p class="greeting">{{ greeting }}</p>
       </div>
-      <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">?</router-link>
+      <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">
+        <AppIcon name="help" :size="22" />
+      </router-link>
     </header>
 
     <button v-if="activeReading" class="resume card-press" @click="resumeReading">
-      <span class="resume-text">🌙 有一局{{ reading.spread?.name ?? '' }}占卜正在进行</span>
-      <span class="resume-cta">继续 →</span>
+      <span class="resume-text">
+        <AppIcon name="moon" :size="18" />
+        有一局{{ reading.spread?.name ?? '' }}占卜正在进行
+      </span>
+      <span class="resume-cta">
+        继续
+        <AppIcon name="arrow" :size="16" />
+      </span>
     </button>
 
     <section class="spreads">
@@ -72,7 +81,7 @@ function startReading(spreadId) {
 
     <section class="learn-entry">
       <router-link to="/learn" class="learn-card card-dashed">
-        <span class="learn-icon">🎓</span>
+        <AppIcon name="learn" :size="22" />
         <span class="learn-text"><b>从零学塔罗</b> · 7 章新手课程</span>
       </router-link>
     </section>
@@ -129,6 +138,13 @@ function startReading(spreadId) {
   margin-bottom: var(--sp-3);
   font-size: var(--fs-body);
   font-weight: var(--w-strong);
+}
+
+.resume-text,
+.resume-cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .resume-cta {
@@ -204,11 +220,6 @@ function startReading(spreadId) {
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: var(--w-medium);
-}
-
-.learn-icon {
-  font-size: 1.25rem;
-  line-height: 1;
 }
 
 .learn-text b {

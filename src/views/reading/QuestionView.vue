@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
+import AppIcon from '../../components/AppIcon.vue'
 
 const router = useRouter()
 const store = useReadingStore()
@@ -41,7 +42,10 @@ function confirm() {
       maxlength="200"
       placeholder="例如：接下来三个月，我该把重心放在哪里？"
     />
-    <p class="privacy"><span class="privacy-icon">🔒</span>你的问题和记录只保存在这台设备上</p>
+    <p class="privacy">
+      <AppIcon name="lock" :size="13" />
+      你的问题和记录只保存在这台设备上
+    </p>
 
     <div class="chips">
       <button
@@ -112,11 +116,6 @@ function confirm() {
   font-size: 0.75rem;
   color: var(--dim);
   margin: var(--sp-1) 2px var(--sp-3);
-}
-
-.privacy-icon {
-  font-size: 0.75rem;
-  line-height: 1;
 }
 
 .chips {

@@ -2,23 +2,24 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { markVisited } from '../router/index.js'
+import AppIcon from '../components/AppIcon.vue'
 
 const router = useRouter()
 const step = ref(0)
 
 const screens = [
   {
-    icon: '🔮',
+    icon: 'reading',
     title: '你的私人塔罗空间',
     body: '占卜、学习、记录，都在这里。不用注册不用登录，所有数据只保存在这台设备上。'
   },
   {
-    icon: '🌙',
+    icon: 'moon',
     title: '七步仪式，不止是抽牌',
     body: '选牌阵 → 静心 → 提问 → 洗牌 → 抽牌 → 翻牌 → 解读。每一步都有仪式感，慢慢来。'
   },
   {
-    icon: '🎓',
+    icon: 'learn',
     title: '从零学会塔罗',
     body: '7 章新手课程配闪卡与实战，学占卜像闯关。牌意看不懂时，随时点进牌库百科。'
   }
@@ -37,7 +38,9 @@ function next() {
 <template>
   <div class="welcome">
     <div class="screen">
-      <div class="icon">{{ screens[step].icon }}</div>
+      <div class="icon">
+        <AppIcon :name="screens[step].icon" :size="44" />
+      </div>
       <h1 class="title">{{ screens[step].title }}</h1>
       <p class="body">{{ screens[step].body }}</p>
     </div>

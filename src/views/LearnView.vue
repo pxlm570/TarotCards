@@ -1,12 +1,13 @@
 <script setup>
 // M2 交付：7 章课程、闪卡、测验、成就。此处为占位（空状态即引导原则）
+import AppIcon from '../components/AppIcon.vue'
 </script>
 
 <template>
   <div class="placeholder">
     <h1 class="title">学习</h1>
     <div class="empty">
-      <span class="icon">🎓</span>
+      <span class="icon"><AppIcon name="learn" :size="34" /></span>
       <p class="empty-title">7 章新手课程正在打磨中</p>
       <p class="hint">敬请期待 · 里程碑 M2</p>
       <router-link to="/" class="action btn-solid">先去抽一张牌</router-link>

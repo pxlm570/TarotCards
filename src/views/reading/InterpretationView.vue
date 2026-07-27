@@ -7,6 +7,7 @@ import cardsData from '../../data/cards.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
 
@@ -107,7 +108,7 @@ function again() {
 
     <div class="practice-bar">
       <button v-if="!practiceMode" class="practice-btn card-dashed" @click="startPractice">
-        <span class="practice-icon">✍️</span>
+        <AppIcon name="pen" :size="18" />
         <span>练习模式：先写下我的理解</span>
       </button>
     </div>
@@ -138,7 +139,12 @@ function again() {
             </div>
             <p class="brief" v-if="!expanded.has(item.positionKey)">{{ item.brief }}</p>
           </div>
-          <span class="chevron" :class="{ open: expanded.has(item.positionKey) }">▾</span>
+          <AppIcon
+            class="chevron"
+            :class="{ open: expanded.has(item.positionKey) }"
+            name="chevron"
+            :size="18"
+          />
         </button>
 
         <div v-if="expanded.has(item.positionKey)" class="pos-body">
@@ -152,7 +158,7 @@ function again() {
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="synthesis card">
-      <h2 class="syn-title">🕯️ 整体串联</h2>
+      <h2 class="syn-title"><AppIcon name="sparkle" :size="19" /> 整体串联</h2>
       <p class="syn-body">
         先看每个位置的含义，再找牌与牌之间的呼应：同花色多，说明能量集中在一个领域；大牌多，说明这件事对你意义重大；
         正逆位的分布，暗示顺流与阻力的位置。试着把它们串成一个故事——这正是塔罗解读的核心练习。
@@ -161,7 +167,7 @@ function again() {
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="note-area">
-      <h2 class="note-title">📝 此刻的感想</h2>
+      <h2 class="note-title"><AppIcon name="note" :size="19" /> 此刻的感想</h2>
       <textarea v-model="note" rows="3" class="note-input" placeholder="记录此刻的直觉与情绪（日记功能将在 M3 保存它们）" @input="noteSaved = false" />
       <div class="note-actions">
         <button class="note-save btn-ghost" :disabled="!note.trim() || noteSaved" @click="saveNote">
@@ -252,10 +258,6 @@ function again() {
 .practice-btn:active {
   transform: scale(0.98);
   border-color: var(--gold-deep);
-}
-
-.practice-icon {
-  line-height: 1;
 }
 
 .practice {
@@ -420,9 +422,19 @@ function again() {
   margin: 20px 0;
 }
 
-.syn-title {
+/* 区块标记图标是装饰，按金色纪律用中性色 */
+.syn-title,
+.note-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
   font-size: var(--fs-head);
   margin-bottom: 10px;
+}
+
+.syn-title :deep(.app-icon),
+.note-title :deep(.app-icon) {
+  color: var(--dim);
 }
 
 .syn-body {
@@ -438,11 +450,6 @@ function again() {
 
 .note-area {
   margin-top: var(--sp-1);
-}
-
-.note-title {
-  font-size: var(--fs-head);
-  margin-bottom: 10px;
 }
 
 .note-input {

@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import { safeGetItem, safeSetItem } from '../../lib/storage.js'
 import CardBack from '../../components/CardBack.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const HINT_KEY = 'tarot.shuffle-hint.v1'
 const VISUAL_COUNT = 20
@@ -154,7 +155,7 @@ function done() {
 
     <div v-if="showHint" class="hint" @click="dismissHint">
       <div class="hint-card card">
-        <span class="hint-icon">👋</span>
+        <span class="hint-icon"><AppIcon name="drag" :size="34" /></span>
         <p class="hint-title">拖动我，或摇一摇</p>
         <p class="hint-sub">点击任意处开始</p>
       </div>
@@ -241,17 +242,18 @@ function done() {
 }
 
 .hint-icon {
-  font-size: 2rem;
-  animation: wave 1.2s ease-in-out infinite;
+  align-self: center;
+  color: var(--gold-text);
+  animation: wave 1.4s ease-in-out infinite;
 }
 
 @keyframes wave {
   0%,
   100% {
-    transform: translateX(-8px) rotate(-8deg);
+    transform: translateX(-9px);
   }
   50% {
-    transform: translateX(8px) rotate(8deg);
+    transform: translateX(9px);
   }
 }
 

@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
+import AppIcon from '../../components/AppIcon.vue'
 
 const TOTAL = 78
 
@@ -52,7 +53,7 @@ function pickRest() {
         :class="{ filled: i < picked, active: i === picked }"
       >
         <span class="dest-label">{{ pos.label }}</span>
-        <span v-if="i < picked" class="dest-check">✓</span>
+        <AppIcon v-if="i < picked" class="dest-check" name="check" :size="12" />
       </div>
     </div>
 

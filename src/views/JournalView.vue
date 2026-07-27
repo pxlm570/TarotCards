@@ -1,12 +1,13 @@
 <script setup>
 // M3 交付：历史时间线、日记、Mirror 统计。此处为占位（空状态即引导原则）
+import AppIcon from '../components/AppIcon.vue'
 </script>
 
 <template>
   <div class="placeholder">
     <h1 class="title">记录</h1>
     <div class="empty">
-      <span class="icon">📔</span>
+      <span class="icon"><AppIcon name="journal" :size="34" /></span>
       <p class="empty-title">占卜历史与日记将在这里沉淀</p>
       <p class="hint">敬请期待 · 里程碑 M3</p>
       <router-link to="/" class="action btn-solid">完成你的第一次占卜</router-link>

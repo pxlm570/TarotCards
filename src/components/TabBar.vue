@@ -1,17 +1,19 @@
 <script setup>
+import AppIcon from './AppIcon.vue'
+
 const tabs = [
-  { path: '/', icon: '🔮', label: '占卜' },
-  { path: '/learn', icon: '🎓', label: '学习' },
-  { path: '/deck', icon: '🃏', label: '牌库' },
-  { path: '/journal', icon: '📔', label: '记录' },
-  { path: '/profile', icon: '⚙️', label: '我的' }
+  { path: '/', icon: 'reading', label: '占卜' },
+  { path: '/learn', icon: 'learn', label: '学习' },
+  { path: '/deck', icon: 'deck', label: '牌库' },
+  { path: '/journal', icon: 'journal', label: '记录' },
+  { path: '/profile', icon: 'profile', label: '我的' }
 ]
 </script>
 
 <template>
   <nav class="tabbar">
     <router-link v-for="tab in tabs" :key="tab.path" :to="tab.path" class="tab" active-class="active">
-      <span class="tab-icon">{{ tab.icon }}</span>
+      <AppIcon :name="tab.icon" :size="23" />
       <span class="tab-label">{{ tab.label }}</span>
     </router-link>
   </nav>
@@ -55,10 +57,6 @@ const tabs = [
   transform: scale(0.92);
 }
 
-.tab-icon {
-  font-size: 1.25rem;
-  line-height: 1;
-}
 
 /* 桌面宽屏：左侧竖栏 */
 @media (min-width: 1024px) {
