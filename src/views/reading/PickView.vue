@@ -35,6 +35,7 @@ function pick(index) {
 function pickRest() {
   if (store.phase !== 'picking') return
   store.pickAll()
+  success() // 完成时刻：与手动选满的手感一致
   toReveal()
 }
 </script>
