@@ -13,6 +13,7 @@ import ch07 from '../data/courses/chapter-07.json'
 import { currentDayKey } from '../lib/day-key.js'
 import { newCard, review, dueCards } from '../lib/spaced-repetition.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { useAchievementsStore } from './achievements.js'
 
 const KEY = 'tarot.learning.v1'
 
@@ -33,6 +34,7 @@ function initialState() {
     progress: {}, // { [chapterId]: { [lessonId]: true } }
     unlocked: ['ch-01'],
     reviewLog: {}, // { [dayKey]: count }
+    totalReviews: 0, // 累计复习次数（终身计数，成就里程碑用）
     sr: {} // { [cardId]: { ease, interval, due, reps } } 闪卡间隔重复状态
   }
 }
@@ -91,6 +93,7 @@ export const useLearningStore = defineStore('learning', {
         if (nextId && !this.unlocked.includes(nextId)) {
           this.unlocked = [...this.unlocked, nextId]
         }
+        useAchievementsStore().unlock(`ch-${String(idx + 1).padStart(2, '0')}-done`)
       }
       this._persist()
       return { chapterCompleted, chapterId }
@@ -100,6 +103,11 @@ export const useLearningStore = defineStore('learning', {
     recordReview() {
       const key = currentDayKey()
       this.reviewLog = { ...this.reviewLog, [key]: (this.reviewLog[key] || 0) + 1 }
+      this.totalReviews++
+      // 成就里程碑
+      const ach = useAchievementsStore()
+      if (this.totalReviews >= 10) ach.unlock('flash-10')
+      if (this.totalReviews >= 50) ach.unlock('flash-50')
       this._persist()
       return this.reviewLog[key]
     },
@@ -126,7 +134,7 @@ export const useLearningStore = defineStore('learning', {
     },
 
     _persist() {
-      safeSetItem(KEY, JSON.stringify({ progress: this.progress, unlocked: this.unlocked, reviewLog: this.reviewLog, sr: this.sr }))
+      safeSetItem(KEY, JSON.stringify({ progress: this.progress, unlocked: this.unlocked, reviewLog: this.reviewLog, totalReviews: this.totalReviews, sr: this.sr }))
     },
     _clear() {
       try {
