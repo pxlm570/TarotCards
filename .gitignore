@@ -34,3 +34,6 @@ CLAUDE.md
 
 # 韦特牌扫描原图（处理后删除，不提交）
 public/decks/rws/raw/
+
+# ZCode 运行期元数据
+.zcode/
