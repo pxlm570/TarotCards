@@ -13,7 +13,9 @@ const learning = useLearningStore()
 const chapterId = route.params.chapterId
 const chapterMeta = chapters.find((c) => c.id === chapterId)
 const CHAPTER_MODULES = import.meta.glob('../../data/courses/chapter-*.json', { eager: true })
-const chapterData = CHAPTER_MODULES[`../../data/courses/chapter-${chapterId}.json`]?.default
+// 文件名是 chapter-<两位序号>.json（如 chapter-01.json），序号来自 index 的 order
+const chapterFile = chapterMeta ? `../../data/courses/chapter-${String(chapterMeta.order).padStart(2, '0')}.json` : null
+const chapterData = chapterFile ? CHAPTER_MODULES[chapterFile]?.default : undefined
 
 const unlocked = computed(() => learning.unlocked.includes(chapterId))
 const chapterDone = computed(() => learning.isChapterComplete(chapterId))

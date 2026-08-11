@@ -15,10 +15,11 @@ const router = useRouter()
 const chapterId = route.params.chapterId
 const lessonId = route.params.lessonId
 
-// 按 id 加载章节数据（静态 import 映射）
+// 按 id 加载章节数据（文件名 chapter-<序号>.json，序号来自 index 的 order）
 const CHAPTER_MODULES = import.meta.glob('../../data/courses/chapter-*.json', { eager: true })
 const chapterMeta = chapters.find((c) => c.id === chapterId)
-const chapterData = CHAPTER_MODULES[`../../data/courses/chapter-${chapterId}.json`]?.default
+const chapterFile = chapterMeta ? `../../data/courses/chapter-${String(chapterMeta.order).padStart(2, '0')}.json` : null
+const chapterData = chapterFile ? CHAPTER_MODULES[chapterFile]?.default : undefined
 const lesson = chapterData?.lessons?.find((l) => l.id === lessonId)
 
 const title = computed(() => lesson?.title ?? '未找到课程')
