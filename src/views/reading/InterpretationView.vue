@@ -1,13 +1,16 @@
 <script setup>
 // 解读页：牌阵缩略全景导航 + 每位置折叠卡（一句话解读→展开全文）+ 领域短句兜底隐藏
 //        + 练习模式（静态，先写自己的理解再对比官方）+ 感想（M1 仅内存）+ 详情弹层。
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import cardsData from '../../data/cards.json'
 import { useReadingStore } from '../../stores/reading.js'
+import { useLearningStore } from '../../stores/learning.js'
+import { consumePracticePending } from '../../lib/practice.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import CardDetailSheet from '../../components/CardDetailSheet.vue'
 import { tap, success, toast } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
@@ -15,6 +18,20 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
 const router = useRouter()
 const store = useReadingStore()
 const { cardUrl } = useDeck()
+const learning = useLearningStore()
+
+// 实战课（M2）：若用户是从某节实战课跳进来的，看完解读即标记该课完成
+onMounted(() => {
+  const p = consumePracticePending()
+  if (p) {
+    try {
+      learning.completeLesson(p.chapterId, p.lessonId)
+      toast('实战完成，本课已打勾', 'success')
+    } catch {
+      /* 章节未解锁等异常：静默 */
+    }
+  }
+})
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -197,30 +214,7 @@ function again() {
       </div>
     </section>
 
-    <div v-if="detail" class="modal" @click.self="detail = null">
-      <div class="modal-card">
-        <img v-if="cardUrl(detail.cardId)" class="modal-img" :src="cardUrl(detail.cardId)" :class="{ reversed: detail.reversed }" alt="" />
-        <h3 class="modal-name">{{ detail.card.name }} {{ detail.card.nameEn }}</h3>
-        <p class="modal-meta">
-          {{ detail.card.arcana === 'major' ? '大阿尔克那' : '小阿尔克那' }}
-          <template v-if="detail.card.element"> · {{ detail.card.element }}</template>
-          <template v-if="detail.card.astro"> · {{ detail.card.astro }}</template>
-        </p>
-        <div class="modal-sec">
-          <h4>正位</h4>
-          <p>{{ detail.card.meaning.upright }}</p>
-        </div>
-        <div class="modal-sec">
-          <h4>逆位</h4>
-          <p>{{ detail.card.meaning.reversed }}</p>
-        </div>
-        <div v-if="detail.card.symbols" class="modal-sec">
-          <h4>牌面符号</h4>
-          <p>{{ detail.card.symbols }}</p>
-        </div>
-        <button class="modal-close btn-ghost btn-block" @click="detail = null">关闭</button>
-      </div>
-    </div>
+    <CardDetailSheet v-if="detail" :card="detail.card" :reversed="detail.reversed" @close="detail = null" />
   </div>
 </template>
 
@@ -501,89 +495,5 @@ function again() {
   flex: 1;
   padding: 13px;
   font-size: var(--fs-body);
-}
-
-.modal {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 30;
-  animation: fade-in var(--t-fast) var(--ease-out);
-}
-
-.modal-card {
-  width: 100%;
-  max-width: 480px;
-  max-height: 86vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 2px solid var(--line);
-  border-bottom: none;
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
-  padding: var(--sp-3) 20px calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
-  text-align: center;
-  box-shadow: var(--shadow-pop);
-  animation: sheet-up var(--t-fast) var(--ease-out);
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes sheet-up {
-  from {
-    transform: translateY(24px);
-  }
-}
-
-.modal-img {
-  width: 112px;
-  border-radius: var(--radius-img);
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-card);
-}
-
-.modal-name {
-  font-size: 1.125rem;
-  margin-bottom: 4px;
-}
-
-.modal-meta {
-  font-size: var(--fs-note);
-  color: var(--dim);
-  margin-bottom: var(--sp-2);
-}
-
-.modal-sec {
-  text-align: left;
-  margin-bottom: 14px;
-}
-
-.modal-sec h4 {
-  font-size: var(--fs-note);
-  font-weight: var(--w-strong);
-  color: var(--gold-text);
-  margin-bottom: 6px;
-}
-
-.modal-sec p {
-  font-size: var(--fs-body);
-  line-height: 1.9;
-}
-
-.modal-close {
-  margin-top: var(--sp-1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modal,
-  .modal-card {
-    animation: none;
-  }
 }
 </style>

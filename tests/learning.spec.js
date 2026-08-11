@@ -1,6 +1,6 @@
 // 学习进度/闯关解锁 store（M2 Task 3）：章节 lesson 完成 → 解锁下一章；
 // 今日复习计数（M3 今日小目标数据源）；持久化 tarot.learning.v1。
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useLearningStore } from '../src/stores/learning.js'
 import ch01 from '../src/data/courses/chapter-01.json'
@@ -19,7 +19,10 @@ describe('learning store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    vi.useRealTimers()
   })
+
+  afterEach(() => vi.useRealTimers())
 
   it('默认解锁 ch-01，无进度，今日复习 0', () => {
     const s = useLearningStore()
@@ -94,5 +97,30 @@ describe('learning store', () => {
     s.completeLesson('ch-01', L1[0])
     expect(s.chapterDoneCount('ch-01')).toBe(1)
     expect(s.totalDoneCount).toBe(1)
+  })
+
+  it('rateCard 更新 SR 状态并计入今日复习', () => {
+    const s = useLearningStore()
+    s.rateCard('major-00', 'good')
+    s.rateCard('major-00', 'again')
+    const st = s.sr['major-00']
+    expect(st.reps).toBe(0) // again 归零
+    expect(s.todayReviewCount).toBe(2)
+    // 已持久化
+    const saved = JSON.parse(localStorage.getItem('tarot.learning.v1'))
+    expect(saved.sr['major-00']).toBeTruthy()
+  })
+
+  it('dueFlashcards 只返回到期卡', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-25T12:00:00'))
+    const s = useLearningStore()
+    s.rateCard('major-00', 'good') // due +1 天
+    // 用 fake 时间构造一张到期卡
+    s.sr = { ...s.sr, 'major-01': { ease: 2.5, interval: 0, reps: 0, due: Date.now() - 1000 } }
+    const due = s.dueFlashcards().map((c) => c.id)
+    expect(due).toContain('major-01')
+    expect(due).not.toContain('major-00')
+    vi.useRealTimers()
   })
 })

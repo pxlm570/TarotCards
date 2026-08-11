@@ -11,6 +11,7 @@ import ch05 from '../data/courses/chapter-05.json'
 import ch06 from '../data/courses/chapter-06.json'
 import ch07 from '../data/courses/chapter-07.json'
 import { currentDayKey } from '../lib/day-key.js'
+import { newCard, review, dueCards } from '../lib/spaced-repetition.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 
 const KEY = 'tarot.learning.v1'
@@ -31,7 +32,8 @@ function initialState() {
   return {
     progress: {}, // { [chapterId]: { [lessonId]: true } }
     unlocked: ['ch-01'],
-    reviewLog: {} // { [dayKey]: count }
+    reviewLog: {}, // { [dayKey]: count }
+    sr: {} // { [cardId]: { ease, interval, due, reps } } 闪卡间隔重复状态
   }
 }
 
@@ -102,13 +104,29 @@ export const useLearningStore = defineStore('learning', {
       return this.reviewLog[key]
     },
 
+    // 给一张闪卡打分（三档），更新 SR 状态并计入今日复习
+    rateCard(cardId, rating) {
+      const prev = this.sr[cardId] ?? newCard()
+      this.sr = { ...this.sr, [cardId]: review(prev, rating) }
+      this.recordReview()
+      return this.sr[cardId]
+    },
+
+    // 已到期的闪卡（复习入口）
+    dueFlashcards() {
+      return dueCards(
+        Object.entries(this.sr).map(([id, st]) => ({ id, ...st })),
+        Date.now()
+      )
+    },
+
     reset() {
       Object.assign(this, initialState())
       this._clear()
     },
 
     _persist() {
-      safeSetItem(KEY, JSON.stringify({ progress: this.progress, unlocked: this.unlocked, reviewLog: this.reviewLog }))
+      safeSetItem(KEY, JSON.stringify({ progress: this.progress, unlocked: this.unlocked, reviewLog: this.reviewLog, sr: this.sr }))
     },
     _clear() {
       try {
