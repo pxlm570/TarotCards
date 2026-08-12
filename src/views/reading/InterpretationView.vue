@@ -14,6 +14,8 @@ import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import CardDetailSheet from '../../components/CardDetailSheet.vue'
+import AiPanel from '../../components/AiPanel.vue'
+import SelfReadPanel from '../../components/SelfReadPanel.vue'
 import { tap, success, toast } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
@@ -192,6 +194,7 @@ function again() {
       <button v-if="!practiceRevealed" class="practice-reveal btn-solid btn-block" @click="practiceRevealed = true">
         写好了，展开官方解读
       </button>
+      <SelfReadPanel v-if="practiceText.trim()" :practice-text="practiceText" />
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="cards">
@@ -242,7 +245,7 @@ function again() {
         先看每个位置的含义，再找牌与牌之间的呼应：同花色多，说明能量集中在一个领域；大牌多，说明这件事对你意义重大；
         正逆位的分布，暗示顺流与阻力的位置。试着把它们串成一个故事——这正是塔罗解读的核心练习。
       </p>
-      <p class="syn-hint">AI 深度解读将在里程碑 M4 加入，把这些牌为你串成完整叙事。</p>
+      <AiPanel />
     </section>
 
     <section v-show="!practiceMode || practiceRevealed" class="note-area">

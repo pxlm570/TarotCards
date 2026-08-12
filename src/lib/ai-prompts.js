@@ -1,0 +1,83 @@
+// AI 提示词模块（M4 Task 3）：人格模板 + 安全边界 + 六个场景的组装函数（全纯函数）。
+import { loadSettings } from './storage.js'
+
+const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业', general: '综合' }
+
+export const PERSONAS = {
+  gentle:
+    '你是「星语」，一位温柔治愈的塔罗师。语气像在深夜陪伴老朋友，多用「或许」「你可以试着」，先肯定再引导。',
+  direct:
+    '你是「星语」，一位直率犀利的塔罗师。不绕弯子，直接点出核心问题，但动机永远是为对方好。',
+  scholar:
+    '你是「星语」，一位学术严谨的塔罗师。解读引用牌面符号学、元素对应与历史渊源，条理清晰。'
+}
+
+export const SAFETY =
+  '安全边界：不替代医疗、法律、金融的专业意见；遇到自伤倾向的表达时，温和建议寻求专业心理帮助；不做「你一定会…」的绝对预言，措辞留有余地。'
+
+function persona() {
+  const p = loadSettings().persona
+  return PERSONAS[p] || PERSONAS.gentle
+}
+
+function orientationText(reversed) {
+  return reversed ? '逆位' : '正位'
+}
+
+export function buildReadingMessages({ question, domain, spread, drawn, cardsData }) {
+  const lines = drawn.map((d) => {
+    const card = cardsData.find((c) => c.id === d.cardId)
+    const pos = spread.positions.find((p) => p.key === d.positionKey)
+    if (!card) return ''
+    const meaning = d.reversed ? card.meaning.reversed : card.meaning.upright
+    return `【${pos?.label ?? ''}】${card.name}（${orientationText(d.reversed)}）：${meaning}`
+  })
+  const domainText = domain && DOMAIN_LABEL[domain] ? `提问领域：${DOMAIN_LABEL[domain]}。` : ''
+  const user = [
+    `我抽了「${spread.name}」牌阵，问题：${question || '（未填写，随心一问）'}。${domainText}`,
+    `牌面如下：\n${lines.join('\n')}`,
+    '请把这几张牌串联成一个整体叙事，结合我的问题，指出牌与牌之间的呼应（同花色、大小牌、正逆位分布），并给出一句可行动的建议。不要逐张复述牌意。'
+  ].join('\n\n')
+  return [
+    { role: 'system', content: `${persona()}\n${SAFETY}` },
+    { role: 'user', content: user }
+  ]
+}
+
+export function buildClarifyMessages(draft) {
+  return [
+    { role: 'system', content: `${persona()}\n${SAFETY}` },
+    {
+      role: 'user',
+      content: `用户提的问题是：「${draft}」。请判断：如果足够清晰具体，回复「清晰」两个字即可；如果模糊，用一两句话反问，帮它聚焦到「具体的处境、可行动的方向」，最多一个问题。`
+    }
+  ]
+}
+
+export function buildTutorMessages({ chapterTitle, content, userQuestion }) {
+  return [
+    { role: 'system', content: `${persona()}\n${SAFETY}\n你是塔罗学习助教，围绕「${chapterTitle}」这一章回答。` },
+    { role: 'user', content: `本章内容摘要：${content}\n\n学习者的提问：${userQuestion}` }
+  ]
+}
+
+export function buildSelfReadMessages({ drawn, cardsData, userInterpretation }) {
+  const names = drawn.map((d) => cardsData.find((c) => c.id === d.cardId)?.name ?? d.cardId).join('、')
+  return [
+    { role: 'system', content: `${persona()}\n${SAFETY}` },
+    {
+      role: 'user',
+      content: `我抽了这些牌：${names}。我自己的理解是：「${userInterpretation}」。请先肯定我理解中的亮点，再补充我可能遗漏的一到两个视角。`
+    }
+  ]
+}
+
+export function buildRecapMessages({ readingsSummary, mirrorStats }) {
+  return [
+    { role: 'system', content: `${persona()}\n${SAFETY}` },
+    {
+      role: 'user',
+      content: `这是我最近一段时间的占卜记录摘要：${readingsSummary}\n统计：${mirrorStats}\n请总结这段时间我反复面对的主题与潜在的模式，并给我一个温和的、向前看的建议。`
+    }
+  ]
+}

@@ -2,13 +2,17 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
+import { useSettingsStore } from '../../stores/settings.js'
 import AppIcon from '../../components/AppIcon.vue'
+import ClarifyDialog from '../../components/ClarifyDialog.vue'
 
 const router = useRouter()
 const store = useReadingStore()
+const settings = useSettingsStore()
 
 const question = ref(store.question)
 const domain = ref(store.domain)
+const clarifying = ref(false)
 
 const chips = [
   { value: 'love', label: '感情' },
@@ -23,10 +27,21 @@ function pick(value) {
   domain.value = value
 }
 
-function confirm() {
-  if (store.phase !== 'questioning') return // 防双击
-  store.submitQuestion(question.value.trim(), domain.value)
+function doSubmit(finalQuestion) {
+  clarifying.value = false
+  if (store.phase !== 'questioning') return
+  store.submitQuestion(finalQuestion ?? question.value.trim(), domain.value)
   router.replace('/reading/shuffle')
+}
+
+function confirm() {
+  if (store.phase !== 'questioning') return
+  // AI 已配置且问题非空 → 先澄清一轮（可跳过）
+  if (settings.hasAI && question.value.trim()) {
+    clarifying.value = true
+  } else {
+    doSubmit(question.value.trim())
+  }
 }
 </script>
 
@@ -60,6 +75,13 @@ function confirm() {
     </div>
 
     <button class="confirm btn-solid btn-block" @click="confirm">开始洗牌</button>
+
+    <ClarifyDialog
+      v-if="clarifying"
+      :question="question.value.trim()"
+      @done="doSubmit"
+      @skip="doSubmit(question.value.trim())"
+    />
   </div>
 </template>
 

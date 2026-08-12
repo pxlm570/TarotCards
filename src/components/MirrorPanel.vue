@@ -1,14 +1,21 @@
 <script setup>
-// Mirror 统计面板（M3 Task 5）：最常出现的牌、花色分布、正逆位比例、近 30 天频次、领域分布。
-import { computed } from 'vue'
+// Mirror 统计面板（M3 Task 5）+ 周期复盘（M4 Task 6，AI 流式 + 保存为日记）。
+import { ref, computed } from 'vue'
 import cardsData from '../data/cards.json'
 import { topCards, suitDist, orientationDist, domainDist, dailyFreq } from '../lib/mirror.js'
 import { useDeck } from '../lib/use-deck.js'
+import { useSettingsStore } from '../stores/settings.js'
+import { useJournalStore } from '../stores/journal.js'
+import { buildRecapMessages } from '../lib/ai-prompts.js'
+import { streamChat } from '../lib/ai-client.js'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   readings: { type: Array, required: true }
 })
 
+const settings = useSettingsStore()
+const journal = useJournalStore()
 const { cardUrl } = useDeck()
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -28,6 +35,44 @@ const orientPct = computed(() => {
 const suitMax = computed(() => Math.max(1, ...Object.values(suits.value)))
 const domainMax = computed(() => Math.max(1, ...Object.values(domains.value)))
 const freqMax = computed(() => Math.max(1, ...freq.value.map((f) => f.count)))
+
+// ---- 周期复盘 ----
+const recapping = ref(false)
+const streamingRecap = ref(false)
+const recapText = ref('')
+
+function startRecap() {
+  if (streamingRecap.value || recapText.value) return
+  const top = topCards(props.readings, 5)
+    .map((t) => `${cardById.get(t.cardId)?.name}×${t.count}`)
+    .join('、')
+  const readingsSummary = `近 ${props.readings.length} 次占卜，常出现的牌：${top}`
+  const s = suits.value
+  const mirrorStats = `花色：大${s.major} 权杖${s.wands} 圣杯${s.cups} 宝剑${s.swords} 星币${s.pentacles}；正位${orient.value.upright} 逆位${orient.value.reversed}`
+  streamRecap(buildRecapMessages({ readingsSummary, mirrorStats }))
+}
+
+async function streamRecap(messages) {
+  recapping.value = true
+  streamingRecap.value = true
+  recapText.value = ''
+  try {
+    for await (const d of streamChat({ messages })) recapText.value += d
+  } catch {
+    recapText.value = '复盘失败，请检查 AI 配置。'
+  } finally {
+    streamingRecap.value = false
+  }
+}
+
+function saveRecap() {
+  const text = recapText.value
+  if (!text) return
+  const id = (() => { try { return crypto.randomUUID() } catch { return 'r' + Date.now().toString(36) } })()
+  journal.addReading({ id, ts: Date.now(), spreadId: 'recap', question: '周期复盘', domain: null, cards: [], note: text, isDaily: false })
+  recapText.value = ''
+  recapping.value = false
+}
 </script>
 
 <template>
@@ -82,6 +127,19 @@ const freqMax = computed(() => Math.max(1, ...freq.value.map((f) => f.count)))
         <div class="bar"><div class="bar-fill" :style="{ width: (v / domainMax) * 100 + '%' }" /></div>
         <span class="bar-num">{{ v }}</span>
       </div>
+    </section>
+
+    <section v-if="settings.hasAI && !recapping" class="block card">
+      <h2 class="sec-title">周期复盘</h2>
+      <button class="btn-ghost btn-block" @click="startRecap">
+        <AppIcon name="sparkle" :size="16" />
+        AI 复盘这段时间的模式
+      </button>
+    </section>
+    <section v-if="recapping" class="block card">
+      <h2 class="sec-title">周期复盘</h2>
+      <p class="recap-text">{{ recapText }}<span v-if="streamingRecap" class="caret" /></p>
+      <button v-if="!streamingRecap && recapText" class="btn-solid btn-block" @click="saveRecap">保存为日记</button>
     </section>
   </div>
 
@@ -233,5 +291,27 @@ const freqMax = computed(() => Math.max(1, ...freq.value.map((f) => f.count)))
 .empty-hint {
   font-size: var(--fs-note);
   color: var(--dim);
+}
+
+.recap-text {
+  font-size: var(--fs-body);
+  line-height: 1.9;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+
+.caret {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  background: var(--gold);
+  animation: blink 0.8s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 </style>

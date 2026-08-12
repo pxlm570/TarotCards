@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import spreads from '../data/spreads.json'
 import cardsData from '../data/cards.json'
@@ -9,17 +9,20 @@ import { useReadingStore } from '../stores/reading.js'
 import { useJournalStore } from '../stores/journal.js'
 import { useLearningStore } from '../stores/learning.js'
 import { useProfileStore } from '../stores/profile.js'
+import { useSettingsStore } from '../stores/settings.js'
 import { PHASE_ROUTE } from '../router/index.js'
 import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
+import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { streamChat } from '../lib/ai-client.js'
 import XpBar from '../components/XpBar.vue'
-import { watch } from 'vue'
 
 const router = useRouter()
 const reading = useReadingStore()
 const journal = useJournalStore()
 const learning = useLearningStore()
 const profile = useProfileStore()
+const settings = useSettingsStore()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -62,6 +65,43 @@ const goalsAllDone = computed(() => todayDrawn.value && reviewDone.value)
 // 历史最佳连胜写回 profile（持久化）
 watch(maxStreak, (v) => profile.updateMaxStreak(v), { immediate: true })
 
+// ---- 人格化提醒（M4）：AI 每日一次问候，缓存当天；无 key / 失败回退静态问候 ----
+const GREETING_KEY = 'tarot.greeting.v1'
+const aiGreeting = ref('')
+
+onMounted(() => {
+  if (!settings.hasAI) return
+  try {
+    const cached = JSON.parse(safeGetItem(GREETING_KEY) || 'null')
+    if (cached && cached.day === currentDayKey()) {
+      aiGreeting.value = cached.text
+      return
+    }
+  } catch {
+    /* ignore */
+  }
+  // 生成问候（结合连胜状态）
+  const streakText = streak.value >= 7 ? `你已经连续${streak.value}天打卡了` : streak.value > 0 ? `今天是连胜第${streak.value}天` : '新的一天'
+  const msgs = [
+    { role: 'system', content: '你是「星语」，温柔治愈的塔罗师，只用一句话问候今天的占卜者，语气像深夜陪伴老朋友，不超过 30 个字。' },
+    { role: 'user', content: `今天的状态：${streakText}。请给我一句温暖的开场问候。` }
+  ]
+  let out = ''
+  ;(async () => {
+    try {
+      for await (const d of streamChat({ messages: msgs })) out += d
+      aiGreeting.value = out.trim()
+      safeSetItem(GREETING_KEY, JSON.stringify({ day: currentDayKey(), text: out.trim() }))
+    } catch {
+      /* 失败回退静态问候 */
+    }
+  })()
+})
+
+function greetingText() {
+  return aiGreeting.value || greeting.value
+}
+
 function startDaily() {
   if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
     return
@@ -90,7 +130,7 @@ function startReading(spreadId) {
     <header class="home-header">
       <div>
         <h1 class="title wordmark">星语<em>塔罗</em></h1>
-        <p class="greeting">{{ greeting }}</p>
+        <p class="greeting">{{ greetingText() }}</p>
       </div>
       <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">
         <AppIcon name="help" :size="22" />

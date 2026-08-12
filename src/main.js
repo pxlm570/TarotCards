@@ -8,6 +8,7 @@ import { createAppRouter } from './router/index.js'
 import { initTheme } from './lib/theme.js'
 import { applyMotionPreference } from './lib/feedback.js'
 import { setupUpdateReload } from './lib/sw-refresh.js'
+import { saveSettings } from './lib/storage.js'
 
 // index.html 头部内联脚本已定首帧主题（防白闪）；这里接管运行期切换与系统偏好联动
 initTheme()
@@ -15,8 +16,18 @@ initTheme()
 applyMotionPreference()
 
 // M4 配置分享链接契约：#import=<base64> 必须在挂载 hash 路由之前解析，
-// 否则会被路由当作非法路径。M1 仅拦截清除，M4 实装"解析并写入 settings"。
+// 否则会被路由当作非法路径。base64 用 Unicode 安全编码（btoa 直接处理中文会炸）。
 if (location.hash.startsWith('#import=')) {
+  try {
+    const raw = location.hash.slice('#import='.length)
+    const json = decodeURIComponent(escape(atob(raw)))
+    const cfg = JSON.parse(json)
+    if (cfg && (cfg.baseUrl || cfg.model || cfg.apiKey)) {
+      saveSettings({ baseUrl: cfg.baseUrl || '', model: cfg.model || '', apiKey: cfg.apiKey || '' })
+    }
+  } catch {
+    /* 无效链接：静默忽略 */
+  }
   history.replaceState(null, '', location.pathname + location.search)
 }
 

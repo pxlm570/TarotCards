@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import chapters from '../../data/courses/index.json'
 import { useLearningStore } from '../../stores/learning.js'
 import AppIcon from '../../components/AppIcon.vue'
+import TutorFab from '../../components/TutorFab.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,6 +32,19 @@ function openLesson(id) {
   if (!unlocked.value) return
   router.push(`/learn/${chapterId}/${id}`)
 }
+
+// 供学习助教：把本章图文正文拼成一段摘要
+const chapterContent = computed(() => {
+  const out = []
+  for (const l of lessons.value) {
+    if (l.type === 'article') {
+      for (const b of l.blocks) {
+        if (b.type === 'heading' || b.type === 'paragraph') out.push(b.text)
+      }
+    }
+  }
+  return out.join(' ').slice(0, 1200)
+})
 </script>
 
 <template>
@@ -79,6 +93,8 @@ function openLesson(id) {
         </button>
       </div>
     </template>
+
+    <TutorFab v-if="unlocked" :chapter-title="chapterMeta?.title ?? ''" :content="chapterContent" />
   </div>
 </template>
 

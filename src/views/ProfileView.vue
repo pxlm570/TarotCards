@@ -13,6 +13,10 @@ import XpBar from '../components/XpBar.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { toast, success } from '../lib/feedback.js'
 import { collectBackup, parseImport, applyImport } from '../lib/backup.js'
+import { useSettingsStore } from '../stores/settings.js'
+import { streamChat } from '../lib/ai-client.js'
+
+const settingsStore = useSettingsStore()
 
 const settings = ref(loadSettings())
 const profile = useProfileStore()
@@ -88,6 +92,43 @@ function doImport(mode) {
   toast('导入成功', 'success')
   setTimeout(() => location.reload(), 600)
 }
+
+// ---- AI 配置 ----
+const testing = ref(false)
+const aiInput = ref({ ...loadSettings() })
+
+function saveAI(patch) {
+  settingsStore.update(patch)
+  Object.assign(aiInput.value, patch)
+}
+
+async function testConnection() {
+  testing.value = true
+  try {
+    await streamChat({ messages: [{ role: 'user', content: 'ping' }], signal: new AbortController().signal }).next()
+    toast('连接正常', 'success')
+  } catch (e) {
+    toast(e.status === 401 ? '密钥无效' : e.status ? `失败（${e.status}）` : '连接失败，检查 baseUrl 或网络', 'info')
+  } finally {
+    testing.value = false
+  }
+}
+
+function genShareLink() {
+  const cfg = { baseUrl: aiInput.value.baseUrl, model: aiInput.value.model, apiKey: aiInput.value.apiKey }
+  if (!cfg.baseUrl || !cfg.apiKey) {
+    toast('请先填写 baseUrl 和 key 再生成')
+    return
+  }
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))
+  const link = `${location.origin}${import.meta.env.BASE_URL}#import=${b64}`
+  try {
+    navigator.clipboard.writeText(link)
+    toast('配置链接已复制，只发给信任的人', 'success')
+  } catch {
+    toast('复制失败，请手动复制')
+  }
+}
 </script>
 
 <template>
@@ -161,6 +202,40 @@ function doImport(mode) {
         <button class="btn-solid" style="flex:1" @click="doImport('merge')">合并</button>
         <button class="btn-ghost" style="flex:1" @click="doImport('overwrite')">全量覆盖</button>
       </div>
+    </section>
+
+    <section class="card block">
+      <h2 class="card-title">AI 解读</h2>
+      <p class="row-hint">baseUrl / 模型 / key 全部自填，任何 OpenAI 兼容端点都行。key 只存在本机浏览器。</p>
+      <label class="field">
+        <span class="field-label">baseUrl</span>
+        <input v-model="aiInput.baseUrl" class="field-input" type="url" placeholder="https://api.deepseek.com" @change="saveAI({ baseUrl: aiInput.baseUrl })" />
+      </label>
+      <label class="field">
+        <span class="field-label">模型</span>
+        <input v-model="aiInput.model" class="field-input" type="text" placeholder="deepseek-chat" @change="saveAI({ model: aiInput.model })" />
+      </label>
+      <label class="field">
+        <span class="field-label">API key</span>
+        <input v-model="aiInput.apiKey" class="field-input" type="password" placeholder="sk-…" @change="saveAI({ apiKey: aiInput.apiKey })" />
+      </label>
+      <div class="persona">
+        <button
+          v-for="p in [['gentle', '温柔治愈'], ['direct', '直率犀利'], ['scholar', '学术严谨']]"
+          :key="p[0]"
+          class="chip"
+          :class="{ on: aiInput.persona === p[0] }"
+          @click="saveAI({ persona: p[0] })"
+        >{{ p[1] }}</button>
+      </div>
+      <button class="btn-ghost btn-block" :class="{ 'is-loading': testing }" :disabled="testing" @click="testConnection">测试连接</button>
+      <button class="btn-ghost btn-block" style="margin-top:8px" @click="genShareLink">生成配置分享链接（复制）</button>
+    </section>
+
+    <section class="card block">
+      <h2 class="card-title">关于</h2>
+      <p class="row-hint">星语塔罗 · 私人塔罗空间。牌面为 Pamela Colman Smith 绘制的韦特塔罗（1909，公有领域）；牌意以《The Pictorial Key to the Tarot》为底本中文自撰。定位为塔罗文化学习与自我探索工具，不提供医疗、法律或财务建议。</p>
+      <router-link to="/welcome" class="btn-ghost btn-block" style="margin-top:10px">重看新手引导</router-link>
     </section>
   </div>
 </template>
@@ -303,5 +378,45 @@ function doImport(mode) {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.field-label {
+  display: block;
+  font-size: var(--fs-note);
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--gold-deep);
+}
+
+.persona {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.persona .chip {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.8125rem;
+  text-align: center;
 }
 </style>
