@@ -74,8 +74,8 @@ export function createAppRouter() {
 
     if (to.path.startsWith('/reading')) {
       const store = useReadingStore()
-      // breathe 携带 ?spread= 是动线入口，由页面自行初始化
-      if (to.name === 'breathe' && to.query.spread) return true
+      // breathe 携带 ?spread= / ?daily=1 是动线入口，由页面自行初始化
+      if (to.name === 'breathe' && (to.query.spread || to.query.daily)) return true
       // 其余步骤须有进行中的占卜（含 sessionStorage 恢复），否则回首页
       if (!store.hasActiveReading()) return '/'
       // 步骤与阶段不符（如刷新后直接改 URL）→ 重定向到当前阶段对应步骤
