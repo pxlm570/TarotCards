@@ -1,26 +1,29 @@
 <script setup>
-// 洗牌页：纯视觉仪式层（数据抽牌由 crypto 真随机负责，见 store.finishShuffle）。
-// 约 20 张视觉牌背交错飞散；拖动搅乱、切牌重排、摇一摇（iOS 权限挂在引导浮层点击里）。
+// 洗牌页：两种模式可选（#8）——(a)互动拖洗+摇一摇 / (b)仪式翻洗动画。切换键持久化偏好。
+// 数据抽牌仍由 crypto 真随机负责（store.finishShuffle），此处纯视觉仪式层。
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import { safeGetItem, safeSetItem } from '../../lib/storage.js'
-import { tap } from '../../lib/feedback.js'
+import { tap, success } from '../../lib/feedback.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
+const MODE_KEY = 'tarot.shuffle-mode.v1'
 const HINT_KEY = 'tarot.shuffle-hint.v1'
 const VISUAL_COUNT = 20
 
 const router = useRouter()
 const store = useReadingStore()
 
+const mode = ref(safeGetItem(MODE_KEY) === 'riffle' ? 'riffle' : 'interactive')
 const showHint = ref(!safeGetItem(HINT_KEY))
 const cards = ref([])
 let motionHandler = null
 let permissionOnce = null
 let lastShake = 0
 
+// ---- 模式 (a)：互动拖洗 ----
 function scatter() {
   cards.value = Array.from({ length: VISUAL_COUNT }, (_, i) => ({
     id: i,
@@ -31,11 +34,7 @@ function scatter() {
   }))
 }
 
-onMounted(() => {
-  scatter()
-  // 摇一摇每局都要生效（不能只在首次引导浮层里注册）：
-  // 无 requestPermission API（安卓/桌面）直接监听；iOS 且无浮层时，
-  // 把权限请求挂在本页第一个触摸手势上（已授权时 resolve 不弹窗）
+function setupShake() {
   if (typeof DeviceMotionEvent === 'undefined') return
   if (typeof DeviceMotionEvent.requestPermission !== 'function') {
     listenShake()
@@ -49,12 +48,11 @@ onMounted(() => {
     }
     window.addEventListener('pointerdown', permissionOnce)
   }
-})
+}
 
 function dismissHint() {
   showHint.value = false
   safeSetItem(HINT_KEY, '1')
-  // iOS 13+ devicemotion 权限必须由用户手势触发——挂在浮层点击里
   if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
     DeviceMotionEvent.requestPermission()
       .then((state) => {
@@ -81,15 +79,9 @@ function listenShake() {
   window.addEventListener('devicemotion', motionHandler)
 }
 
-onUnmounted(() => {
-  if (motionHandler) window.removeEventListener('devicemotion', motionHandler)
-  if (permissionOnce) window.removeEventListener('pointerdown', permissionOnce)
-})
-
 let dragging = false
 function onPointerMove(e) {
   if (!dragging && e.buttons !== 1 && e.pointerType !== 'touch') return
-  // 拖动搅乱：靠近指针的牌被推开
   const rect = e.currentTarget.getBoundingClientRect()
   const px = ((e.clientX - rect.left) / rect.width - 0.5) * 100
   const py = ((e.clientY - rect.top) / rect.height - 0.5) * 100
@@ -107,52 +99,97 @@ function onPointerMove(e) {
   }
 }
 
+// ---- 模式 (b)：仪式翻洗 ----
+const rifflePhase = ref(0) // 0 未开始 / 1 洗牌中 / 2 完成
+const riffleTimer = ref(null)
+
+function startRiffle() {
+  rifflePhase.value = 1
+  clearTimeout(riffleTimer.value)
+  riffleTimer.value = setTimeout(() => {
+    rifflePhase.value = 2
+    success()
+  }, 2200)
+}
+
+function switchMode(m) {
+  mode.value = m
+  safeSetItem(MODE_KEY, m)
+  if (m === 'riffle') {
+    rifflePhase.value = 0
+  } else {
+    scatter()
+  }
+  tap()
+}
+
 function cut() {
-  // 切牌：视觉上分三段重新聚拢再散开
   scatter()
   tap()
 }
 
 function done() {
-  if (store.phase !== 'shuffling') return // 防双击
+  if (store.phase !== 'shuffling') return
   store.finishShuffle()
-  // 代抽快照开启时 finishShuffle 内部已 pickAll，phase 直达 revealing
   router.replace(store.phase === 'revealing' ? '/reading/reveal' : '/reading/pick')
 }
+
+onMounted(() => {
+  scatter()
+  setupShake()
+})
+
+onUnmounted(() => {
+  if (motionHandler) window.removeEventListener('devicemotion', motionHandler)
+  if (permissionOnce) window.removeEventListener('pointerdown', permissionOnce)
+  clearTimeout(riffleTimer.value)
+})
 </script>
 
 <template>
   <div class="shuffle">
-    <p class="tip">拖动搅乱牌堆，或摇一摇手机</p>
+    <div class="mode-switch">
+      <button class="mode" :class="{ on: mode === 'interactive' }" @click="switchMode('interactive')">互动拖洗</button>
+      <button class="mode" :class="{ on: mode === 'riffle' }" @click="switchMode('riffle')">仪式翻洗</button>
+    </div>
 
-    <div
-      class="pool"
-      @pointerdown="dragging = true"
-      @pointerup="dragging = false"
-      @pointercancel="dragging = false"
-      @pointerleave="dragging = false"
-      @pointermove="onPointerMove"
-    >
+    <!-- 模式 a：互动拖洗 -->
+    <template v-if="mode === 'interactive'">
+      <p class="tip">拖动搅乱牌堆，或摇一摇手机</p>
       <div
-        v-for="c in cards"
-        :key="c.id"
-        class="fly"
-        :style="{
-          transform: `translate(${c.x}%, ${c.y}%) rotate(${c.r}deg)`,
-          transitionDelay: c.delay + 'ms'
-        }"
+        class="pool"
+        @pointerdown="dragging = true"
+        @pointerup="dragging = false"
+        @pointercancel="dragging = false"
+        @pointerleave="dragging = false"
+        @pointermove="onPointerMove"
       >
-        <!-- 位移（散牌）与缓浮（呼吸感）分两层：内层动画不会被外层内联 transform 覆盖 -->
-        <div class="bob" :style="{ animationDelay: (c.id % 8) * 0.45 + 's' }">
-          <CardBack class="back" />
+        <div v-for="c in cards" :key="c.id" class="fly"
+          :style="{ transform: `translate(${c.x}%, ${c.y}%) rotate(${c.r}deg)`, transitionDelay: c.delay + 'ms' }">
+          <div class="bob" :style="{ animationDelay: (c.id % 8) * 0.45 + 's' }">
+            <CardBack class="back" />
+          </div>
         </div>
       </div>
-    </div>
+      <div class="actions">
+        <button class="btn-ghost" @click="cut">切牌</button>
+        <button class="btn-solid" @click="done">洗好了</button>
+      </div>
+    </template>
 
-    <div class="actions">
-      <button class="btn-ghost" @click="cut">切牌</button>
-      <button class="btn-solid" @click="done">洗好了</button>
-    </div>
+    <!-- 模式 b：仪式翻洗 -->
+    <template v-else>
+      <p class="tip">{{ rifflePhase === 0 ? '点一下牌堆，开始翻洗' : rifflePhase === 1 ? '洗牌中…' : '洗好了' }}</p>
+      <div class="riffle" @click="rifflePhase === 0 && startRiffle()">
+        <div class="riffle-stack" :class="{ washing: rifflePhase === 1, done: rifflePhase === 2 }">
+          <div v-for="i in 12" :key="i" class="riffle-card"><CardBack class="back" /></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" @click="rifflePhase === 0 && startRiffle()">{{ rifflePhase === 0 ? '开始翻洗' : '再洗一次' }}</button>
+        <button class="btn-solid" :disabled="rifflePhase !== 2" @click="done">洗好了</button>
+      </div>
+    </template>
 
     <div v-if="showHint" class="hint" @click="dismissHint">
       <div class="hint-card card">
@@ -170,7 +207,32 @@ function done() {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 48px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+  padding: 40px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mode {
+  flex: 1;
+  padding: 9px;
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom-width: 3px;
+  color: var(--dim);
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  cursor: pointer;
+}
+
+.mode.on {
+  border-color: var(--gold-deep);
+  background: var(--gold-soft);
+  color: var(--gold-text);
 }
 
 .tip {
@@ -180,6 +242,7 @@ function done() {
   font-weight: var(--w-medium);
   letter-spacing: 0.2em;
   text-indent: 0.2em;
+  margin-bottom: 8px;
 }
 
 .pool {
@@ -199,7 +262,6 @@ function done() {
   pointer-events: none;
 }
 
-/* 仪式链 ③ 洗牌：牌堆缓浮（逐张错拍），静止时也是「活」的 */
 .bob {
   animation: bob 3.6s ease-in-out infinite;
 }
@@ -214,9 +276,68 @@ function done() {
   }
 }
 
+/* 仪式翻洗 */
+.riffle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 900px;
+}
+
+.riffle-stack {
+  position: relative;
+  width: 150px;
+  height: 260px;
+}
+
+.riffle-card {
+  position: absolute;
+  inset: 0;
+}
+
+.riffle-card .back {
+  width: 100%;
+  height: 100%;
+}
+
+.riffle-stack.washing .riffle-card {
+  animation: riffle 0.18s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+
+.riffle-stack.washing .riffle-card:nth-child(odd) {
+  animation-duration: 0.22s;
+  transform: rotate(-3deg);
+}
+.riffle-stack.washing .riffle-card:nth-child(even) {
+  animation-duration: 0.16s;
+  transform: rotate(3deg);
+}
+
+@keyframes riffle {
+  from {
+    transform: translateY(0) rotate(0);
+  }
+  to {
+    transform: translateY(-14px) rotate(var(--rot, 0));
+  }
+}
+
+.riffle-stack.done .riffle-card {
+  animation: settle 0.4s var(--ease-out) both;
+}
+
+@keyframes settle {
+  to {
+    transform: translateY(0) rotate(0);
+  }
+}
+
 .actions {
   display: flex;
   gap: 14px;
+  margin-top: 10px;
 }
 
 .actions > button {
@@ -273,7 +394,9 @@ function done() {
     transition: none;
   }
   .hint-icon,
-  .bob {
+  .bob,
+  .riffle-stack.washing .riffle-card,
+  .riffle-stack.done .riffle-card {
     animation: none;
   }
 }
