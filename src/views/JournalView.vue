@@ -5,10 +5,13 @@ import { useRouter } from 'vue-router'
 import { useJournalStore } from '../stores/journal.js'
 import { currentDayKey } from '../lib/day-key.js'
 import TimelineItem from '../components/TimelineItem.vue'
+import MirrorPanel from '../components/MirrorPanel.vue'
 import AppIcon from '../components/AppIcon.vue'
 
 const router = useRouter()
 const journal = useJournalStore()
+
+const tab = ref('timeline') // timeline | mirror
 
 const DOMAINS = [
   { key: 'all', label: '全部' },
@@ -51,8 +54,15 @@ const groups = computed(() => {
   <div class="journal">
     <header class="head">
       <h1 class="title">记录</h1>
+      <div class="tabs">
+        <button class="tab" :class="{ on: tab === 'timeline' }" @click="tab = 'timeline'">时间线</button>
+        <button class="tab" :class="{ on: tab === 'mirror' }" @click="tab = 'mirror'">镜子</button>
+      </div>
     </header>
 
+    <MirrorPanel v-if="tab === 'mirror'" :readings="journal.readings" />
+
+    <template v-else>
     <div class="search">
       <input v-model="keyword" class="search-input" type="search" placeholder="搜索问题关键词" />
     </div>
@@ -82,6 +92,7 @@ const groups = computed(() => {
       <p class="hint">{{ keyword ? '换个关键词试试' : '完成一次占卜后会自动记录' }}</p>
       <router-link to="/" class="action btn-solid">去抽一张牌</router-link>
     </div>
+    </template>
   </div>
 </template>
 
@@ -93,6 +104,32 @@ const groups = computed(() => {
 .title {
   font-size: var(--fs-title);
   margin-bottom: 14px;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-bottom-width: 3px;
+  color: var(--dim);
+  font-size: var(--fs-body);
+  font-weight: var(--w-strong);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab.on {
+  border-color: var(--gold-deep);
+  background: var(--gold-soft);
+  color: var(--gold-text);
 }
 
 .search {
