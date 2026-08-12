@@ -26,11 +26,12 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 
 ## 里程碑状态
 
-- ✅ **M1 占卜主流程**、**M1.5 视觉改版**、**M2 学习系统**、**M3 记录与留存** 已完成并上线。
-  - M2：7 章课程（`src/data/courses/`，lesson 类型 `article/flashcards/quiz/practice`）、闪卡 SR 引擎、学习/解锁 store、牌库百科（搜索/筛选/皮肤切换）、成就框架。
-  - M3：占卜自动落库（`tarot.journal.v1`：`readings[]`+`dailyDraws{}`，容量上限 500 淘汰最旧）、记录时间线/详情/筛选/删除、每日一抽+连胜（`lib/streak.js`+`lib/day-key.js` 凌晨 4 点分界）、XP 22 级（`lib/xp.js` + `stores/profile.js`，key `tarot.profile.v1` 含 `xp/birthday/maxStreak`）、Mirror 统计（`lib/mirror.js`）、本命牌（`lib/birth-cards.js` Mary Greer 法）、数据导出/导入（`lib/backup.js`）。
-  - 占卜动线落库衔接：`stores/reading.js` 新增 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载时自动存一条、感想保存落库、`?daily=1` 打卡。
-- ⏳ **M4 AI 增强 / M5 打磨扩展 未开始**。实施计划：`docs/plans/2026-07-25-tarot-m{4,5}-implementation-plan.md`（执行前必读）。
+- ✅ **M1~M5 全部完成并上线**（v1.0）：
+  - M1 占卜主流程、M1.5 视觉改版、M2 学习系统、M3 记录与留存、M4 AI 增强、M5 打磨扩展 均落地。
+  - M3：占卜自动落库 `tarot.journal.v1`（`readings[]`+`dailyDraws{}`，上限 500 淘汰最旧）、记录时间线/详情、每日一抽+连胜（`lib/streak.js`+`lib/day-key.js` 凌晨 4 点）、XP 22 级（`lib/xp.js`+`stores/profile.js`，key `tarot.profile.v1`）、Mirror（`lib/mirror.js`）、本命牌（`lib/birth-cards.js`）、数据导出导入（`lib/backup.js`）。
+  - M4：`stores/settings.js` + `lib/ai-client.js`（SSE 流式）+ `lib/ai-prompts.js`（6 场景+人格+安全边界）；解读页深度解读/追问/我先解、提问澄清、学习助教、Mirror 复盘、首页 AI 问候；`#import=` 配置分享链接已实装。
+  - M5：动效/字号开关、分享卡片（`lib/share-card.js`+`ShareCardModal`）、PWA 安装引导、仪式牌阵（new-moon/full-moon/birthday 数据已入 spreads.json，生日窗口置顶）、rws-sepia 皮肤管线验证（`scripts/gen-rws-sepia.py`）。
+- 占卜动线落库衔接：`stores/reading.js` 有 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载自动存一条、`?daily=1` 打卡。
 
 ## 架构与关键约定
 
@@ -75,5 +76,5 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 ## 必读文档
 
 - 产品设计定稿（信息架构/动线/内容/视觉 §8）：`docs/plans/2026-07-25-tarot-tool-design.md`
-- 待执行计划：`docs/plans/2026-07-25-tarot-m4-implementation-plan.md`、`...-m5-...`
 - 历史留档（只读，别当依据）：`docs/archive/README.md`
+- ⚠️ M3-M5 已按计划完成；计划文档（`docs/plans/2026-07-25-tarot-m{3,4,5}-implementation-plan.md`）中除「月相牌阵需权威日历核实」与「连胜里程碑牌背 UI」两项外均已落地（见仓库收尾时向用户提出的决策项）。
