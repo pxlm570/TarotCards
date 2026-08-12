@@ -1,11 +1,14 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+// 提问页（M4 后合并静心步骤）：页内呼吸提示（不再单独占屏）+ 问题输入 + AI 澄清。
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import spreads from '../../data/spreads.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useSettingsStore } from '../../stores/settings.js'
 import AppIcon from '../../components/AppIcon.vue'
 import ClarifyDialog from '../../components/ClarifyDialog.vue'
 
+const route = useRoute()
 const router = useRouter()
 const store = useReadingStore()
 const settings = useSettingsStore()
@@ -13,6 +16,7 @@ const settings = useSettingsStore()
 const question = ref(store.question)
 const domain = ref(store.domain)
 const clarifying = ref(false)
+const ready = ref(false)
 
 const chips = [
   { value: 'love', label: '感情' },
@@ -22,6 +26,30 @@ const chips = [
   { value: 'general', label: '综合' },
   { value: null, label: '随心抽' }
 ]
+
+// 挂载即初始化本局（替代原静心页）：选牌阵 → 直接进入提问阶段
+onMounted(() => {
+  const isDaily = route.query.daily === '1'
+  const spreadId = isDaily ? 'single' : route.query.spread
+  if (isDaily || spreadId) {
+    const sid = spreadId || 'single'
+    if (!spreads.some((s) => s.id === sid)) {
+      router.replace('/')
+      return
+    }
+    if (store.phase !== 'questioning' || store.spreadId !== sid || store.isDaily !== isDaily) {
+      store.reset()
+      store.isDaily = isDaily
+      store.selectSpread(sid)
+      store.beginBreathing()
+      store.toQuestion()
+    }
+  } else if (store.phase !== 'questioning') {
+    router.replace('/')
+    return
+  }
+  ready.value = true
+})
 
 function pick(value) {
   domain.value = value
@@ -46,7 +74,12 @@ function confirm() {
 </script>
 
 <template>
-  <div class="question">
+  <div v-if="ready" class="question">
+    <div class="breathe-hint">
+      <span class="ring"><span class="ring-inner" /></span>
+      <p class="breathe-text">先深呼吸，默念你的问题</p>
+    </div>
+
     <h1 class="title">你想问什么？</h1>
     <p class="subtitle">问题越具体，牌给的回应越清晰。也可以什么都不写，随心一抽。</p>
 
@@ -86,13 +119,57 @@ function confirm() {
 </template>
 
 <style scoped>
-/* 仪式链 ② 提问：「纸上落墨」——输入框是一张纸，不催促 */
+/* 仪式感：提问页顶部一段呼吸提示（不阻塞输入，不单独占屏） */
 .question {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 13vh 24px calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+  padding: 10vh 24px calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
+}
+
+.breathe-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: breathe 3.4s ease-in-out infinite;
+}
+
+.ring-inner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold-soft);
+  animation: breathe 3.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+.breathe-text {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
 }
 
 .title {
@@ -150,5 +227,12 @@ function confirm() {
 .confirm {
   margin-top: auto;
   padding: 15px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring,
+  .ring-inner {
+    animation: none;
+  }
 }
 </style>

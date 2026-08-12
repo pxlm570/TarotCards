@@ -27,7 +27,6 @@ function hasVisited() {
 
 // 占卜动线：阶段 ↔ 路由步骤映射（守卫据此把误入的步骤重定向到当前阶段）
 const PHASE_ROUTE = {
-  breathing: '/reading/breathe',
   questioning: '/reading/question',
   shuffling: '/reading/shuffle',
   picking: '/reading/pick',
@@ -47,7 +46,6 @@ const routes = [
   { path: '/journal', name: 'journal', component: () => import('../views/JournalView.vue') },
   { path: '/journal/:readingId', name: 'reading-detail', component: () => import('../views/ReadingDetailView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
-  { path: '/reading/breathe', name: 'breathe', component: () => import('../views/reading/BreatheView.vue') },
   { path: '/reading/question', name: 'question', component: () => import('../views/reading/QuestionView.vue') },
   { path: '/reading/shuffle', name: 'shuffle', component: () => import('../views/reading/ShuffleView.vue') },
   { path: '/reading/pick', name: 'pick', component: () => import('../views/reading/PickView.vue') },
@@ -74,8 +72,8 @@ export function createAppRouter() {
 
     if (to.path.startsWith('/reading')) {
       const store = useReadingStore()
-      // breathe 携带 ?spread= / ?daily=1 是动线入口，由页面自行初始化
-      if (to.name === 'breathe' && (to.query.spread || to.query.daily)) return true
+      // question 携带 ?spread= / ?daily=1 是动线入口，由页面自行初始化
+      if (to.name === 'question' && (to.query.spread || to.query.daily)) return true
       // 其余步骤须有进行中的占卜（含 sessionStorage 恢复），否则回首页
       if (!store.hasActiveReading()) return '/'
       // 步骤与阶段不符（如刷新后直接改 URL）→ 重定向到当前阶段对应步骤

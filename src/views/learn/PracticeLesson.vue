@@ -26,7 +26,7 @@ function go() {
   }
   setPracticePending(props.chapterId, props.lessonId)
   tap()
-  router.push({ path: '/reading/breathe', query: { spread: props.spreadId } })
+  router.push({ path: '/reading/question', query: { spread: props.spreadId } })
 }
 </script>
 

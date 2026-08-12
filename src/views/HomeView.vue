@@ -112,7 +112,7 @@ function startDaily() {
   }
   tap()
   reading.reset()
-  router.push({ path: '/reading/breathe', query: { daily: '1' } })
+  router.push({ path: '/reading/question', query: { daily: '1' } })
 }
 
 function startReading(spreadId) {
@@ -121,7 +121,7 @@ function startReading(spreadId) {
   }
   tap()
   reading.reset()
-  router.push({ path: '/reading/breathe', query: { spread: spreadId } })
+  router.push({ path: '/reading/question', query: { spread: spreadId } })
 }
 
 // M5：生日窗口（前 3 后 3 天）把生日牌阵置顶并加「今日限定」
