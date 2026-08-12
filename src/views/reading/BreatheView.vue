@@ -13,16 +13,19 @@ const store = useReadingStore()
 let timer = null
 
 onMounted(() => {
-  const spreadId = route.query.spread
-  if (spreadId) {
-    if (!spreads.some((s) => s.id === spreadId)) {
+  const isDaily = route.query.daily === '1'
+  const spreadId = isDaily ? 'single' : route.query.spread
+  if (isDaily || spreadId) {
+    const sid = spreadId || 'single'
+    if (!spreads.some((s) => s.id === sid)) {
       router.replace('/')
       return
     }
-    // 携带 spread 参数 = 开新局（重看/恢复场景不带参数，由守卫按 phase 分流）
-    if (store.phase !== 'breathing' || store.spreadId !== spreadId) {
+    // 携带 spread / daily 参数 = 开新局（重看/恢复场景不带参数，由守卫按 phase 分流）
+    if (store.phase !== 'breathing' || store.spreadId !== sid || store.isDaily !== isDaily) {
       store.reset()
-      store.selectSpread(spreadId)
+      store.isDaily = isDaily
+      store.selectSpread(sid)
       store.beginBreathing()
     }
   } else if (store.phase !== 'breathing') {

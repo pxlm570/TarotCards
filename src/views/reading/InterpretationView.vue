@@ -8,6 +8,7 @@ import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
 import { useJournalStore } from '../../stores/journal.js'
 import { consumePracticePending } from '../../lib/practice.js'
+import { currentDayKey } from '../../lib/day-key.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -40,18 +41,22 @@ function ensureSaved() {
     domain: store.domain,
     cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed })),
     note: note.value,
-    isDaily: false
+    isDaily: store.isDaily
   })
-  if (store.journalId) {
-    if (!journal.getById(store.journalId)) {
-      journal.addReading(build(store.journalId))
-    }
-    return
+  let id = store.journalId
+  if (!id) {
+    id = newId()
+    journal.addReading(build(id))
+    store.journalId = id
+    store.persistNow()
+  } else if (!journal.getById(id)) {
+    journal.addReading(build(id))
   }
-  const id = newId()
-  journal.addReading(build(id))
-  store.journalId = id
-  store.persistNow()
+  // 每日一抽：写入当天打卡（凌晨 4 点分界）
+  if (store.isDaily) {
+    const day = currentDayKey()
+    journal.markDaily(day, id)
+  }
 }
 
 // 实战课（M2）回来自动打勾 + 本局落库（M3）

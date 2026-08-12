@@ -2,13 +2,20 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import spreads from '../data/spreads.json'
+import cardsData from '../data/cards.json'
 import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
+import { useJournalStore } from '../stores/journal.js'
 import { PHASE_ROUTE } from '../router/index.js'
+import { currentDayKey } from '../lib/day-key.js'
+import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 
 const router = useRouter()
 const reading = useReadingStore()
+const journal = useJournalStore()
+
+const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 // Android 返回手势/误退出后，进行中的占卜仍在（store 或 sessionStorage）——
 // 给出「继续占卜」入口，否则 standalone PWA 下没有任何途径回到动线
@@ -28,6 +35,32 @@ const greeting = computed(() => {
   if (h < 19) return '傍晚好，回顾一下今天'
   return '晚上好，此刻适合占卜'
 })
+
+// ---- 每日一抽与连胜 ----
+const today = currentDayKey()
+const dailyReading = computed(() => journal.dailyReading(currentDayKey()))
+const dailyCardName = computed(() => {
+  const id = dailyReading.value?.cards?.[0]?.cardId
+  return id ? cardById.get(id)?.name ?? '' : ''
+})
+const streak = computed(() => calcStreak(Object.keys(journal.dailyDraws), currentDayKey()))
+const maxStreak = computed(() => calcMaxStreak(Object.keys(journal.dailyDraws)))
+const todayDrawn = computed(() => !!journal.dailyDraws[currentDayKey()])
+// 今日未打卡但昨日有连胜：提示「别让连胜断了」
+const pendingToday = computed(() => !todayDrawn.value && streak.value > 0)
+
+function startDaily() {
+  if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
+    return
+  }
+  if (dailyReading.value) {
+    router.push(`/journal/${dailyReading.value.id}`)
+    return
+  }
+  tap()
+  reading.reset()
+  router.push({ path: '/reading/breathe', query: { daily: '1' } })
+}
 
 function startReading(spreadId) {
   if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
@@ -61,6 +94,25 @@ function startReading(spreadId) {
         <AppIcon name="arrow" :size="16" />
       </span>
     </button>
+
+    <!-- 每日一抽大卡 -->
+    <button class="daily card-press" :class="{ done: dailyReading }" @click="startDaily">
+      <span class="daily-icon"><AppIcon name="star" :size="26" /></span>
+      <span class="daily-main">
+        <b>{{ dailyReading ? '今日已抽 · ' + dailyCardName : '每日一抽' }}</b>
+        <span class="daily-sub">{{ dailyReading ? '点击回看今天的指引' : '抽一张牌，与今天的自己对话' }}</span>
+      </span>
+      <span class="daily-streak">
+        <span class="streak-n">{{ streak }}</span>
+        <span class="streak-label">天连胜</span>
+      </span>
+    </button>
+    <p class="streak-meta">
+      <template v-if="dailyReading">今日已打卡</template>
+      <template v-else-if="pendingToday">今天还没打卡，别让连胜断了</template>
+      <template v-else>连续打卡，积累你的仪式感</template>
+      · 历史最佳 {{ maxStreak }} 天
+    </p>
 
     <section class="spreads">
       <h2 class="section-title">选择牌阵</h2>
@@ -155,6 +207,65 @@ function startReading(spreadId) {
   flex-shrink: 0;
 }
 
+/* 每日一抽 */
+.daily {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  margin-bottom: 8px;
+  background: var(--gold-soft);
+  border-color: var(--gold-deep);
+}
+
+.daily-icon {
+  color: var(--gold-text);
+}
+
+.daily-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.daily-main b {
+  font-size: var(--fs-head);
+  color: var(--gold-text);
+}
+
+.daily-sub {
+  font-size: var(--fs-note);
+  color: var(--dim);
+}
+
+.daily-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--gold-text);
+}
+
+.streak-n {
+  font-size: 1.5rem;
+  font-weight: var(--w-title);
+  line-height: 1;
+}
+
+.streak-label {
+  font-size: 0.6875rem;
+  color: var(--dim);
+}
+
+.streak-meta {
+  font-size: 0.75rem;
+  color: var(--dim);
+  text-align: center;
+  margin-bottom: var(--sp-3);
+}
+
 .section-title {
   font-size: var(--fs-head);
   margin-bottom: 14px;
@@ -169,7 +280,6 @@ function startReading(spreadId) {
   margin-bottom: 12px;
 }
 
-/* 牌阵张数：大号数字是牌阵卡的识别锚点（定稿保留） */
 .spread-n {
   min-width: 44px;
   text-align: center;
@@ -202,7 +312,6 @@ function startReading(spreadId) {
   font-weight: var(--w-title);
 }
 
-/* 位置串（过去 · 现在 · 未来）：大牌阵会超长，截断而不换行撑高卡片 */
 .spread-desc {
   max-width: 100%;
   font-size: var(--fs-note);
