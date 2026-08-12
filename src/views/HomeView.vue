@@ -16,6 +16,7 @@ import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { streamChat } from '../lib/ai-client.js'
+import { useDeck } from '../lib/use-deck.js'
 import XpBar from '../components/XpBar.vue'
 
 const router = useRouter()
@@ -24,6 +25,7 @@ const journal = useJournalStore()
 const learning = useLearningStore()
 const profile = useProfileStore()
 const settings = useSettingsStore()
+const { cardUrl } = useDeck()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -193,7 +195,13 @@ const orderedSpreads = computed(() => {
 
     <!-- 每日一抽大卡 -->
     <button class="daily card-press" :class="{ done: dailyReading }" @click="startDaily">
-      <span class="daily-icon"><AppIcon name="star" :size="26" /></span>
+      <img
+        v-if="dailyReading"
+        class="daily-thumb"
+        :src="cardUrl(dailyReading.cards?.[0]?.cardId)"
+        :alt="dailyCardName"
+      />
+      <span v-else class="daily-icon"><AppIcon name="star" :size="26" /></span>
       <span class="daily-main">
         <b>{{ dailyReading ? '今日已抽 · ' + dailyCardName : '每日一抽' }}</b>
         <span class="daily-sub">{{ dailyReading ? '点击回看今天的指引' : '抽一张牌，与今天的自己对话' }}</span>
@@ -319,6 +327,15 @@ const orderedSpreads = computed(() => {
 
 .daily-icon {
   color: var(--gold-text);
+}
+
+.daily-thumb {
+  width: 52px;
+  aspect-ratio: 300 / 527;
+  border-radius: var(--radius-img);
+  object-fit: cover;
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
 }
 
 .daily-main {

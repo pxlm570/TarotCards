@@ -174,19 +174,23 @@ function again() {
       <p v-if="store.question" class="question">「{{ store.question }}」</p>
     </header>
 
-    <div class="overview card">
-      <SpreadCanvas
-        v-if="store.spread"
-        :spread="store.spread"
-        :cards="store.drawn"
-        :revealed="null"
-        readonly
-        :portrait="store.cardCount > 5"
-        :card-width-pct="overviewPct"
-        @inspect="jumpTo"
-      />
-      <p class="overview-hint">点牌面跳到对应解读</p>
-    </div>
+    <div class="interp-layout">
+      <div class="col-side">
+        <div class="overview card">
+          <SpreadCanvas
+            v-if="store.spread"
+            :spread="store.spread"
+            :cards="store.drawn"
+            :revealed="null"
+            readonly
+            :portrait="store.cardCount > 5"
+            :card-width-pct="overviewPct"
+            @inspect="jumpTo"
+          />
+          <p class="overview-hint">点牌面跳到对应解读</p>
+        </div>
+      </div>
+      <div class="col-main">
 
     <div class="practice-bar">
       <button v-if="!practiceMode" class="practice-btn card-dashed" @click="startPractice">
@@ -274,6 +278,8 @@ function again() {
         生成分享卡片
       </button>
     </section>
+      </div><!-- /.col-main -->
+    </div><!-- /.interp-layout -->
 
     <ShareCardModal
       v-if="shareOpen && store.spread"
@@ -294,6 +300,24 @@ function again() {
 <style scoped>
 .interp {
   padding: var(--sp-4) 18px calc(40px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 桌面端：左牌阵（sticky）、右解读双栏 */
+@media (min-width: 1024px) {
+  .interp {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .interp-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .col-side {
+    position: sticky;
+    top: 24px;
+  }
 }
 
 .head {
