@@ -26,9 +26,11 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 
 ## 里程碑状态
 
-- ✅ **M1 占卜主流程**、**M1.5 视觉改版**、**M2 学习系统** 已完成并上线。M2 交付：7 章课程（`src/data/courses/`，lesson 类型 `article/flashcards/quiz/practice`）、闪卡 SR 引擎、学习/解锁 store、牌库百科（搜索/筛选/皮肤切换）、成就框架。
-- ⏳ **M3 记录与留存 / M4 AI 增强 / M5 打磨扩展 未开始**。实施计划：`docs/plans/2026-07-25-tarot-m{3,4,5}-implementation-plan.md`（执行前必读）。
-- 新增存储契约：`tarot.learning.v1`（进度/解锁/reviewLog/totalReviews/sr）、`tarot.achievements.v1`；`src/lib/day-key.js`（凌晨 4 点分界）供 M3 连胜复用。
+- ✅ **M1 占卜主流程**、**M1.5 视觉改版**、**M2 学习系统**、**M3 记录与留存** 已完成并上线。
+  - M2：7 章课程（`src/data/courses/`，lesson 类型 `article/flashcards/quiz/practice`）、闪卡 SR 引擎、学习/解锁 store、牌库百科（搜索/筛选/皮肤切换）、成就框架。
+  - M3：占卜自动落库（`tarot.journal.v1`：`readings[]`+`dailyDraws{}`，容量上限 500 淘汰最旧）、记录时间线/详情/筛选/删除、每日一抽+连胜（`lib/streak.js`+`lib/day-key.js` 凌晨 4 点分界）、XP 22 级（`lib/xp.js` + `stores/profile.js`，key `tarot.profile.v1` 含 `xp/birthday/maxStreak`）、Mirror 统计（`lib/mirror.js`）、本命牌（`lib/birth-cards.js` Mary Greer 法）、数据导出/导入（`lib/backup.js`）。
+  - 占卜动线落库衔接：`stores/reading.js` 新增 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载时自动存一条、感想保存落库、`?daily=1` 打卡。
+- ⏳ **M4 AI 增强 / M5 打磨扩展 未开始**。实施计划：`docs/plans/2026-07-25-tarot-m{4,5}-implementation-plan.md`（执行前必读）。
 
 ## 架构与关键约定
 
@@ -73,5 +75,5 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 ## 必读文档
 
 - 产品设计定稿（信息架构/动线/内容/视觉 §8）：`docs/plans/2026-07-25-tarot-tool-design.md`
-- 待执行计划：`docs/plans/2026-07-25-tarot-m3-implementation-plan.md`、`...-m4-...`、`...-m5-...`
+- 待执行计划：`docs/plans/2026-07-25-tarot-m4-implementation-plan.md`、`...-m5-...`
 - 历史留档（只读，别当依据）：`docs/archive/README.md`
