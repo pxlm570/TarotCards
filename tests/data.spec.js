@@ -73,9 +73,9 @@ describe('cards.json', () => {
 })
 
 describe('spreads.json', () => {
-  it('包含 5 个牌阵且 id 唯一', () => {
-    expect(spreads).toHaveLength(5)
-    expect(new Set(spreads.map((s) => s.id)).size).toBe(5)
+  it('包含 8 个牌阵且 id 唯一', () => {
+    expect(spreads).toHaveLength(8)
+    expect(new Set(spreads.map((s) => s.id)).size).toBe(8)
   })
 
   it('cardCount 与 positions 长度一致', () => {

@@ -123,6 +123,21 @@ function startReading(spreadId) {
   reading.reset()
   router.push({ path: '/reading/breathe', query: { spread: spreadId } })
 }
+
+// M5：生日窗口（前 3 后 3 天）把生日牌阵置顶并加「今日限定」
+const birthdayWindow = computed(() => {
+  if (!profile.birthday) return false
+  const [y, m, d] = profile.birthday.split('-').map(Number)
+  const bday = new Date(y, m - 1, d)
+  const today = new Date()
+  const diff = Math.round((today - bday) / 86400000)
+  return Math.abs(diff) <= 3
+})
+const orderedSpreads = computed(() => {
+  if (!birthdayWindow.value) return spreads
+  const b = spreads.find((s) => s.id === 'birthday')
+  return b ? [b, ...spreads.filter((s) => s.id !== 'birthday')] : spreads
+})
 </script>
 
 <template>
@@ -190,7 +205,7 @@ function startReading(spreadId) {
     <section class="spreads">
       <h2 class="section-title">选择牌阵</h2>
       <button
-        v-for="(spread, i) in spreads"
+        v-for="(spread, i) in orderedSpreads"
         :key="spread.id"
         class="spread-card card-press stagger-item"
         :style="{ '--i': i }"
@@ -205,7 +220,8 @@ function startReading(spreadId) {
           <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
         </span>
         <span class="badge" :class="{ 'badge-plain': spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
-        <span v-if="i === 0" class="recommend">推荐</span>
+        <span v-if="spread.id === 'birthday' && birthdayWindow" class="recommend">今日限定</span>
+        <span v-else-if="i === 0" class="recommend">推荐</span>
       </button>
     </section>
 

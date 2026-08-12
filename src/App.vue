@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import TabBar from './components/TabBar.vue'
 import AppToast from './components/AppToast.vue'
 import AchievementToast from './components/AchievementToast.vue'
+import AppInstallBanner from './components/AppInstallBanner.vue'
 
 const route = useRoute()
 // 占卜动线与引导页沉浸式展示，不显示 TabBar
@@ -23,6 +24,7 @@ const showTabBar = computed(() => !route.path.startsWith('/reading') && route.pa
     <TabBar v-if="showTabBar" />
     <AppToast />
     <AchievementToast />
+    <AppInstallBanner v-if="showTabBar" />
   </div>
 </template>
 

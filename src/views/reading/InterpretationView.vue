@@ -16,6 +16,7 @@ import AppIcon from '../../components/AppIcon.vue'
 import CardDetailSheet from '../../components/CardDetailSheet.vue'
 import AiPanel from '../../components/AiPanel.vue'
 import SelfReadPanel from '../../components/SelfReadPanel.vue'
+import ShareCardModal from '../../components/ShareCardModal.vue'
 import { tap, success, toast } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
@@ -119,6 +120,12 @@ const practiceRevealed = ref(false)
 const note = ref('')
 const noteSaved = ref(false)
 const detail = ref(null) // 详情弹层展示的 item
+const shareOpen = ref(false)
+
+const shareReading = computed(() => ({
+  question: store.question,
+  cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed }))
+}))
 
 function toggle(key) {
   const next = new Set(expanded.value)
@@ -262,7 +269,18 @@ function again() {
         </button>
         <button class="again btn-solid" @click="again">再来一次</button>
       </div>
+      <button class="share btn-ghost btn-block" @click="shareOpen = true">
+        <AppIcon name="sparkle" :size="15" />
+        生成分享卡片
+      </button>
     </section>
+
+    <ShareCardModal
+      v-if="shareOpen && store.spread"
+      :reading="shareReading"
+      :spread="store.spread"
+      @close="shareOpen = false"
+    />
 
     <CardDetailSheet v-if="detail" :card="detail.card" :reversed="detail.reversed" @close="detail = null" />
   </div>
@@ -545,5 +563,10 @@ function again() {
   flex: 1;
   padding: 13px;
   font-size: var(--fs-body);
+}
+
+.share {
+  margin-top: 12px;
+  color: var(--gold-text);
 }
 </style>

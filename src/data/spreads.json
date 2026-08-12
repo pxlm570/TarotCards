@@ -33,5 +33,27 @@
       { "key": "env", "label": "环境", "meaning": "周围人与环境的影响", "x": 88, "y": 60 },
       { "key": "hope", "label": "希望与恐惧", "meaning": "内心的期待与担忧", "x": 88, "y": 38 },
       { "key": "outcome", "label": "结果", "meaning": "综合能量的可能走向", "x": 88, "y": 16 }
+    ] },
+  { "id": "new-moon", "name": "新月播种", "difficulty": "新手", "cardCount": 4, "ritual": "new-moon",
+    "positions": [
+      { "key": "seed", "label": "播种", "meaning": "值得种下的新愿望", "x": 20, "y": 30 },
+      { "key": "nurture", "label": "滋养", "meaning": "滋养这颗种子的养分", "x": 80, "y": 30 },
+      { "key": "release", "label": "放手", "meaning": "需要放下的旧负担", "x": 20, "y": 72 },
+      { "key": "guide", "label": "指引", "meaning": "本月的方向", "x": 80, "y": 72 }
+    ] },
+  { "id": "full-moon", "name": "满月释放", "difficulty": "新手", "cardCount": 4, "ritual": "full-moon",
+    "positions": [
+      { "key": "manifest", "label": "显现", "meaning": "已显化的成果", "x": 20, "y": 30 },
+      { "key": "gratitude", "label": "感恩", "meaning": "值得感恩之处", "x": 80, "y": 30 },
+      { "key": "release", "label": "释放", "meaning": "可以放下的", "x": 20, "y": 72 },
+      { "key": "forward", "label": "前行", "meaning": "下一步的方向", "x": 80, "y": 72 }
+    ] },
+  { "id": "birthday", "name": "生日牌阵", "difficulty": "进阶", "cardCount": 5, "ritual": "birthday",
+    "positions": [
+      { "key": "past-year", "label": "过去一年", "meaning": "回顾过去一年", "x": 30, "y": 22 },
+      { "key": "lesson", "label": "课题", "meaning": "这一年反复出现的课题", "x": 70, "y": 22 },
+      { "key": "gift", "label": "礼物", "meaning": "你收获的礼物与能力", "x": 20, "y": 55 },
+      { "key": "theme", "label": "新一年主题", "meaning": "新一年的主题", "x": 80, "y": 55 },
+      { "key": "blessing", "label": "祝福", "meaning": "给新一年的祝福", "x": 50, "y": 82 }
     ] }
 ]

@@ -15,6 +15,7 @@ import { toast, success } from '../lib/feedback.js'
 import { collectBackup, parseImport, applyImport } from '../lib/backup.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { streamChat } from '../lib/ai-client.js'
+import { applyMotionPreference } from '../lib/feedback.js'
 
 const settingsStore = useSettingsStore()
 
@@ -32,6 +33,19 @@ function toggle(key) {
 function pickTheme(value) {
   setTheme(value)
   settings.value = loadSettings()
+}
+
+function toggleMotion() {
+  const next = !settings.value.reducedMotion
+  settings.value = saveSettings({ reducedMotion: next })
+  applyMotionPreference() // 立即生效
+}
+
+function pickFontSize(size) {
+  settings.value = saveSettings({ fontSize: size })
+  const el = document.documentElement
+  if (size === 'large') el.setAttribute('data-fontsize', 'large')
+  else el.removeAttribute('data-fontsize')
 }
 
 // ---- 本命牌 ----
@@ -151,6 +165,22 @@ function genShareLink() {
         >
           {{ THEME_LABEL[value] }}
         </button>
+      </div>
+      <label class="row">
+        <div>
+          <span class="row-name">减弱动效</span>
+          <p class="row-hint">减少缩放与闪烁，更适合夜间或敏感用户</p>
+        </div>
+        <input type="checkbox" :checked="settings.reducedMotion" @change="toggleMotion" />
+      </label>
+      <div class="chips" style="margin-top: 10px">
+        <button
+          v-for="s in [['standard', '标准'], ['large', '睡前大字']]"
+          :key="s[0]"
+          class="chip"
+          :class="{ on: settings.fontSize === s[0] }"
+          @click="pickFontSize(s[0])"
+        >{{ s[1] }}</button>
       </div>
     </section>
 

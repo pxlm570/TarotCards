@@ -9,6 +9,11 @@ html {
   background: var(--bg);
 }
 
+/* 睡前大字档（M5）：放大根字号，所有 rem 令牌随之放大 */
+html[data-fontsize="large"] {
+  font-size: 18px;
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
