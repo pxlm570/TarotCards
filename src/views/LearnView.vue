@@ -50,6 +50,12 @@ function openChapter(id) {
       </span>
     </button>
 
+    <!-- 每日挑战：低调可选，不做也不影响 -->
+    <button class="challenge-link" @click="router.push('/learn/challenge')">
+      <AppIcon name="sparkle" :size="15" />
+      每日挑战 · 5 题（+10 XP）
+    </button>
+
     <section class="chapters">
       <h2 class="section-title">章节</h2>
       <button
@@ -168,6 +174,24 @@ function openChapter(id) {
   gap: 4px;
   font-size: var(--fs-note);
   font-weight: var(--w-strong);
+}
+
+.challenge-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  margin-bottom: var(--sp-3);
+  background: none;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-card);
+  color: var(--dim);
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .section-title {

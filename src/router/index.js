@@ -39,6 +39,7 @@ const routes = [
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
   { path: '/learn', name: 'learn', component: () => import('../views/LearnView.vue') },
   { path: '/learn/review', name: 'learn-review', component: () => import('../views/learn/ReviewView.vue') },
+  { path: '/learn/challenge', name: 'learn-challenge', component: () => import('../views/learn/DailyChallengeView.vue') },
   { path: '/learn/:chapterId', name: 'chapter', component: () => import('../views/learn/ChapterView.vue') },
   { path: '/learn/:chapterId/:lessonId', name: 'lesson', component: () => import('../views/learn/LessonView.vue') },
   { path: '/deck', name: 'deck', component: () => import('../views/DeckView.vue') },

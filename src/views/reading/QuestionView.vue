@@ -71,10 +71,20 @@ function confirm() {
     doSubmit(question.value.trim())
   }
 }
+
+function cancel() {
+  store.reset()
+  router.replace('/')
+}
 </script>
 
 <template>
   <div v-if="ready" class="question">
+    <button class="back btn-text" @click="cancel">
+      <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
+      取消这局
+    </button>
+
     <div class="breathe-hint">
       <span class="ring"><span class="ring-inner" /></span>
       <p class="breathe-text">先深呼吸，默念你的问题</p>
@@ -126,6 +136,15 @@ function confirm() {
   padding: 10vh 24px calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding-left: 0;
+  color: var(--dim);
 }
 
 .breathe-hint {

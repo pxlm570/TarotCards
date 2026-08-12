@@ -283,6 +283,11 @@ function again() {
     />
 
     <CardDetailSheet v-if="detail" :card="detail.card" :reversed="detail.reversed" @close="detail = null" />
+
+    <!-- 回到顶部（大牌阵阅读后快捷跳回全景） -->
+    <button class="to-top" aria-label="回到顶部" @click="window.scrollTo({ top: 0, behavior: 'smooth' })">
+      <AppIcon name="chevron" :size="18" style="transform: rotate(180deg)" />
+    </button>
   </div>
 </template>
 
@@ -568,5 +573,23 @@ function again() {
 .share {
   margin-top: 12px;
   color: var(--gold-text);
+}
+
+.to-top {
+  position: fixed;
+  right: 16px;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gold);
+  color: var(--on-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+  z-index: 15;
 }
 </style>

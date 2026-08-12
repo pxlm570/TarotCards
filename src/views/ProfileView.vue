@@ -143,6 +143,17 @@ function genShareLink() {
     toast('复制失败，请手动复制')
   }
 }
+
+// 清空所有本地数据（危险，二次确认）
+function clearAll() {
+  if (!window.confirm('确定清空所有数据吗？记录、进度、设置、成就都将被删除，且不可恢复。建议先导出备份。')) return
+  if (!window.confirm('再次确认：真的要清空全部数据吗？')) return
+  for (const k of Object.keys(localStorage)) {
+    if (k.startsWith('tarot.')) localStorage.removeItem(k)
+  }
+  toast('已清空')
+  setTimeout(() => location.reload(), 600)
+}
 </script>
 
 <template>
@@ -232,6 +243,10 @@ function genShareLink() {
         <button class="btn-solid" style="flex:1" @click="doImport('merge')">合并</button>
         <button class="btn-ghost" style="flex:1" @click="doImport('overwrite')">全量覆盖</button>
       </div>
+      <button class="clear-data btn-text" @click="clearAll">
+        <AppIcon name="journal" :size="14" />
+        清空所有数据（危险）
+      </button>
     </section>
 
     <section class="card block">
@@ -408,6 +423,16 @@ function genShareLink() {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+}
+
+.clear-data {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px auto 0;
+  color: var(--dim);
+  font-size: 0.75rem;
+  padding: 8px;
 }
 
 .field {
