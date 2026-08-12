@@ -7,13 +7,19 @@ import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
 import { useJournalStore } from '../stores/journal.js'
+import { useLearningStore } from '../stores/learning.js'
+import { useProfileStore } from '../stores/profile.js'
 import { PHASE_ROUTE } from '../router/index.js'
 import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
+import XpBar from '../components/XpBar.vue'
+import { watch } from 'vue'
 
 const router = useRouter()
 const reading = useReadingStore()
 const journal = useJournalStore()
+const learning = useLearningStore()
+const profile = useProfileStore()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -48,6 +54,13 @@ const maxStreak = computed(() => calcMaxStreak(Object.keys(journal.dailyDraws)))
 const todayDrawn = computed(() => !!journal.dailyDraws[currentDayKey()])
 // 今日未打卡但昨日有连胜：提示「别让连胜断了」
 const pendingToday = computed(() => !todayDrawn.value && streak.value > 0)
+
+// ---- 今日小目标：抽 1 张 + 复习 3 张闪卡 ----
+const reviewDone = computed(() => learning.todayReviewCount >= 3)
+const goalsAllDone = computed(() => todayDrawn.value && reviewDone.value)
+
+// 历史最佳连胜写回 profile（持久化）
+watch(maxStreak, (v) => profile.updateMaxStreak(v), { immediate: true })
 
 function startDaily() {
   if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
@@ -95,6 +108,26 @@ function startReading(spreadId) {
       </span>
     </button>
 
+    <section class="xp-block card">
+      <XpBar show-next />
+    </section>
+
+    <!-- 今日小目标 -->
+    <section class="goals card">
+      <p class="goals-title">
+        <template v-if="goalsAllDone">今日已圆满</template>
+        <template v-else>今日小目标</template>
+      </p>
+      <div class="goal">
+        <span class="goal-dot" :class="{ done: todayDrawn }"><AppIcon :name="todayDrawn ? 'check' : 'star'" :size="14" /></span>
+        <span class="goal-text">抽 1 张牌</span>
+      </div>
+      <div class="goal">
+        <span class="goal-dot" :class="{ done: reviewDone }"><AppIcon :name="reviewDone ? 'check' : 'deck'" :size="14" /></span>
+        <span class="goal-text">复习 {{ learning.todayReviewCount }}/3 张闪卡</span>
+      </div>
+    </section>
+
     <!-- 每日一抽大卡 -->
     <button class="daily card-press" :class="{ done: dailyReading }" @click="startDaily">
       <span class="daily-icon"><AppIcon name="star" :size="26" /></span>
@@ -132,6 +165,7 @@ function startReading(spreadId) {
           <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
         </span>
         <span class="badge" :class="{ 'badge-plain': spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
+        <span v-if="i === 0" class="recommend">推荐</span>
       </button>
     </section>
 
@@ -264,6 +298,61 @@ function startReading(spreadId) {
   color: var(--dim);
   text-align: center;
   margin-bottom: var(--sp-3);
+}
+
+.xp-block {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.goals {
+  padding: 14px 16px;
+  margin-bottom: var(--sp-3);
+}
+
+.goals-title {
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  color: var(--gold-text);
+  margin-bottom: 8px;
+}
+
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.goal-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sunk);
+  color: var(--dim);
+}
+
+.goal-dot.done {
+  background: var(--gold-soft);
+  color: var(--gold-text);
+}
+
+.goal-text {
+  font-size: var(--fs-body);
+  color: var(--dim);
+}
+
+.recommend {
+  font-size: 0.625rem;
+  font-weight: var(--w-strong);
+  color: var(--on-gold);
+  background: var(--gold);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  flex-shrink: 0;
 }
 
 .section-title {
