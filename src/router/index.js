@@ -45,6 +45,7 @@ const routes = [
   { path: '/deck', name: 'deck', component: () => import('../views/DeckView.vue') },
   { path: '/deck/:cardId', name: 'card', component: () => import('../views/CardDetailView.vue') },
   { path: '/journal', name: 'journal', component: () => import('../views/JournalView.vue') },
+  { path: '/journal/:readingId', name: 'reading-detail', component: () => import('../views/ReadingDetailView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
   { path: '/reading/breathe', name: 'breathe', component: () => import('../views/reading/BreatheView.vue') },
   { path: '/reading/question', name: 'question', component: () => import('../views/reading/QuestionView.vue') },
