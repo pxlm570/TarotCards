@@ -1,8 +1,10 @@
 <script setup>
-// 随堂测验：逐题单选，选完即显示解析；全部作答后判分，≥80% 通过（可重考）。
+// 随堂测验（#6 改版）：闯关式逐题作答，四题型（单选/多选/看图认牌/正逆判断），
+// 答错可无限重试当前题（答对才推进）——趣味向、无压力，完成即打勾。
 import { ref, computed } from 'vue'
 import { useLearningStore } from '../../stores/learning.js'
 import { useProfileStore } from '../../stores/profile.js'
+import { useDeck } from '../../lib/use-deck.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const props = defineProps({
@@ -13,70 +15,124 @@ const props = defineProps({
 
 const learning = useLearningStore()
 const profile = useProfileStore()
-const answers = ref({})
-const submitted = ref(false)
-const passed = ref(false)
+const { cardUrl } = useDeck()
 
-const allAnswered = computed(() => Object.keys(answers.value).length === props.questions.length)
+const index = ref(0)
+const multiSel = ref([]) // 多选已勾下标
+const wrongMsg = ref('') // 答错的解析提示
+const done = ref(false)
 
-const correct = computed(() => props.questions.reduce((n, q, i) => n + (answers.value[i] === q.answer ? 1 : 0), 0))
-const percent = computed(() => (props.questions.length ? Math.round((correct.value / props.questions.length) * 100) : 0))
+const current = computed(() => props.questions[index.value])
+const type = computed(() => current.value?.type ?? 'single')
 
-function pick(qIndex, optIndex) {
-  if (submitted.value) return
-  answers.value = { ...answers.value, [qIndex]: optIndex }
-  tap()
+function isCorrect() {
+  const q = current.value
+  if (q.type === 'multi') {
+    const ans = Array.isArray(q.answer) ? q.answer : []
+    return multiSel.value.length === ans.length && ans.every((a) => multiSel.value.includes(a))
+  }
+  return true // single/image/orientation 由选中即时判
 }
 
-function submit() {
-  if (!allAnswered.value) return
-  submitted.value = true
-  passed.value = percent.value >= 80
-  if (passed.value) {
-    learning.completeLesson(props.chapterId, props.lessonId)
-    profile.addXp(30) // 通过一章测验
-    success()
+// 单选类：点击即判
+function pick(oi) {
+  const q = current.value
+  if (q.type === 'multi') {
+    multiSel.value = multiSel.value.includes(oi)
+      ? multiSel.value.filter((x) => x !== oi)
+      : [...multiSel.value, oi]
+    return
+  }
+  tap()
+  if (oi === q.answer) {
+    advance()
+  } else {
+    wrongMsg.value = q.explain
   }
 }
 
-function retake() {
-  answers.value = {}
-  submitted.value = false
-  passed.value = false
+function confirmMulti() {
+  if (multiSel.value.length === 0) return
+  if (isCorrect()) advance()
+  else wrongMsg.value = current.value.explain
 }
+
+function advance() {
+  success()
+  if (index.value + 1 >= props.questions.length) {
+    finish()
+  } else {
+    index.value++
+    multiSel.value = []
+    wrongMsg.value = ''
+  }
+}
+
+function finish() {
+  done.value = true
+  learning.completeLesson(props.chapterId, props.lessonId)
+  profile.addXp(30) // 通过一章测验
+}
+
+function retry() {
+  wrongMsg.value = ''
+  multiSel.value = []
+  if (current.value?.type === 'multi') return
+  // 单选类重试：重置（因每次点选已即时判，重试即再点）
+  wrongMsg.value = ''
+}
+
+const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lessonId])
 </script>
 
 <template>
   <div class="quiz">
-    <div v-for="(q, qi) in questions" :key="qi" class="q card">
-      <p class="q-text">{{ qi + 1 }}. {{ q.q }}</p>
+    <div class="bar">
+      <span class="bar-num">第 {{ index + 1 }} / {{ questions.length }} 题</span>
+      <div class="track"><div class="fill" :style="{ width: (index / questions.length) * 100 + '%' }" /></div>
+    </div>
+
+    <div v-if="done" class="done card">
+      <p class="done-title">本课测验完成</p>
+      <p class="done-hint">答错的题已经弄懂，随时可以再回来玩。</p>
+    </div>
+
+    <div v-else-if="current" class="q card" :key="index">
+      <!-- 看图认牌 -->
+      <template v-if="type === 'image'">
+        <p class="q-text">这张牌是哪张？</p>
+        <div class="q-img-wrap">
+          <img v-if="cardUrl(current.cardId)" class="q-img" :src="cardUrl(current.cardId)" alt="" />
+        </div>
+      </template>
+      <!-- 正逆判断 -->
+      <template v-else-if="type === 'orientation'">
+        <p class="q-text">{{ current.q }}</p>
+        <div class="q-img-wrap">
+          <img v-if="cardUrl(current.cardId)" class="q-img" :src="cardUrl(current.cardId)" alt="" />
+        </div>
+      </template>
+      <p v-else class="q-text">{{ current.q }}</p>
+
       <div class="opts">
         <button
-          v-for="(opt, oi) in q.options"
+          v-for="(opt, oi) in current.options"
           :key="oi"
           class="opt"
-          :class="{
-            sel: answers[qi] === oi,
-            right: submitted && oi === q.answer,
-            wrong: submitted && answers[qi] === oi && oi !== q.answer
-          }"
-          @click="pick(qi, oi)"
+          :class="{ sel: type === 'multi' && multiSel.includes(oi), right: wrongMsg && oi === current.answer && type !== 'multi' }"
+          @click="pick(oi)"
         >
           {{ opt }}
         </button>
       </div>
-      <p v-if="submitted && answers[qi] !== undefined" class="explain">解析：{{ q.explain }}</p>
-    </div>
 
-    <div class="foot">
-      <button v-if="!submitted" class="btn-solid btn-block" :disabled="!allAnswered" @click="submit">
-        查看结果
-      </button>
-      <div v-else class="result card" :class="{ pass: passed }">
-        <p class="score">{{ correct }} / {{ questions.length }} · {{ percent }}%</p>
-        <p class="verdict">{{ passed ? '通过！' : '还差一点，再试一次' }}</p>
-        <button v-if="!passed" class="btn-ghost btn-block" @click="retake">重新作答</button>
+      <p v-if="wrongMsg" class="explain">提示：{{ wrongMsg }}</p>
+
+      <div v-if="type === 'multi'" class="multi-actions">
+        <button class="btn-solid btn-block" :disabled="multiSel.length === 0" @click="confirmMulti">确认</button>
       </div>
+
+      <button v-if="wrongMsg && type !== 'multi'" class="btn-ghost btn-block retry" @click="retry">再试一次</button>
     </div>
   </div>
 </template>
@@ -88,6 +144,32 @@ function retake() {
   gap: 14px;
 }
 
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-num {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+.track {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width var(--t-mid) var(--ease-out);
+}
+
 .q {
   padding: var(--sp-2);
 }
@@ -97,6 +179,20 @@ function retake() {
   font-weight: var(--w-strong);
   line-height: 1.7;
   margin-bottom: 12px;
+}
+
+.q-img-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.q-img {
+  width: 130px;
+  aspect-ratio: 300 / 527;
+  border-radius: var(--radius-img);
+  object-fit: cover;
+  box-shadow: var(--shadow-card);
 }
 
 .opts {
@@ -134,35 +230,35 @@ function retake() {
   background: var(--gold-soft);
 }
 
-.opt.wrong {
-  border-color: var(--coral);
-  background: rgba(240, 101, 90, 0.12);
-}
-
 .explain {
   margin-top: 10px;
   font-size: var(--fs-note);
-  color: var(--dim);
+  color: var(--coral);
   line-height: 1.7;
 }
 
-.foot {
-  margin-top: 6px;
+.multi-actions {
+  margin-top: 12px;
 }
 
-.result {
-  padding: var(--sp-2);
+.retry {
+  margin-top: 12px;
+}
+
+.done {
+  padding: var(--sp-3);
   text-align: center;
 }
 
-.score {
+.done-title {
   font-size: var(--fs-head);
   font-weight: var(--w-title);
+  color: var(--gold-text);
+  margin-bottom: 6px;
 }
 
-.verdict {
+.done-hint {
   font-size: var(--fs-note);
   color: var(--dim);
-  margin: 6px 0 12px;
 }
 </style>

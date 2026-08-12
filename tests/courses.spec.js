@@ -90,13 +90,25 @@ describe('章节结构', () => {
         }
       })
 
-      it('quiz 每题选项与 answer 下标合法', () => {
+      it('quiz 每题选项与 answer 下标合法（含 multi/image/orientation）', () => {
         for (const l of lessons.filter((x) => x.type === 'quiz')) {
           expect(Array.isArray(l.questions) && l.questions.length > 0, `${l.id} questions`).toBe(true)
           for (const q of l.questions) {
             expect(q.q.trim(), `${l.id} q`).toBeTruthy()
             expect(Array.isArray(q.options) && q.options.length >= 2, `${l.id} options`).toBe(true)
-            expect(Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length, `${l.id} answer`).toBe(true)
+            const type = q.type ?? 'single'
+            expect(['single', 'multi', 'image', 'orientation'], `${l.id} type`).toContain(type)
+            if (type === 'multi') {
+              expect(Array.isArray(q.answer) && q.answer.length >= 1, `${l.id} multi answer`).toBe(true)
+              q.answer.forEach((a) =>
+                expect(Number.isInteger(a) && a >= 0 && a < q.options.length, `${l.id} answer idx`).toBe(true)
+              )
+            } else {
+              expect(Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length, `${l.id} answer`).toBe(true)
+            }
+            if (type === 'image' || type === 'orientation') {
+              expect(CARD_IDS.has(q.cardId), `${l.id} cardId`).toBe(true)
+            }
             expect(q.explain.trim(), `${l.id} explain`).toBeTruthy()
           }
         }

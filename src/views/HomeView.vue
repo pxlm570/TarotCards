@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import spreads from '../data/spreads.json'
 import cardsData from '../data/cards.json'
+import moonPhases from '../data/moon-phases.json'
 import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
@@ -124,7 +125,7 @@ function startReading(spreadId) {
   router.push({ path: '/reading/question', query: { spread: spreadId } })
 }
 
-// M5：生日窗口（前 3 后 3 天）把生日牌阵置顶并加「今日限定」
+// M5：仪式牌阵置顶——生日窗口（前 3 后 3 天）或新月/满月当天
 const birthdayWindow = computed(() => {
   if (!profile.birthday) return false
   const [y, m, d] = profile.birthday.split('-').map(Number)
@@ -133,10 +134,17 @@ const birthdayWindow = computed(() => {
   const diff = Math.round((today - bday) / 86400000)
   return Math.abs(diff) <= 3
 })
+const ritualToday = computed(() => {
+  const day = currentDayKey()
+  if (moonPhases.newMoon.includes(day)) return 'new-moon'
+  if (moonPhases.fullMoon.includes(day)) return 'full-moon'
+  if (birthdayWindow.value) return 'birthday'
+  return null
+})
 const orderedSpreads = computed(() => {
-  if (!birthdayWindow.value) return spreads
-  const b = spreads.find((s) => s.id === 'birthday')
-  return b ? [b, ...spreads.filter((s) => s.id !== 'birthday')] : spreads
+  if (!ritualToday.value) return spreads
+  const r = spreads.find((s) => s.id === ritualToday.value)
+  return r ? [r, ...spreads.filter((s) => s.id !== ritualToday.value)] : spreads
 })
 </script>
 
@@ -220,7 +228,7 @@ const orderedSpreads = computed(() => {
           <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
         </span>
         <span class="badge" :class="{ 'badge-plain': spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
-        <span v-if="spread.id === 'birthday' && birthdayWindow" class="recommend">今日限定</span>
+        <span v-if="spread.id === ritualToday" class="recommend">今日限定</span>
         <span v-else-if="i === 0" class="recommend">推荐</span>
       </button>
     </section>
