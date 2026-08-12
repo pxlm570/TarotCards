@@ -12,6 +12,7 @@ import cardsData from '../data/cards.json'
 import XpBar from '../components/XpBar.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { toast, success } from '../lib/feedback.js'
+import { collectBackup, parseImport, applyImport } from '../lib/backup.js'
 
 const settings = ref(loadSettings())
 const profile = useProfileStore()
@@ -43,6 +44,49 @@ function saveBirthday() {
   profile.setBirthday(v)
   success()
   toast('已生成你的本命牌', 'success')
+}
+
+// ---- 数据导出/导入 ----
+const fileRef = ref(null)
+const pendingImport = ref(null)
+
+function doExport() {
+  const b = collectBackup()
+  const blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `星语塔罗-backup-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast('已导出备份')
+}
+
+function onFileChange(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      pendingImport.value = parseImport(String(reader.result))
+      toast('已读取备份文件，请选择导入方式', 'info')
+    } catch {
+      pendingImport.value = null
+      toast('文件无效，无法导入', 'info')
+    }
+  }
+  reader.readAsText(file)
+  e.target.value = ''
+}
+
+function doImport(mode) {
+  if (!pendingImport.value) return
+  const label = mode === 'merge' ? '合并' : '全量覆盖'
+  if (!window.confirm(`确定${label}导入吗？${mode === 'overwrite' ? '现有数据将被替换。' : '新记录将并入，重复记录跳过。'}`)) return
+  applyImport(pendingImport.value, mode)
+  pendingImport.value = null
+  toast('导入成功', 'success')
+  setTimeout(() => location.reload(), 600)
 }
 </script>
 
@@ -106,6 +150,17 @@ function saveBirthday() {
         <input v-model="birthdayInput" class="birth-input" type="date" max="2026-12-31" />
         <button class="birth-save btn-ghost btn-block" :disabled="!/^\d{4}-\d{2}-\d{2}$/.test(birthdayInput)" @click="saveBirthday">算出我的本命牌</button>
       </template>
+    </section>
+    <section class="card block">
+      <h2 class="card-title">数据</h2>
+      <p class="row-hint">记录、进度与设置都在本机。换设备可导出备份再导入。</p>
+      <button class="btn-ghost btn-block" @click="doExport">导出备份</button>
+      <button class="btn-ghost btn-block" style="margin-top: 8px" @click="fileRef.click()">导入备份</button>
+      <input ref="fileRef" type="file" accept="application/json,.json" style="display: none" @change="onFileChange" />
+      <div v-if="pendingImport" class="import-actions">
+        <button class="btn-solid" style="flex:1" @click="doImport('merge')">合并</button>
+        <button class="btn-ghost" style="flex:1" @click="doImport('overwrite')">全量覆盖</button>
+      </div>
     </section>
   </div>
 </template>
@@ -242,5 +297,11 @@ function saveBirthday() {
 .birth-input:focus {
   outline: none;
   border-color: var(--gold-deep);
+}
+
+.import-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 </style>
