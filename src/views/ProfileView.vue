@@ -1,13 +1,22 @@
 <script setup>
 // M4 交付完整设置页（AI 配置/主题/导出导入）。M1 验收需要：逆位与代抽的临时开关。
-// M1.5 起提供主题三态（跟随系统 / 浅色 / 暗夜）——双主题必须有地方能锁定。
-// M3：加入 XP 等级条与本命牌（T6 实装）。
-import { ref } from 'vue'
+// M1.5 起提供主题三态（跟随系统 / 浅色 / 暗夜）。
+// M3：XP 等级条、本命牌（生日 → 人格/灵魂牌）。
+import { ref, computed } from 'vue'
 import { loadSettings, saveSettings } from '../lib/storage.js'
 import { setTheme, THEME_VALUES } from '../lib/theme.js'
+import { useProfileStore } from '../stores/profile.js'
+import { birthCards } from '../lib/birth-cards.js'
+import { useDeck } from '../lib/use-deck.js'
+import cardsData from '../data/cards.json'
 import XpBar from '../components/XpBar.vue'
+import AppIcon from '../components/AppIcon.vue'
+import { toast, success } from '../lib/feedback.js'
 
 const settings = ref(loadSettings())
+const profile = useProfileStore()
+const { cardUrl } = useDeck()
+const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '暗夜' }
 
@@ -18,6 +27,22 @@ function toggle(key) {
 function pickTheme(value) {
   setTheme(value)
   settings.value = loadSettings()
+}
+
+// ---- 本命牌 ----
+const birthdayInput = ref('')
+const birth = computed(() => {
+  if (!profile.birthday) return null
+  const [y, m, d] = profile.birthday.split('-').map(Number)
+  return birthCards(y, m, d)
+})
+
+function saveBirthday() {
+  const v = birthdayInput.value
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return
+  profile.setBirthday(v)
+  success()
+  toast('已生成你的本命牌', 'success')
 }
 </script>
 
@@ -65,7 +90,22 @@ function pickTheme(value) {
 
     <section class="card block">
       <h2 class="card-title">本命牌</h2>
-      <p class="row-hint">输入生日，找到属于你的牌 · 敬请期待（M3）</p>
+      <template v-if="birth">
+        <div class="birth-cards">
+          <div v-for="id in birth.majors" :key="id" class="birth-card">
+            <img v-if="cardUrl(id)" class="birth-img" :src="cardUrl(id)" :alt="id" />
+            <span class="birth-name">{{ cardById.get(id)?.name }}</span>
+          </div>
+        </div>
+        <p class="birth-display">人格 / 灵魂 · {{ birth.display }}</p>
+        <p class="birth-hint">「{{ birth.majors.map((id) => cardById.get(id)?.name).join('」与「') }}」是你的本命牌，代表着你的内在与灵魂课题。</p>
+        <button class="change btn-text" @click="profile.setBirthday(''); birthdayInput = ''">重新输入生日</button>
+      </template>
+      <template v-else>
+        <p class="row-hint">输入生日，找到属于你的牌。</p>
+        <input v-model="birthdayInput" class="birth-input" type="date" max="2026-12-31" />
+        <button class="birth-save btn-ghost btn-block" :disabled="!/^\d{4}-\d{2}-\d{2}$/.test(birthdayInput)" @click="saveBirthday">算出我的本命牌</button>
+      </template>
     </section>
   </div>
 </template>
@@ -137,5 +177,70 @@ function pickTheme(value) {
   font-size: 0.75rem;
   color: var(--dim);
   text-align: center;
+}
+
+.birth-cards {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+
+.birth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.birth-img {
+  width: 92px;
+  aspect-ratio: 300 / 527;
+  border-radius: var(--radius-img);
+  object-fit: cover;
+  box-shadow: var(--shadow-card);
+}
+
+.birth-name {
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  color: var(--gold-text);
+}
+
+.birth-display {
+  text-align: center;
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+  color: var(--gold-text);
+  margin-bottom: 6px;
+}
+
+.birth-hint {
+  text-align: center;
+  font-size: var(--fs-note);
+  color: var(--dim);
+  line-height: 1.7;
+}
+
+.change {
+  display: block;
+  margin: 10px auto 0;
+  color: var(--dim);
+}
+
+.birth-input {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--ink);
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.birth-input:focus {
+  outline: none;
+  border-color: var(--gold-deep);
 }
 </style>
