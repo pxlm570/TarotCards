@@ -8,8 +8,8 @@ export const FLOW_KEY = 'tarot.flow.v1'
 
 export const DEFAULT_SETTINGS = Object.freeze({
   apiKey: '',
-  baseUrl: '',
-  model: '',
+  baseUrl: 'https://token-plan-cn.xiaomimimo.com/anthropic', // 默认 AI 端点（Anthropic 协议）；key 用户自填
+  model: 'mimo-v2.5',
   persona: 'gentle', // gentle | direct | scholar
   reversalsEnabled: false, // 逆位默认关：新手解读负担减半，M2 第 5 章后引导开启
   autoDraw: false,

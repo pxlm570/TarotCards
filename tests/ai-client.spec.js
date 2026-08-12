@@ -59,4 +59,22 @@ describe('ai-client', () => {
     const url = fetchMock.mock.calls[0][0]
     expect(url).toBe('https://x.com/chat/completions')
   })
+
+  it('Anthropic 协议：URL 指向 /v1/messages 且解析 content_block_delta', async () => {
+    saveSettings({ baseUrl: 'https://token-plan-cn.xiaomimimo.com/anthropic', model: 'mimo-v2.5', apiKey: 'sk-x' })
+    const chunks = [
+      'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"你好"}}\n\n',
+      'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"，星语"}}\n\n',
+      'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+    ]
+    const fetchMock = vi.fn(async () => sseResponse(chunks))
+    vi.stubGlobal('fetch', fetchMock)
+    const out = []
+    for await (const d of streamChat({ messages: [{ role: 'system', content: 'sys' }, { role: 'user', content: 'hi' }] })) out.push(d)
+    expect(out.join('')).toBe('你好，星语')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages')
+    expect(init.headers['x-api-key']).toBe('sk-x')
+    expect(init.headers['anthropic-version']).toBe('2023-06-01')
+  })
 })
