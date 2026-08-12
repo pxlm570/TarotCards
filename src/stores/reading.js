@@ -33,7 +33,8 @@ function initialState() {
     pickedIndices: [], // 用户点过的牌背下标（UI 动画 + 防重复点选）
     drawn: [], // 已落位 [{ cardId, reversed, positionKey }]
     revealedKeys: [], // 实际翻开的 positionKey（保序）——只存计数会让刷新恢复错位
-    snapshot: null // finishShuffle 时的设置快照 { reversalsEnabled, autoDraw }
+    snapshot: null, // finishShuffle 时的设置快照 { reversalsEnabled, autoDraw }
+    journalId: null // M3：本局已写入记录库的 reading id（随 flow 持久化，一局只存一次）
   }
 }
 
@@ -163,8 +164,8 @@ export const useReadingStore = defineStore('reading', {
     },
 
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页

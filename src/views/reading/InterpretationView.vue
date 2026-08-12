@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import cardsData from '../../data/cards.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
+import { useJournalStore } from '../../stores/journal.js'
 import { consumePracticePending } from '../../lib/practice.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
@@ -19,9 +20,43 @@ const router = useRouter()
 const store = useReadingStore()
 const { cardUrl } = useDeck()
 const learning = useLearningStore()
+const journal = useJournalStore()
 
-// 实战课（M2）：若用户是从某节实战课跳进来的，看完解读即标记该课完成
+function newId() {
+  try {
+    return crypto.randomUUID()
+  } catch {
+    return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  }
+}
+
+// 翻牌完成即自动落一条记录（一局只存一次，靠 store.journalId 幂等）
+function ensureSaved() {
+  const build = (id) => ({
+    id,
+    ts: Date.now(),
+    spreadId: store.spreadId,
+    question: store.question,
+    domain: store.domain,
+    cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed })),
+    note: note.value,
+    isDaily: false
+  })
+  if (store.journalId) {
+    if (!journal.getById(store.journalId)) {
+      journal.addReading(build(store.journalId))
+    }
+    return
+  }
+  const id = newId()
+  journal.addReading(build(id))
+  store.journalId = id
+  store.persistNow()
+}
+
+// 实战课（M2）回来自动打勾 + 本局落库（M3）
 onMounted(() => {
+  ensureSaved()
   const p = consumePracticePending()
   if (p) {
     try {
@@ -96,9 +131,11 @@ function startPractice() {
 }
 
 function saveNote() {
-  noteSaved.value = true // M1 仅内存留存；M3 落日记库
+  // M3 落日记库：补写当前记录的感想
+  if (store.journalId) journal.saveNote(store.journalId, note.value)
+  noteSaved.value = true
   success()
-  toast('已记下 · M3 起会存进日记', 'success')
+  toast('已记下', 'success')
 }
 
 function again() {
