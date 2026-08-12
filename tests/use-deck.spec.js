@@ -29,6 +29,8 @@ let deck
 describe('useDeck：皮肤加载与切换', () => {
   beforeEach(async () => {
     localStorage.clear()
+    // 默认皮肤已是 rws-star；本测试聚焦 rws 的加载/切换，显式指定
+    localStorage.setItem('tarot.settings.v1', JSON.stringify({ deckId: 'rws' }))
     vi.resetModules()
     mockFetch({ rws: RWS, 'rws-sepia': SEPIA })
     deck = await import('../src/lib/use-deck.js')

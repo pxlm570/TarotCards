@@ -37,3 +37,6 @@ public/decks/rws/raw/
 
 # ZCode 运行期元数据
 .zcode/
+
+# 临时生图产物
+.imgtmp/

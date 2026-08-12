@@ -20,6 +20,11 @@ export async function loadDeck(id) {
   const res = await fetch(`${BASE}decks/${id}/manifest.json`)
   if (!res.ok) throw new Error(`加载皮肤 ${id} 失败：${res.status}`)
   const manifest = await res.json()
+  // 皮肤可复用另一套皮肤的牌面图（只换牌背）：cardsFrom 指向基础皮肤 id
+  if (manifest.cardsFrom) {
+    const base = await loadDeck(manifest.cardsFrom)
+    manifest.cards = base.cards
+  }
   manifestCache.set(id, manifest)
   return manifest
 }
