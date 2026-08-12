@@ -42,6 +42,8 @@ function openCard(cardId) {
     <ArticleLesson
       v-if="lesson?.type === 'article'"
       :blocks="lesson.blocks"
+      :chapter-id="chapterId"
+      :lesson-id="lessonId"
       @open-card="openCard"
     />
     <FlashcardLesson
