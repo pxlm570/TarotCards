@@ -14,6 +14,7 @@ import { currentDayKey } from '../lib/day-key.js'
 import { newCard, review, dueCards } from '../lib/spaced-repetition.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { useAchievementsStore } from './achievements.js'
+import { useProfileStore } from './profile.js'
 
 const KEY = 'tarot.learning.v1'
 
@@ -94,6 +95,7 @@ export const useLearningStore = defineStore('learning', {
           this.unlocked = [...this.unlocked, nextId]
         }
         useAchievementsStore().unlock(`ch-${String(idx + 1).padStart(2, '0')}-done`)
+        useProfileStore().addXp(50) // 完成一章
       }
       this._persist()
       return { chapterCompleted, chapterId }
@@ -117,6 +119,7 @@ export const useLearningStore = defineStore('learning', {
       const prev = this.sr[cardId] ?? newCard()
       this.sr = { ...this.sr, [cardId]: review(prev, rating) }
       this.recordReview()
+      useProfileStore().addXp(2) // 闪卡复习每张
       return this.sr[cardId]
     },
 

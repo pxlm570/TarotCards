@@ -7,6 +7,7 @@ import cardsData from '../../data/cards.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
 import { useJournalStore } from '../../stores/journal.js'
+import { useProfileStore } from '../../stores/profile.js'
 import { consumePracticePending } from '../../lib/practice.js'
 import { currentDayKey } from '../../lib/day-key.js'
 import { useDeck } from '../../lib/use-deck.js'
@@ -22,6 +23,7 @@ const store = useReadingStore()
 const { cardUrl } = useDeck()
 const learning = useLearningStore()
 const journal = useJournalStore()
+const profile = useProfileStore()
 
 function newId() {
   try {
@@ -49,6 +51,8 @@ function ensureSaved() {
     journal.addReading(build(id))
     store.journalId = id
     store.persistNow()
+    profile.addXp(10) // 完成一次占卜
+    if (store.isDaily) profile.addXp(5) // 每日一抽
   } else if (!journal.getById(id)) {
     journal.addReading(build(id))
   }
@@ -138,6 +142,7 @@ function startPractice() {
 function saveNote() {
   // M3 落日记库：补写当前记录的感想
   if (store.journalId) journal.saveNote(store.journalId, note.value)
+  if (!noteSaved.value) profile.addXp(5) // 首次写日记感想
   noteSaved.value = true
   success()
   toast('已记下', 'success')

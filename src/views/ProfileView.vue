@@ -1,9 +1,11 @@
 <script setup>
 // M4 交付完整设置页（AI 配置/主题/导出导入）。M1 验收需要：逆位与代抽的临时开关。
 // M1.5 起提供主题三态（跟随系统 / 浅色 / 暗夜）——双主题必须有地方能锁定。
+// M3：加入 XP 等级条与本命牌（T6 实装）。
 import { ref } from 'vue'
 import { loadSettings, saveSettings } from '../lib/storage.js'
 import { setTheme, THEME_VALUES } from '../lib/theme.js'
+import XpBar from '../components/XpBar.vue'
 
 const settings = ref(loadSettings())
 
@@ -22,6 +24,10 @@ function pickTheme(value) {
 <template>
   <div class="profile">
     <h1 class="title">我的</h1>
+
+    <section class="card block">
+      <XpBar show-next />
+    </section>
 
     <section class="card block">
       <h2 class="card-title">外观</h2>

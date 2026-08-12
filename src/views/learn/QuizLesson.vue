@@ -2,6 +2,7 @@
 // 随堂测验：逐题单选，选完即显示解析；全部作答后判分，≥80% 通过（可重考）。
 import { ref, computed } from 'vue'
 import { useLearningStore } from '../../stores/learning.js'
+import { useProfileStore } from '../../stores/profile.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const props = defineProps({
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 
 const learning = useLearningStore()
+const profile = useProfileStore()
 const answers = ref({})
 const submitted = ref(false)
 const passed = ref(false)
@@ -32,6 +34,7 @@ function submit() {
   passed.value = percent.value >= 80
   if (passed.value) {
     learning.completeLesson(props.chapterId, props.lessonId)
+    profile.addXp(30) // 通过一章测验
     success()
   }
 }
