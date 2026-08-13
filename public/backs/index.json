@@ -13,5 +13,23 @@
     "id": "sepia",
     "name": "复古·泛黄",
     "file": "sepia.webp"
+  },
+  {
+    "id": "streak7",
+    "name": "七日之约",
+    "file": "streak7.webp",
+    "unlock": 7
+  },
+  {
+    "id": "streak30",
+    "name": "卅日光华",
+    "file": "streak30.webp",
+    "unlock": 30
+  },
+  {
+    "id": "streak100",
+    "name": "百日铭刻",
+    "file": "streak100.webp",
+    "unlock": 100
   }
 ]

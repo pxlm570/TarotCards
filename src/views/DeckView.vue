@@ -7,9 +7,11 @@ import CardGrid from '../components/CardGrid.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useDeck } from '../lib/use-deck.js'
 import { listDecks, loadDeck, cardImageUrl, listBacks, standaloneBackUrl } from '../lib/deck-loader.js'
+import { useProfileStore } from '../stores/profile.js'
 import { tap, toast } from '../lib/feedback.js'
 
 const router = useRouter()
+const profile = useProfileStore()
 const { faceId, backId, switchFace, switchBack } = useDeck()
 
 const FILTERS = [
@@ -42,12 +44,16 @@ listDecks()
   })
   .catch(() => {})
 
-// 牌背库（独立注册表，用牌背自己的名字）
+// 牌背库（独立注册表，用牌背自己的名字；连胜解锁款带 unlock 门槛）
 listBacks()
   .then((list) => {
-    backs.value = list.map((b) => ({ id: b.id, name: b.name, url: standaloneBackUrl(b) }))
+    backs.value = list.map((b) => ({ id: b.id, name: b.name, url: standaloneBackUrl(b), unlock: b.unlock ?? 0 }))
   })
   .catch(() => {})
+
+function isBackLocked(b) {
+  return b.unlock > 0 && profile.maxStreak < b.unlock
+}
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -74,6 +80,11 @@ function pickFace(id) {
 }
 
 function pickBack(id) {
+  const b = backs.value.find((x) => x.id === id)
+  if (b && isBackLocked(b)) {
+    toast(`连续打卡 ${b.unlock} 天解锁`, 'info')
+    return
+  }
   switchBack(id)
   tap()
   toast('已切换牌背', 'success')
@@ -97,12 +108,16 @@ function pickBack(id) {
           v-for="b in backs"
           :key="b.id"
           class="lib-item"
-          :class="{ on: backId === b.id }"
+          :class="{ on: backId === b.id, locked: isBackLocked(b) }"
           @click="pickBack(b.id)"
         >
-          <img v-if="b.url" class="lib-back" :src="b.url" :alt="b.name" />
-          <div v-else class="lib-back skeleton" />
+          <span class="lib-back-wrap">
+            <img v-if="b.url" class="lib-back" :src="b.url" :alt="b.name" />
+            <div v-else class="lib-back skeleton" />
+            <span v-if="isBackLocked(b)" class="lib-lock"><AppIcon name="lock" :size="16" /></span>
+          </span>
           <span class="lib-name">{{ b.name }}</span>
+          <span v-if="isBackLocked(b)" class="lib-lock-hint">{{ b.unlock }} 天解锁</span>
         </button>
       </div>
     </section>
@@ -221,6 +236,31 @@ function pickBack(id) {
   border-radius: var(--radius-img);
   object-fit: cover;
   box-shadow: var(--shadow-card);
+}
+
+.lib-item.locked {
+  opacity: 0.55;
+}
+
+.lib-back-wrap {
+  position: relative;
+  display: block;
+}
+
+.lib-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-img);
+  color: #fff;
+}
+
+.lib-lock-hint {
+  font-size: 0.625rem;
+  color: var(--coral);
 }
 
 .lib-name {

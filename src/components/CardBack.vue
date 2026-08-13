@@ -43,7 +43,10 @@ const { backUrl, manifest } = useDeck()
 }
 
 .fallback {
-  background: var(--sunk);
+  background:
+    radial-gradient(circle at 50% 50%, var(--gold-soft) 0 8%, transparent 9%),
+    repeating-linear-gradient(45deg, var(--sunk) 0 10px, var(--line) 10px 12px);
+  border: 1px solid var(--line);
 }
 
 @media (prefers-reduced-motion: reduce) {
