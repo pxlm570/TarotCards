@@ -1,9 +1,11 @@
 <script setup>
 // 记录 Tab（M3 Task 2）：时间线（今天/昨天/更早）+ 领域筛选 + 关键词搜索。
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useJournalStore } from '../stores/journal.js'
 import { currentDayKey } from '../lib/day-key.js'
+import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { toast } from '../lib/feedback.js'
 import spreadsData from '../data/spreads.json'
 import TimelineItem from '../components/TimelineItem.vue'
 import MirrorPanel from '../components/MirrorPanel.vue'
@@ -13,6 +15,18 @@ const router = useRouter()
 const journal = useJournalStore()
 
 const tab = ref('timeline') // timeline | mirror
+
+// 记录容量提醒（方案 C）：banner 常驻（≥480）+ 跨阈值当天 toast 一次（≥490）
+const FULL_HINT_KEY = 'tarot.journal-full-hint.v1'
+const overThreshold = computed(() => journal.count >= 480)
+const atCap = computed(() => journal.count >= 500)
+
+onMounted(() => {
+  if (journal.count >= 490 && safeGetItem(FULL_HINT_KEY) !== currentDayKey()) {
+    safeSetItem(FULL_HINT_KEY, currentDayKey())
+    toast('记录接近上限，建议前往「我的」页导出备份', 'info')
+  }
+})
 
 const DOMAINS = [
   { key: 'all', label: '全部' },
@@ -62,6 +76,14 @@ const groups = computed(() => {
         <button class="tab" :class="{ on: tab === 'mirror' }" @click="tab = 'mirror'">镜子</button>
       </div>
     </header>
+
+    <!-- 记录容量提醒 banner（≥480 常驻） -->
+    <div v-if="overThreshold" class="full-hint">
+      <p class="full-hint-text">
+        {{ atCap ? '记录已达上限，最旧记录将被自动淘汰' : `记录即将存满（${journal.count}/500），建议先导出备份` }}
+      </p>
+      <button class="full-hint-btn btn-text" @click="router.push('/profile')">去导出</button>
+    </div>
 
     <MirrorPanel v-if="tab === 'mirror'" :readings="journal.readings" />
 
@@ -126,6 +148,31 @@ const groups = computed(() => {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
+}
+
+/* 容量提醒 banner */
+.full-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--gold-soft);
+  border: 2px solid var(--gold-deep);
+}
+
+.full-hint-text {
+  font-size: var(--fs-note);
+  color: var(--gold-text);
+  line-height: 1.6;
+}
+
+.full-hint-btn {
+  flex-shrink: 0;
+  color: var(--gold-text);
+  padding: 6px 8px;
 }
 
 .tab {
