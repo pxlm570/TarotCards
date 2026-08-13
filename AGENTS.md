@@ -32,6 +32,7 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
   - M4：`stores/settings.js` + `lib/ai-client.js`（SSE 流式）+ `lib/ai-prompts.js`（6 场景+人格+安全边界）；解读页深度解读/追问/我先解、提问澄清、学习助教、Mirror 复盘、首页 AI 问候；`#import=` 配置分享链接已实装。
   - M5：动效/字号开关、分享卡片（`lib/share-card.js`+`ShareCardModal`）、PWA 安装引导、仪式牌阵（new-moon/full-moon/birthday 数据已入 spreads.json，生日窗口置顶）、rws-sepia 皮肤管线验证（`scripts/gen-rws-sepia.py`）。
 - 占卜动线落库衔接：`stores/reading.js` 有 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载自动存一条、`?daily=1` 打卡。
+- 裁决记录（2026-08-13，用户拍板）：**音效暂缓为备选**——未实装、未删 `settings.sound` 字段，进 v1.5 backlog（产品安静定位，音效与深夜使用场景相悖，可能后续再做）。
 
 ## 架构与关键约定
 
