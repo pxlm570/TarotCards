@@ -261,7 +261,7 @@ function again() {
 
     <section v-show="!practiceMode || practiceRevealed" class="note-area">
       <h2 class="note-title"><AppIcon name="note" :size="19" /> 此刻的感想</h2>
-      <textarea v-model="note" rows="3" class="note-input" placeholder="记录此刻的直觉与情绪（日记功能将在 M3 保存它们）" @input="noteSaved = false" />
+      <textarea v-model="note" rows="3" class="note-input" placeholder="记录此刻的直觉与情绪，会存进你的记录里" @input="noteSaved = false" />
       <div class="note-actions">
         <button
           class="note-save btn-ghost"

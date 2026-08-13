@@ -211,7 +211,6 @@ function clearAll() {
         </div>
         <input type="checkbox" :checked="settings.autoDraw" @change="toggle('autoDraw')" />
       </label>
-      <p class="temp-note">临时开关 · 完整设置页在里程碑 M4</p>
     </section>
 
     <section class="card block">
@@ -345,13 +344,6 @@ function clearAll() {
   height: 22px;
   accent-color: var(--gold-deep);
   flex-shrink: 0;
-}
-
-.temp-note {
-  margin-top: var(--sp-1);
-  font-size: 0.75rem;
-  color: var(--dim);
-  text-align: center;
 }
 
 .birth-cards {
