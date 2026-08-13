@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useJournalStore } from '../stores/journal.js'
 import { currentDayKey } from '../lib/day-key.js'
+import spreadsData from '../data/spreads.json'
 import TimelineItem from '../components/TimelineItem.vue'
 import MirrorPanel from '../components/MirrorPanel.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -24,12 +25,14 @@ const DOMAINS = [
 ]
 
 const domainFilter = ref('all')
+const spreadFilter = ref('all')
 const keyword = ref('')
 
 const filtered = computed(() => {
   const kw = keyword.value.trim()
   return journal.readings.filter((r) => {
     if (domainFilter.value !== 'all' && (r.domain ?? null) !== domainFilter.value) return false
+    if (spreadFilter.value !== 'all' && r.spreadId !== spreadFilter.value) return false
     if (kw && !(r.question ?? '').includes(kw)) return false
     return true
   })
@@ -76,6 +79,19 @@ const groups = computed(() => {
         @click="domainFilter = d.key"
       >
         {{ d.label }}
+      </button>
+    </div>
+
+    <div class="chips spread-chips">
+      <button class="chip" :class="{ on: spreadFilter === 'all' }" @click="spreadFilter = 'all'">全部牌阵</button>
+      <button
+        v-for="s in spreadsData"
+        :key="s.id"
+        class="chip"
+        :class="{ on: spreadFilter === s.id }"
+        @click="spreadFilter = s.id"
+      >
+        {{ s.name }}
       </button>
     </div>
 
@@ -156,6 +172,10 @@ const groups = computed(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: var(--sp-3);
+}
+
+.spread-chips {
+  margin-top: -16px;
 }
 
 .chip {
