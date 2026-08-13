@@ -184,6 +184,29 @@ export const useReadingStore = defineStore('reading', {
       return true
     },
 
+    // 返回手势（UX #8）：占卜动线内逐级回退；questioning 再退则退出本局
+    stepBack() {
+      const order = ['questioning', 'shuffling', 'picking', 'revealing', 'interpreting']
+      const idx = order.indexOf(this.phase)
+      if (idx <= 0) {
+        this.reset()
+        return null
+      }
+      const prev = order[idx - 1]
+      // 回退时清掉只会向前的中间态，避免回到旧步骤后状态错位
+      if (prev === 'picking') {
+        this.drawn = []
+        this.pending = []
+        this.pickedIndices = []
+      }
+      if (prev === 'revealing') {
+        this.revealedKeys = []
+      }
+      this.phase = prev
+      this.persistNow()
+      return prev
+    },
+
     hasActiveReading() {
       return this.phase !== 'idle' || this.tryRestore()
     }

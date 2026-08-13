@@ -199,4 +199,31 @@ describe('reading store：状态机', () => {
     expect(store.phase).toBe('shuffling')
     expect(store.domain).toBeNull()
   })
+
+  it('stepBack：interpreting→revealing→picking 逐级回退并清理中间态', () => {
+    const store = useReadingStore()
+    walkToPicking(store)
+    store.pickAll()
+    store.revealCard('past')
+    store.revealAll()
+    store.goInterpret()
+    expect(store.phase).toBe('interpreting')
+    expect(store.stepBack()).toBe('revealing')
+    // revealing 回退到 picking：清空 revealedKeys 与已抽/待抽
+    expect(store.stepBack()).toBe('picking')
+    expect(store.revealedKeys).toEqual([])
+    expect(store.drawn).toEqual([])
+    expect(store.pending).toEqual([])
+    expect(store.pickedIndices).toEqual([])
+  })
+
+  it('stepBack：picking→shuffling→questioning，问题保留；questioning 再退则重置', () => {
+    const store = useReadingStore()
+    walkToPicking(store) // 到 picking
+    expect(store.stepBack()).toBe('shuffling')
+    expect(store.stepBack()).toBe('questioning')
+    expect(store.question).toBe('测试问题') // 问题未丢
+    expect(store.stepBack()).toBeNull() // 无前一步 → 重置
+    expect(store.phase).toBe('idle')
+  })
 })

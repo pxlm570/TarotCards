@@ -1,15 +1,31 @@
 <script setup>
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import TabBar from './components/TabBar.vue'
 import AppToast from './components/AppToast.vue'
 import AchievementToast from './components/AchievementToast.vue'
 import AppInstallBanner from './components/AppInstallBanner.vue'
 import LevelUpToast from './components/LevelUpToast.vue'
+import { useReadingStore } from './stores/reading.js'
+import { PHASE_ROUTE } from './router/index.js'
 
 const route = useRoute()
 // 占卜动线与引导页沉浸式展示，不显示 TabBar
 const showTabBar = computed(() => !route.path.startsWith('/reading') && route.path !== '/welcome')
+
+// UX #8：返回手势统一——占卜动线内返回键逐级回退，不误退
+function onBack() {
+  const store = useReadingStore()
+  if (store.phase === 'idle') return // 非占卜中，交给浏览器默认
+  const prev = store.stepBack()
+  if (prev && PHASE_ROUTE[prev]) {
+    history.pushState(null, '', PHASE_ROUTE[prev]) // 打断返回，改跳上一步
+  }
+  // prev === null → 已退出本局，允许浏览器回退到首页
+}
+
+onMounted(() => window.addEventListener('popstate', onBack))
+onUnmounted(() => window.removeEventListener('popstate', onBack))
 </script>
 
 <template>
