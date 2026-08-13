@@ -8,6 +8,7 @@ import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
 import { useJournalStore } from '../../stores/journal.js'
 import { useProfileStore } from '../../stores/profile.js'
+import { recentCardCount } from '../../lib/mirror.js'
 import { consumePracticePending } from '../../lib/practice.js'
 import { currentDayKey } from '../../lib/day-key.js'
 import { useDeck } from '../../lib/use-deck.js'
@@ -127,6 +128,15 @@ const shareReading = computed(() => ({
   cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed }))
 }))
 
+// 每日一抽「历史钩子」（Task 10）：仅每日一抽显示，近 30 天该牌出现次数
+const historyHook = computed(() => {
+  if (!store.isDaily) return ''
+  const cardId = store.drawn[0]?.cardId
+  if (!cardId) return ''
+  const n = recentCardCount(journal.readings, cardId)
+  return n <= 1 ? '近 30 天里，这是它第一次来到你面前' : `这张牌近 30 天已出现 ${n} 次`
+})
+
 function toggle(key) {
   const next = new Set(expanded.value)
   next.has(key) ? next.delete(key) : next.add(key)
@@ -172,6 +182,7 @@ function again() {
     <header class="head">
       <h1 class="title">{{ store.spread?.name }} · 解读</h1>
       <p v-if="store.question" class="question">「{{ store.question }}」</p>
+      <p v-if="historyHook" class="history-hook">{{ historyHook }}</p>
     </header>
 
     <div class="interp-layout">
@@ -333,6 +344,13 @@ function again() {
   margin-top: var(--sp-1);
   color: var(--dim);
   font-size: var(--fs-note);
+}
+
+.history-hook {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--gold-text);
+  font-weight: var(--w-medium);
 }
 
 .overview {

@@ -58,3 +58,19 @@ export function dailyFreq(readings, days = 30, today = new Date()) {
   }
   return arr
 }
+
+// 每日一抽「历史钩子」（Task 10）：某 cardId 在近 N 天（dayKey 口径，含今天）的所有 readings 中出现次数
+// （含正逆位、含普通占卜，不只每日一抽）。纯函数，UI 只调用。
+export function recentCardCount(readings, cardId, { days = 30, today = new Date() } = {}) {
+  const end = currentDayKey(today)
+  const start = currentDayKey(new Date(today.getTime() - (days - 1) * 24 * 3600 * 1000))
+  let n = 0
+  for (const r of readings) {
+    const day = currentDayKey(new Date(r.ts))
+    if (day < start || day > end) continue
+    for (const c of r.cards) {
+      if (c.cardId === cardId) n++
+    }
+  }
+  return n
+}
