@@ -79,4 +79,15 @@ describe('useDeck：牌面/牌背独立', () => {
     await vi.waitFor(() => expect(d.backItem.value).toBeTruthy())
     expect(d.backItem.value.id).toBe('star-gold') // 回退第一项
   })
+
+  it('deckId 指向已移除皮肤时回退 rws 并写回 settings', async () => {
+    // mock 索引里没有 rws-star（已被移除）
+    localStorage.setItem('tarot.settings.v1', JSON.stringify({ deckId: 'rws-star', backId: 'star-gold' }))
+    vi.resetModules()
+    deck = await import('../src/lib/use-deck.js')
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    expect(d.faceId.value).toBe('rws')
+    expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws')
+  })
 })

@@ -2,7 +2,7 @@
 //  - faceId（settings.deckId）：用哪套牌面图（如 rws / rws-sepia）
 //  - backId（settings.backId）：用哪张独立牌背（如 星纹·暖金 / 霓虹壁画）
 import { ref } from 'vue'
-import { loadDeck, cardImageUrl, standaloneBackUrl, listBacks } from './deck-loader.js'
+import { loadDeck, cardImageUrl, standaloneBackUrl, listBacks, listDecks } from './deck-loader.js'
 import { loadSettings, saveSettings } from './storage.js'
 
 const faceId = ref(loadSettings().deckId || 'rws')
@@ -16,7 +16,15 @@ let backsLoading = null
 
 function loadFace() {
   error.value = null
-  loading = loadDeck(faceId.value)
+  loading = listDecks()
+    .then((ids) => {
+      // 旧配置可能指向已移除的皮肤（如 rws-star）→ 回退默认并写回，避免卡在加载失败
+      if (!ids.includes(faceId.value)) {
+        faceId.value = 'rws'
+        saveSettings({ deckId: 'rws' })
+      }
+      return loadDeck(faceId.value)
+    })
     .then((m) => {
       manifest.value = m
     })
