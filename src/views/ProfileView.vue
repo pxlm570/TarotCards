@@ -16,6 +16,7 @@ import { collectBackup, parseImport, applyImport } from '../lib/backup.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { streamChat } from '../lib/ai-client.js'
 import { applyMotionPreference } from '../lib/feedback.js'
+import { renderSVG } from 'uqr'
 
 const settingsStore = useSettingsStore()
 
@@ -67,7 +68,6 @@ function saveBirthday() {
 // ---- 数据导出/导入 ----
 const fileRef = ref(null)
 const pendingImport = ref(null)
-
 function doExport() {
   const b = collectBackup()
   const blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' })
@@ -110,6 +110,8 @@ function doImport(mode) {
 // ---- AI 配置 ----
 const testing = ref(false)
 const aiInput = ref({ ...loadSettings() })
+const shareLink = ref('') // 生成的配置分享链接（二维码弹层）
+const qrSvg = computed(() => (shareLink.value ? renderSVG(shareLink.value) : ''))
 
 // 快捷填充：只帮填 baseUrl（不做官方端点绑定，其余常见端点自填 model/key）
 const QUICK_ENDPOINTS = [
@@ -148,11 +150,21 @@ function genShareLink() {
   }
   const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))
   const link = `${location.origin}${import.meta.env.BASE_URL}#import=${b64}`
+  shareLink.value = link
   try {
     navigator.clipboard.writeText(link)
-    toast('配置链接已复制，只发给信任的人', 'success')
+    toast('链接已复制，扫码或转发给信任的人', 'success')
   } catch {
-    toast('复制失败，请手动复制')
+    toast('复制失败，可长按链接复制')
+  }
+}
+
+function copyShareLink() {
+  try {
+    navigator.clipboard.writeText(shareLink.value)
+    toast('已复制链接')
+  } catch {
+    toast('复制失败')
   }
 }
 
@@ -305,6 +317,20 @@ function clearAll() {
       <p class="row-hint">星语塔罗 · 私人塔罗空间。牌面为 Pamela Colman Smith 绘制的韦特塔罗（1909，公有领域）；牌意以《The Pictorial Key to the Tarot》为底本中文自撰。定位为塔罗文化学习与自我探索工具，不提供医疗、法律或财务建议。</p>
       <router-link to="/welcome" class="btn-ghost btn-block" style="margin-top:10px">重看新手引导</router-link>
     </section>
+
+    <!-- 配置分享链接二维码弹层 -->
+    <div v-if="shareLink" class="modal" @click.self="shareLink = ''">
+      <div class="dialog card">
+        <h3 class="dialog-title">配置分享</h3>
+        <div class="qr" v-html="qrSvg" />
+        <p class="dialog-link">{{ shareLink }}</p>
+        <p class="dialog-warn">链接含你的 API key：扫码或转发即等同让对方持有 key，只发给信任的人。</p>
+        <div class="dialog-actions">
+          <button class="btn-ghost" @click="shareLink = ''">关闭</button>
+          <button class="btn-solid" @click="copyShareLink"><AppIcon name="check" :size="15" /> 复制</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -449,6 +475,65 @@ function clearAll() {
   color: var(--dim);
   font-size: 0.75rem;
   padding: 8px;
+}
+
+/* 二维码弹层 */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 45;
+  padding: 24px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 360px;
+  padding: var(--sp-3);
+  text-align: center;
+}
+
+.dialog-title {
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+  margin-bottom: 12px;
+}
+
+.qr {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.qr :deep(svg) {
+  width: 168px;
+  height: 168px;
+}
+
+.dialog-link {
+  font-size: 0.6875rem;
+  color: var(--dim);
+  word-break: break-all;
+  margin-bottom: 10px;
+}
+
+.dialog-warn {
+  font-size: 0.75rem;
+  color: var(--coral);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dialog-actions > button {
+  flex: 1;
 }
 
 .field {
