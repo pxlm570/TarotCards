@@ -8,6 +8,7 @@
 
 - 指令/规划类文档只保留 `AGENTS.md` 一份在库；`docs/`（含 archive）、`.workbuddy/`、`.zcode/`、`CLAUDE.md`（已移入 archive）**都不入 git**，仅存本地——改它们直接改文件即可，不 commit。
 - 远端仓库 `https://github.com/pxlm570/TarotCards` 只含代码与素材，已转公开并自动部署（push `master` 触发测试→构建→发布）。
+- **推送策略（2026-08 用户定，取代此前「绝不 push」规则）**：允许执行代理 push，但**每次 push 前必须征得用户同意或等用户明确指令**，不得擅自推送。
 - 提交信息风格：`feat:`/`fix:`/`chore:`/`docs:`/`test:` + 中文描述。
 
 ## 命令
