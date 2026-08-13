@@ -1,6 +1,6 @@
 <script setup>
 // 抽牌页：78 张牌背横排滑动，逐张点选（选中金色描边）；「帮我抽完」一键补满。
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
@@ -20,8 +20,18 @@ function toReveal() {
   router.replace('/reading/reveal')
 }
 
+// 选牌防误触：先弹确认，确认才真正放入槽位
+const confirmIndex = ref(null)
+
 function pick(index) {
   if (store.pickedIndices.includes(index) || store.phase !== 'picking') return
+  confirmIndex.value = index
+}
+
+function confirmPick() {
+  const index = confirmIndex.value
+  confirmIndex.value = null
+  if (index == null) return
   store.pickCard(index)
   // 选满即完成时刻：手感与普通点选区分
   if (store.phase === 'revealing') {
@@ -79,6 +89,18 @@ function pickRest() {
     </div>
 
     <button class="auto btn-ghost btn-block" @click="pickRest">帮我抽完</button>
+
+    <!-- 选牌确认（防误触） -->
+    <div v-if="confirmIndex !== null" class="modal" @click.self="confirmIndex = null">
+      <div class="dialog card">
+        <p class="dialog-title">选择这张牌？</p>
+        <p class="dialog-sub">将放入「{{ currentPosition }}」</p>
+        <div class="dialog-actions">
+          <button class="btn-ghost" @click="confirmIndex = null">取消</button>
+          <button class="btn-solid" @click="confirmPick"><AppIcon name="check" :size="15" /> 确定</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -215,6 +237,46 @@ function pickRest() {
 
 .auto {
   margin: 0 20px;
+}
+
+/* 选牌确认弹层 */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 24px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 340px;
+  padding: var(--sp-3);
+  text-align: center;
+}
+
+.dialog-title {
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+  margin-bottom: 8px;
+}
+
+.dialog-sub {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  margin-bottom: 16px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dialog-actions > button {
+  flex: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

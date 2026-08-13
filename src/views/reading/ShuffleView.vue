@@ -89,12 +89,12 @@ function onPointerMove(e) {
     const dx = c.x - px
     const dy = c.y - py
     const dist = Math.hypot(dx, dy)
-    if (dist < 22) {
-      c.x += (dx / (dist || 1)) * 6 + (Math.random() - 0.5) * 3
-      c.y += (dy / (dist || 1)) * 4 + (Math.random() - 0.5) * 3
-      c.r += (Math.random() - 0.5) * 14
-      c.x = Math.max(-42, Math.min(42, c.x))
-      c.y = Math.max(-28, Math.min(28, c.y))
+    if (dist < 26) {
+      c.x += (dx / (dist || 1)) * 8 + (Math.random() - 0.5) * 4
+      c.y += (dy / (dist || 1)) * 6 + (Math.random() - 0.5) * 4
+      c.r += (Math.random() - 0.5) * 18
+      c.x = Math.max(-44, Math.min(44, c.x))
+      c.y = Math.max(-30, Math.min(30, c.y))
     }
   }
 }
@@ -104,12 +104,13 @@ const rifflePhase = ref(0) // 0 未开始 / 1 洗牌中 / 2 完成
 const riffleTimer = ref(null)
 
 function startRiffle() {
+  // 任何时候都可重洗（修复「再洗一次」失效）
   rifflePhase.value = 1
   clearTimeout(riffleTimer.value)
   riffleTimer.value = setTimeout(() => {
     rifflePhase.value = 2
     success()
-  }, 2200)
+  }, 2400)
 }
 
 function switchMode(m) {
@@ -180,13 +181,13 @@ onUnmounted(() => {
     <!-- 模式 b：仪式翻洗 -->
     <template v-else>
       <p class="tip">{{ rifflePhase === 0 ? '点一下牌堆，开始翻洗' : rifflePhase === 1 ? '洗牌中…' : '洗好了' }}</p>
-      <div class="riffle" @click="rifflePhase === 0 && startRiffle()">
+      <div class="riffle" @click="rifflePhase !== 1 && startRiffle()">
         <div class="riffle-stack" :class="{ washing: rifflePhase === 1, done: rifflePhase === 2 }">
           <div v-for="i in 12" :key="i" class="riffle-card"><CardBack class="back" /></div>
         </div>
       </div>
       <div class="actions">
-        <button class="btn-ghost" @click="rifflePhase === 0 && startRiffle()">{{ rifflePhase === 0 ? '开始翻洗' : '再洗一次' }}</button>
+        <button class="btn-ghost" :disabled="rifflePhase === 1" @click="startRiffle">{{ rifflePhase === 0 ? '开始翻洗' : '再洗一次' }}</button>
         <button class="btn-solid" :disabled="rifflePhase !== 2" @click="done">洗好了</button>
       </div>
     </template>
@@ -269,14 +270,14 @@ onUnmounted(() => {
 @keyframes bob {
   0%,
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0) rotate(-2deg) scale(1);
   }
   50% {
-    transform: translateY(-7px) rotate(2.5deg);
+    transform: translateY(-10px) rotate(3deg) scale(1.04);
   }
 }
 
-/* 仪式翻洗 */
+/* 仪式翻洗：动态性更强的洗牌动画 */
 .riffle {
   flex: 1;
   display: flex;
@@ -301,36 +302,49 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.riffle-stack.washing .riffle-card {
-  animation: riffle 0.18s ease-in-out infinite alternate;
-  transform-origin: bottom center;
-}
-
 .riffle-stack.washing .riffle-card:nth-child(odd) {
-  animation-duration: 0.22s;
-  transform: rotate(-3deg);
+  animation: riffle-a 0.28s ease-in-out infinite alternate;
 }
 .riffle-stack.washing .riffle-card:nth-child(even) {
-  animation-duration: 0.16s;
-  transform: rotate(3deg);
+  animation: riffle-b 0.2s ease-in-out infinite alternate;
 }
 
-@keyframes riffle {
-  from {
-    transform: translateY(0) rotate(0);
+@keyframes riffle-a {
+  0% {
+    transform: translateX(-16px) rotate(-10deg) translateY(0);
   }
-  to {
-    transform: translateY(-14px) rotate(var(--rot, 0));
+  50% {
+    transform: translateX(-2px) rotate(-2deg) translateY(-12px);
+  }
+  100% {
+    transform: translateX(-16px) rotate(-10deg) translateY(2px);
   }
 }
 
+@keyframes riffle-b {
+  0% {
+    transform: translateX(16px) rotate(10deg) translateY(0);
+  }
+  50% {
+    transform: translateX(2px) rotate(2deg) translateY(-12px);
+  }
+  100% {
+    transform: translateX(16px) rotate(10deg) translateY(2px);
+  }
+}
+
+/* 洗牌完成：整副牌聚拢 + 金色微光 */
 .riffle-stack.done .riffle-card {
   animation: settle 0.4s var(--ease-out) both;
 }
 
+.riffle-stack.done {
+  filter: drop-shadow(0 0 14px var(--gold-glow));
+}
+
 @keyframes settle {
   to {
-    transform: translateY(0) rotate(0);
+    transform: translate(0, 0) rotate(0);
   }
 }
 

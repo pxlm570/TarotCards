@@ -185,10 +185,13 @@ function onTap(card) {
 }
 
 .pos-label {
+  /* 标签放在牌上方，避免被下方相邻牌盖住 */
+  order: -1;
   font-size: 0.6875rem;
   font-weight: var(--w-medium);
   color: var(--dim);
   white-space: nowrap;
+  text-shadow: 0 1px 3px var(--bg);
 }
 
 /* 已翻开 = 当前有效项，用金色标出 */
