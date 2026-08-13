@@ -24,8 +24,30 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,webp,jpg,png,json}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
+        // 牌面/牌背图不进预缓存（150+ 张 webp 会让首访/每次发版全量拉 20MB）：
+        // 改为运行时缓存（CacheFirst，30 天）。已浏览过的离线可见，未浏览允许缺图。
+        globPatterns: ['**/*.{js,css,html,svg,jpg,png,json}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: /\/decks\/.*\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'deck-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
+            urlPattern: /\/backs\/.*\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'back-images',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       }
     })
   ],
