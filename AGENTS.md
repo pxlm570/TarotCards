@@ -32,7 +32,8 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
   - M4：`stores/settings.js` + `lib/ai-client.js`（SSE 流式）+ `lib/ai-prompts.js`（6 场景+人格+安全边界）；解读页深度解读/追问/我先解、提问澄清、学习助教、Mirror 复盘、首页 AI 问候；`#import=` 配置分享链接已实装。
   - M5：动效/字号开关、分享卡片（`lib/share-card.js`+`ShareCardModal`）、PWA 安装引导、仪式牌阵（new-moon/full-moon/birthday 数据已入 spreads.json，生日窗口置顶）、rws-sepia 皮肤管线验证（`scripts/gen-rws-sepia.py`）。
 - 占卜动线落库衔接：`stores/reading.js` 有 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载自动存一条、`?daily=1` 打卡。
-- 裁决记录（2026-08-13，用户拍板）：**音效暂缓为备选**——未实装、未删 `settings.sound` 字段，进 v1.5 backlog（产品安静定位，音效与深夜使用场景相悖，可能后续再做）。
+- **v1.0 后追加（2026-08，验收收尾）**：牌面/牌背分离自由组合（`public/backs/` 独立注册表 + `switchFace/switchBack`）、洗牌双模式（互动拖洗 / 仪式翻洗 + 切换键）、每日挑战（低调可选 +10XP）、测验四题型（单选/多选/看图认牌/正逆判断 + 无限重试）、返回手势逐级回退（`reading.stepBack` + App.vue 全局 popstate 处理，pushState 保留基路径与 hash）、AI 客户端 Anthropic 协议支持（baseUrl 含 `/anthropic` 自动走 `/v1/messages`）。
+- 裁决记录（2026-08-13，用户拍板）：**默认 AI 端点恢复留空**（回归定稿「不做官方端点绑定」），mimo 移入设置页「快捷填充」下拉（只帮填 baseUrl）；**音效暂缓为备选**——未实装、未删 `settings.sound` 字段，进 v1.5 backlog（产品安静定位，音效与深夜使用场景相悖，可能后续再做）。
 
 ## 架构与关键约定
 
@@ -78,4 +79,4 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 
 - 产品设计定稿（信息架构/动线/内容/视觉 §8）：`docs/plans/2026-07-25-tarot-tool-design.md`
 - 历史留档（只读，别当依据）：`docs/archive/README.md`
-- ⚠️ M3-M5 已按计划完成；计划文档（`docs/plans/2026-07-25-tarot-m{3,4,5}-implementation-plan.md`）中除「月相牌阵需权威日历核实」与「连胜里程碑牌背 UI」两项外均已落地（见仓库收尾时向用户提出的决策项）。
+- ✅ M3-M5 遗留项均已落地：月相牌阵日期已按 NASA+timeanddate 双源核实（db9623d）、连胜里程碑牌背 UI 已实现（ac9514c）。
