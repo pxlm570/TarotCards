@@ -19,7 +19,9 @@ function onBack() {
   if (store.phase === 'idle') return // 非占卜中，交给浏览器默认
   const prev = store.stepBack()
   if (prev && PHASE_ROUTE[prev]) {
-    history.pushState(null, '', PHASE_ROUTE[prev]) // 打断返回，改跳上一步
+    // pushState 第三参是整个 URL 路径：裸路径会抹掉基路径与 hash（线上刷新 404）。
+    // 这里保留 pathname/search 并拼上 #/reading/... 的 hash 形态。
+    history.pushState(null, '', location.pathname + location.search + '#' + PHASE_ROUTE[prev])
   }
   // prev === null → 已退出本局，允许浏览器回退到首页
 }
