@@ -111,6 +111,18 @@ function doImport(mode) {
 const testing = ref(false)
 const aiInput = ref({ ...loadSettings() })
 
+// 快捷填充：只帮填 baseUrl（不做官方端点绑定，其余常见端点自填 model/key）
+const QUICK_ENDPOINTS = [
+  { label: '小米 MiMo', baseUrl: 'https://token-plan-cn.xiaomimimo.com/anthropic' },
+  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com' },
+  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' }
+]
+
+function quickFill(endpoint) {
+  saveAI({ baseUrl: endpoint.baseUrl })
+  toast(`已填入 ${endpoint.label} 端点`)
+}
+
 function saveAI(patch) {
   settingsStore.update(patch)
   Object.assign(aiInput.value, patch)
@@ -251,6 +263,18 @@ function clearAll() {
     <section class="card block">
       <h2 class="card-title">AI 解读</h2>
       <p class="row-hint">baseUrl / 模型 / key 全部自填，任何 OpenAI 兼容端点都行。key 只存在本机浏览器。</p>
+      <div class="quickfill">
+        <span class="field-label">快捷填充（只填 baseUrl）</span>
+        <div class="chips">
+          <button
+            v-for="ep in QUICK_ENDPOINTS"
+            :key="ep.label"
+            class="chip"
+            :class="{ on: aiInput.baseUrl === ep.baseUrl }"
+            @click="quickFill(ep)"
+          >{{ ep.label }}</button>
+        </div>
+      </div>
       <label class="field">
         <span class="field-label">baseUrl</span>
         <input v-model="aiInput.baseUrl" class="field-input" type="url" placeholder="https://api.deepseek.com" @change="saveAI({ baseUrl: aiInput.baseUrl })" />
@@ -430,6 +454,22 @@ function clearAll() {
 .field {
   display: block;
   margin-bottom: 10px;
+}
+
+.quickfill {
+  margin-bottom: 12px;
+}
+
+.quickfill .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.quickfill .chip {
+  padding: 8px 14px;
+  font-size: 0.8125rem;
 }
 
 .field-label {
