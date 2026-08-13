@@ -1,47 +1,76 @@
-// 当前皮肤的 manifest 单例加载（全部取图组件共用）。
-// 失败时暴露 error + retry：已挂载视图靠 retry 恢复，不然会永久空白牌面。
-// switchDeck：M2 皮肤切换（settings.deckId 变化后强制重载——manifest 是响应式 ref，
-// 视图通过 cardUrl/backUrl 自动更新，无需组件自行重建）。
+// 当前牌面（face）与牌背（back）的加载单例。牌面与牌背可自由组合：
+//  - faceId（settings.deckId）：用哪套牌面图（如 rws / rws-sepia）
+//  - backId（settings.backId）：用哪张独立牌背（如 星纹·暖金 / 霓虹壁画）
 import { ref } from 'vue'
-import { loadDeck, cardImageUrl, backImageUrl } from './deck-loader.js'
+import { loadDeck, cardImageUrl, standaloneBackUrl, listBacks } from './deck-loader.js'
 import { loadSettings, saveSettings } from './storage.js'
 
-const deckId = ref(loadSettings().deckId)
+const faceId = ref(loadSettings().deckId || 'rws')
 const manifest = ref(null)
 const error = ref(null)
 let loading = null
 
-function start() {
+const backId = ref(loadSettings().backId || 'star-gold')
+const backItem = ref(null)
+let backsLoading = null
+
+function loadFace() {
   error.value = null
-  loading = loadDeck(deckId.value)
+  loading = loadDeck(faceId.value)
     .then((m) => {
       manifest.value = m
     })
     .catch((err) => {
-      console.error('[deck] 皮肤加载失败', err)
+      console.error('[deck] 牌面加载失败', err)
       error.value = err
       loading = null // 允许重试
     })
 }
 
+function loadBack() {
+  if (backsLoading) return
+  if (backItem.value && backItem.value.id === backId.value) return
+  backItem.value = null
+  backsLoading = listBacks()
+    .then((list) => {
+      backItem.value = list.find((b) => b.id === backId.value) || list[0] || null
+    })
+    .catch(() => {
+      backItem.value = null
+    })
+    .finally(() => {
+      backsLoading = null
+    })
+}
+
 export function useDeck() {
-  if (!loading && !manifest.value) start()
+  if (!loading && !manifest.value) loadFace()
+  loadBack()
   return {
-    deckId,
+    faceId,
     manifest,
+    backId,
+    backItem,
     error,
     retry: () => {
-      if (!manifest.value && !loading) start()
+      if (!manifest.value && !loading) loadFace()
     },
-    // 切换到另一套皮肤：写 settings.deckId 并重载 manifest
-    switchDeck: (id) => {
-      if (id === deckId.value && manifest.value) return
-      deckId.value = id
+    // 换牌面（牌背保持独立）
+    switchFace: (id) => {
+      if (id === faceId.value && manifest.value) return
+      faceId.value = id
       manifest.value = null
       error.value = null
       loading = null
       saveSettings({ deckId: id })
-      start()
+      loadFace()
+    },
+    // 换牌背（牌面保持独立）
+    switchBack: (id) => {
+      if (id === backId.value && backItem.value?.id === id) return
+      backId.value = id
+      saveSettings({ backId: id })
+      loadBack()
     },
     cardUrl: (cardId) => {
       if (!manifest.value) return ''
@@ -51,6 +80,6 @@ export function useDeck() {
         return '' // 皮肤缺牌不在渲染期抛崩整页
       }
     },
-    backUrl: () => (manifest.value ? backImageUrl(manifest.value) : '')
+    backUrl: () => (backItem.value ? standaloneBackUrl(backItem.value) : '')
   }
 }

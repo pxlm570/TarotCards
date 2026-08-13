@@ -1,0 +1,17 @@
+[
+  {
+    "id": "star-gold",
+    "name": "星纹·暖金",
+    "file": "star-gold.webp"
+  },
+  {
+    "id": "neon",
+    "name": "霓虹壁画",
+    "file": "neon.webp"
+  },
+  {
+    "id": "sepia",
+    "name": "复古·泛黄",
+    "file": "sepia.webp"
+  }
+]

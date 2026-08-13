@@ -6,6 +6,7 @@ const BASE = import.meta.env.BASE_URL
 
 const manifestCache = new Map()
 let deckIdsCache = null
+let backsCache = null
 
 export async function listDecks() {
   if (deckIdsCache) return deckIdsCache
@@ -13,6 +14,15 @@ export async function listDecks() {
   if (!res.ok) throw new Error(`加载皮肤索引失败：${res.status}`)
   deckIdsCache = await res.json()
   return deckIdsCache
+}
+
+// 牌背注册表（与牌面解耦，用户可自由组合）：[{ id, name, file }]
+export async function listBacks() {
+  if (backsCache) return backsCache
+  const res = await fetch(`${BASE}backs/index.json`)
+  if (!res.ok) throw new Error(`加载牌背索引失败：${res.status}`)
+  backsCache = await res.json()
+  return backsCache
 }
 
 export async function loadDeck(id) {
@@ -37,4 +47,9 @@ export function cardImageUrl(manifest, cardId) {
 
 export function backImageUrl(manifest) {
   return `${BASE}decks/${manifest.id}/${manifest.back}`
+}
+
+// 独立牌背图（不依赖某套牌面皮肤）
+export function standaloneBackUrl(back) {
+  return `${BASE}backs/${back.file}`
 }

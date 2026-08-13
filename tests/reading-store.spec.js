@@ -24,7 +24,8 @@ describe('storage：settings 契约', () => {
     expect(s.reversalsEnabled).toBe(false) // 新手默认关逆位
     expect(s.autoDraw).toBe(false)
     expect(s.sound).toBe(false)
-    expect(s.deckId).toBe('rws-star')
+    expect(s.deckId).toBe('rws')
+    expect(s.backId).toBe('star-gold')
   })
 
   it('saveSettings 增量合并并持久化', () => {

@@ -16,7 +16,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   theme: 'auto', // auto = 跟随系统 prefers-color-scheme（M1.5 定稿）| light | dark
   sound: false,
   haptics: true,
-  deckId: 'rws-star', // 默认皮肤（AI 生成的暖金新牌背）；可在牌库皮肤库切换
+  deckId: 'rws', // 牌面皮肤（rws / rws-sepia）
+  backId: 'star-gold', // 独立牌背（星纹·暖金，与牌面可自由组合）
   reducedMotion: null, // null = 跟随系统 prefers-reduced-motion（M5 UI 生效）
   fontSize: 'standard' // standard | large（M5 生效）
 })

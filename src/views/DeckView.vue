@@ -1,16 +1,16 @@
 <script setup>
-// 牌库 Tab（M2 Task 5）：筛选 + 搜索 + 皮肤切换 + 网格。
+// 牌库 Tab：搜索/筛选 + 牌面库（可自由组合）+ 牌背库（独立选择，各用各的名字）。
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import cardsData from '../data/cards.json'
 import CardGrid from '../components/CardGrid.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useDeck } from '../lib/use-deck.js'
-import { listDecks, loadDeck, backImageUrl } from '../lib/deck-loader.js'
+import { listDecks, loadDeck, cardImageUrl, listBacks, standaloneBackUrl } from '../lib/deck-loader.js'
 import { tap, toast } from '../lib/feedback.js'
 
 const router = useRouter()
-const { deckId, switchDeck } = useDeck()
+const { faceId, backId, switchFace, switchBack } = useDeck()
 
 const FILTERS = [
   { key: 'all', label: '全部' },
@@ -23,21 +23,29 @@ const FILTERS = [
 
 const filter = ref('all')
 const keyword = ref('')
-const decks = ref([]) // [{id, name, backUrl}]
+const faces = ref([]) // [{id, name, thumb}] 牌面
+const backs = ref([]) // [{id, name, url}] 牌背
 
-// 皮肤库：加载每个皮肤 manifest 的牌背缩略
+// 牌面库
 listDecks()
   .then(async (ids) => {
     const items = []
     for (const id of ids) {
       try {
         const m = await loadDeck(id)
-        items.push({ id, name: m.name, backUrl: backImageUrl(m) })
+        items.push({ id, name: m.name, thumb: cardImageUrl(m, 'major-00') })
       } catch {
-        items.push({ id, name: id, backUrl: '' })
+        items.push({ id, name: id, thumb: '' })
       }
     }
-    decks.value = items
+    faces.value = items
+  })
+  .catch(() => {})
+
+// 牌背库（独立注册表，用牌背自己的名字）
+listBacks()
+  .then((list) => {
+    backs.value = list.map((b) => ({ id: b.id, name: b.name, url: standaloneBackUrl(b) }))
   })
   .catch(() => {})
 
@@ -59,10 +67,16 @@ function pickFilter(key) {
   tap()
 }
 
-function switchSkin(id) {
-  switchDeck(id)
+function pickFace(id) {
+  switchFace(id)
   tap()
-  toast('已切换牌组', 'success')
+  toast('已切换牌面', 'success')
+}
+
+function pickBack(id) {
+  switchBack(id)
+  tap()
+  toast('已切换牌背', 'success')
 }
 </script>
 
@@ -75,6 +89,42 @@ function switchSkin(id) {
       </div>
     </header>
 
+    <!-- 牌背库：独立选择 -->
+    <section v-if="backs.length" class="lib">
+      <p class="lib-title">牌背 · 点选切换（自由组合）</p>
+      <div class="lib-row">
+        <button
+          v-for="b in backs"
+          :key="b.id"
+          class="lib-item"
+          :class="{ on: backId === b.id }"
+          @click="pickBack(b.id)"
+        >
+          <img v-if="b.url" class="lib-back" :src="b.url" :alt="b.name" />
+          <div v-else class="lib-back skeleton" />
+          <span class="lib-name">{{ b.name }}</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 牌面库：独立选择 -->
+    <section v-if="faces.length > 1" class="lib">
+      <p class="lib-title">牌面 · 点选切换</p>
+      <div class="lib-row">
+        <button
+          v-for="f in faces"
+          :key="f.id"
+          class="lib-item"
+          :class="{ on: faceId === f.id }"
+          @click="pickFace(f.id)"
+        >
+          <img v-if="f.thumb" class="lib-face" :src="f.thumb" :alt="f.name" />
+          <div v-else class="lib-face skeleton" />
+          <span class="lib-name">{{ f.name }}</span>
+        </button>
+      </div>
+    </section>
+
     <div class="toolbar">
       <div class="chips">
         <button
@@ -86,22 +136,6 @@ function switchSkin(id) {
         >
           {{ f.label }}
         </button>
-      </div>
-      <div v-if="decks.length > 1" class="skinlib">
-        <p class="skinlib-title">皮肤库 · 点选切换</p>
-        <div class="skinlib-row">
-          <button
-            v-for="d in decks"
-            :key="d.id"
-            class="skin-item"
-            :class="{ on: deckId === d.id }"
-            @click="switchSkin(d.id)"
-          >
-            <img v-if="d.backUrl" class="skin-back" :src="d.backUrl" :alt="d.name" />
-            <div v-else class="skin-back skeleton" />
-            <span class="skin-name">{{ d.name }}</span>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -143,39 +177,24 @@ function switchSkin(id) {
   border-color: var(--gold-deep);
 }
 
-.toolbar {
+.lib {
   margin-bottom: 14px;
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  padding: 8px 14px;
-  font-size: 0.8125rem;
-}
-
-.skinlib {
-  margin-top: 12px;
-}
-
-.skinlib-title {
+.lib-title {
   font-size: var(--fs-note);
   color: var(--dim);
   margin-bottom: 8px;
 }
 
-.skinlib-row {
+.lib-row {
   display: flex;
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
 }
 
-.skin-item {
+.lib-item {
   flex: none;
   width: 84px;
   display: flex;
@@ -190,12 +209,13 @@ function switchSkin(id) {
   -webkit-tap-highlight-color: transparent;
 }
 
-.skin-item.on {
+.lib-item.on {
   border-color: var(--gold-deep);
   background: var(--gold-soft);
 }
 
-.skin-back {
+.lib-back,
+.lib-face {
   width: 84px;
   aspect-ratio: 300 / 527;
   border-radius: var(--radius-img);
@@ -203,7 +223,7 @@ function switchSkin(id) {
   box-shadow: var(--shadow-card);
 }
 
-.skin-name {
+.lib-name {
   font-size: 0.6875rem;
   color: var(--dim);
   text-align: center;
@@ -211,6 +231,21 @@ function switchSkin(id) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.toolbar {
+  margin-bottom: 14px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 14px;
+  font-size: 0.8125rem;
 }
 
 .count {
