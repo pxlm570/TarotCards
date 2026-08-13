@@ -99,6 +99,7 @@ function cancel() {
       rows="3"
       maxlength="200"
       placeholder="例如：接下来三个月，我该把重心放在哪里？"
+      @keydown.ctrl.enter="confirm"
     />
     <p class="privacy">
       <AppIcon name="lock" :size="13" />

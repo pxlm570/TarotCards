@@ -3,12 +3,14 @@
 import { ref, onMounted } from 'vue'
 import { buildClarifyMessages } from '../lib/ai-prompts.js'
 import { streamChat, AI_NOT_CONFIGURED } from '../lib/ai-client.js'
+import { useEscClose } from '../composables/useEscClose.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   question: { type: String, required: true }
 })
 const emit = defineEmits(['done', 'skip'])
+useEscClose(() => emit('skip')) // Esc 关闭（视为跳过澄清）
 
 const text = ref('')
 const answer = ref('')

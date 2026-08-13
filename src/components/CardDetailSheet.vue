@@ -2,6 +2,7 @@
 // 牌详情弹层（M2 Task 5）：InterpretationView 与 CardDetailView 共用。
 // props.reversed 用于从解读页进入时高亮当前正逆位（仅高亮定位，不筛选内容）。
 import { useDeck } from '../lib/use-deck.js'
+import { useEscClose } from '../composables/useEscClose.js'
 import AppIcon from './AppIcon.vue'
 
 defineProps({
@@ -11,6 +12,7 @@ defineProps({
 
 const emit = defineEmits(['close'])
 const { cardUrl } = useDeck()
+useEscClose(() => emit('close')) // Esc 关闭
 </script>
 
 <template>

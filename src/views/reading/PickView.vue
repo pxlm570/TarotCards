@@ -1,10 +1,11 @@
 <script setup>
 // 抽牌页：78 张牌背横排滑动，逐张点选（选中金色描边）；「帮我抽完」一键补满。
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useEscClose } from '../../composables/useEscClose.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const TOTAL = 78
@@ -48,6 +49,27 @@ function pickRest() {
   success() // 完成时刻：与手动选满的手感一致
   toReveal()
 }
+
+// 桌面键盘（Task 12）：Esc 关确认弹层；数字键 1-9 选第 N 张未选牌（走既有二次确认）
+useEscClose(() => (confirmIndex.value = null))
+function onKey(e) {
+  const tag = document.activeElement?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持数字键
+  if (!/^[1-9]$/.test(e.key)) return
+  if (store.phase !== 'picking') return
+  let n = Number(e.key)
+  for (let i = 0; i < TOTAL; i++) {
+    if (!store.pickedIndices.includes(i)) {
+      n--
+      if (n === 0) {
+        pick(i)
+        return
+      }
+    }
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>

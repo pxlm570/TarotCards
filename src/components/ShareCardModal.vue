@@ -2,6 +2,7 @@
 // 分享卡片弹层（M5 Task 2）：生成预览 + 下载 / 系统分享。
 import { ref } from 'vue'
 import { generateShareCard } from '../lib/share-card.js'
+import { useEscClose } from '../composables/useEscClose.js'
 import AppIcon from './AppIcon.vue'
 import { toast, success } from '../lib/feedback.js'
 
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
+useEscClose(() => emit('close')) // Esc 关闭
 
 const includeQuestion = ref(false)
 const previewUrl = ref('')

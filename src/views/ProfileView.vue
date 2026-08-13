@@ -17,6 +17,7 @@ import { useSettingsStore } from '../stores/settings.js'
 import { streamChat } from '../lib/ai-client.js'
 import { applyMotionPreference } from '../lib/feedback.js'
 import { renderSVG } from 'uqr'
+import { useEscClose } from '../composables/useEscClose.js'
 
 const settingsStore = useSettingsStore()
 
@@ -112,6 +113,7 @@ const testing = ref(false)
 const aiInput = ref({ ...loadSettings() })
 const shareLink = ref('') // 生成的配置分享链接（二维码弹层）
 const qrSvg = computed(() => (shareLink.value ? renderSVG(shareLink.value) : ''))
+useEscClose(() => (shareLink.value = '')) // Esc 关闭二维码弹层
 
 // 快捷填充：只帮填 baseUrl（不做官方端点绑定，其余常见端点自填 model/key）
 const QUICK_ENDPOINTS = [

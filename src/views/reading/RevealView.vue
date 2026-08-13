@@ -1,11 +1,12 @@
 <script setup>
 // 翻牌页：点一张翻一张（600ms 3D 翻转，逆位旋转 180°）；「全部翻开」大牌阵刚需。
 // 翻开状态直接来自 store.revealedKeys（乱序翻牌 + 刷新恢复都一致）。
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useEscClose } from '../../composables/useEscClose.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const router = useRouter()
@@ -51,6 +52,19 @@ function interpret() {
   store.goInterpret()
   router.replace('/reading/interpretation')
 }
+
+// 桌面键盘（Task 12）：Esc 关确认弹层；Enter 确认翻开 / 全部翻开
+useEscClose(() => (confirmCard.value = null))
+function onKey(e) {
+  if (e.key !== 'Enter') return
+  if (confirmCard.value) {
+    confirmFlip()
+  } else if (!allRevealed.value) {
+    flipAll()
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
