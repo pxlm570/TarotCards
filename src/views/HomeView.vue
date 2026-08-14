@@ -17,7 +17,6 @@ import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { streamChat } from '../lib/ai-client.js'
 import { useDeck } from '../lib/use-deck.js'
-import XpBar from '../components/XpBar.vue'
 
 const router = useRouter()
 const reading = useReadingStore()
@@ -105,6 +104,12 @@ function greetingText() {
   return aiGreeting.value || greeting.value
 }
 
+// 主 CTA：滚动到牌阵区
+function scrollToSpreads() {
+  tap()
+  document.getElementById('spreads')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function startDaily() {
   if (activeReading.value && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
     return
@@ -173,9 +178,11 @@ const orderedSpreads = computed(() => {
       </span>
     </button>
 
-    <section class="xp-block card">
-      <XpBar show-next />
-    </section>
+    <!-- 主 CTA：首屏可见「开始占卜」，滚到牌阵区（Task 17） -->
+    <button class="cta btn-solid" @click="scrollToSpreads">
+      <AppIcon name="reading" :size="20" />
+      开始占卜
+    </button>
 
     <!-- 今日小目标 -->
     <section class="goals card">
@@ -218,7 +225,7 @@ const orderedSpreads = computed(() => {
       · 历史最佳 {{ maxStreak }} 天
     </p>
 
-    <section class="spreads">
+    <section id="spreads" class="spreads">
       <h2 class="section-title">选择牌阵</h2>
       <button
         v-for="(spread, i) in orderedSpreads"
@@ -381,9 +388,11 @@ const orderedSpreads = computed(() => {
   margin-bottom: var(--sp-3);
 }
 
-.xp-block {
-  padding: 14px 16px;
-  margin-bottom: 12px;
+.cta {
+  width: 100%;
+  padding: 16px;
+  font-size: var(--fs-head);
+  margin-bottom: var(--sp-3);
 }
 
 .goals {
