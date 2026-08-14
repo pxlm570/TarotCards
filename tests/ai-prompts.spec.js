@@ -65,4 +65,33 @@ describe('ai-prompts', () => {
     expect(msgs[1].content).toContain('近一月 5 次占卜')
     expect(msgs[1].content).toContain('事业出现 3 次')
   })
+
+  // Task 19：技艺层
+  it('system 注入「占卜师技艺」与解读方法论', () => {
+    const msgs = buildReadingMessages({ question: 'x', domain: null, spread, drawn, cardsData: cards })
+    const s = msgs[0].content
+    expect(s).toContain('占卜师技艺')
+    expect(s).toContain('先整体')
+    expect(s).toContain('逆位不是坏牌')
+    expect(s).toContain(SAFETY) // 安全边界仍在
+  })
+
+  it('三大人格在技艺层之上可分辨（盲测关键词）', () => {
+    const gent = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+    saveSettings({ persona: 'direct' })
+    const dir = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+    saveSettings({ persona: 'scholar' })
+    const sch = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+    expect(gent).toContain('或许')
+    expect(dir).toContain('别绕弯')
+    expect(sch).toContain('符号学')
+    // 三者互不相同
+    expect(gent).not.toBe(dir)
+    expect(dir).not.toBe(sch)
+  })
+
+  it('澄清场景注入「只帮提问者把问题问清楚、不展开解读」侧重', () => {
+    const msgs = buildClarifyMessages('我会不会成功')
+    expect(msgs[0].content).toContain('不展开牌意解读')
+  })
 })
