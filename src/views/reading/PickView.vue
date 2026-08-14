@@ -1,11 +1,12 @@
 <script setup>
-// 抽牌页：78 张牌背横排滑动，逐张点选（选中金色描边）；「帮我抽完」一键补满。
+// 抽牌页（Task 16 改版）：点牌 → 内联选中态（上浮+金边+金辉，槽位呼吸描边），
+// 底部固定确认栏「放入「位置」」；点其他牌 = 选中转移，再点选中牌或 Esc = 取消。
+// 键盘（桌面）：数字键选中、Enter 放入、Esc 取消。
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
-import { useEscClose } from '../../composables/useEscClose.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const TOTAL = 78
@@ -16,30 +17,36 @@ const store = useReadingStore()
 const picked = computed(() => store.drawn.length)
 const target = computed(() => store.cardCount)
 const currentPosition = computed(() => store.spread?.positions[picked.value]?.label ?? '')
+const selectedIndex = ref(null) // 当前选中（未放入）的牌背下标；null = 无选中
 
 function toReveal() {
   router.replace('/reading/reveal')
 }
 
-// 选牌防误触：先弹确认，确认才真正放入槽位
-const confirmIndex = ref(null)
-
+// 点牌：若该牌已被放入 → 忽略；若正被选中 → 取消；否则进入选中态
 function pick(index) {
-  if (store.pickedIndices.includes(index) || store.phase !== 'picking') return
-  confirmIndex.value = index
+  if (store.phase !== 'picking') return
+  if (store.pickedIndices.includes(index)) return
+  if (selectedIndex.value === index) {
+    selectedIndex.value = null
+    return
+  }
+  selectedIndex.value = index
+  tap()
 }
 
-function confirmPick() {
-  const index = confirmIndex.value
-  confirmIndex.value = null
-  if (index == null) return
+// 确认放入
+function place() {
+  if (selectedIndex.value == null || store.phase !== 'picking') return
+  const index = selectedIndex.value
+  selectedIndex.value = null
   store.pickCard(index)
   // 选满即完成时刻：手感与普通点选区分
   if (store.phase === 'revealing') {
     success()
     toReveal()
   } else {
-    tap()
+    success()
   }
 }
 
@@ -50,19 +57,30 @@ function pickRest() {
   toReveal()
 }
 
-// 桌面键盘（Task 12）：Esc 关确认弹层；数字键 1-9 选第 N 张未选牌（走既有二次确认）
-useEscClose(() => (confirmIndex.value = null))
+// 桌面键盘（Task 12/16 微调）：数字键=选中、Enter=放入、Esc=取消选中
 function onKey(e) {
   const tag = document.activeElement?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持数字键
-  if (!/^[1-9]$/.test(e.key)) return
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持
   if (store.phase !== 'picking') return
+  if (e.key === 'Enter') {
+    if (selectedIndex.value != null) {
+      e.preventDefault()
+      place()
+    }
+    return
+  }
+  if (e.key === 'Escape') {
+    selectedIndex.value = null
+    return
+  }
+  if (!/^[1-9]$/.test(e.key)) return
   let n = Number(e.key)
   for (let i = 0; i < TOTAL; i++) {
     if (!store.pickedIndices.includes(i)) {
       n--
       if (n === 0) {
-        pick(i)
+        selectedIndex.value = i
+        tap()
         return
       }
     }
@@ -105,23 +123,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           :class="{ taken: store.pickedIndices.includes(i - 1) }"
           @click="pick(i - 1)"
         >
-          <CardBack :selected="store.pickedIndices.includes(i - 1)" />
+          <CardBack :selected="store.pickedIndices.includes(i - 1) || selectedIndex === i - 1" />
         </button>
       </div>
     </div>
 
     <button class="auto btn-ghost btn-block" @click="pickRest">帮我抽完</button>
 
-    <!-- 选牌确认（防误触） -->
-    <div v-if="confirmIndex !== null" class="modal" @click.self="confirmIndex = null">
-      <div class="dialog card">
-        <p class="dialog-title">选择这张牌？</p>
-        <p class="dialog-sub">将放入「{{ currentPosition }}」</p>
-        <div class="dialog-actions">
-          <button class="btn-ghost" @click="confirmIndex = null">取消</button>
-          <button class="btn-solid" @click="confirmPick"><AppIcon name="check" :size="15" /> 确定</button>
-        </div>
-      </div>
+    <!-- 底部固定确认栏（内联选中态，非弹窗） -->
+    <div v-if="selectedIndex !== null" class="confirm-bar">
+      <button class="btn-solid" @click="place">放入「{{ currentPosition }}」</button>
     </div>
   </div>
 </template>
@@ -192,7 +203,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 /* 保留 pointer-events：点已抽的牌由 pick() 静默忽略。
    若设 pointer-events:none 点击会穿透到被压在下面的邻牌，静默误耗名额 */
 .slot.taken {
-  opacity: 0.32; /* 上浮+金边仍隐约可见：这张已经进入牌阵 */
+  opacity: 0.32;
   cursor: default;
 }
 
@@ -261,50 +272,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   margin: 0 20px;
 }
 
-/* 选牌确认弹层 */
-.modal {
+/* 底部固定确认栏：不遮挡牌堆，靠近「帮我抽完」上方 */
+.confirm-bar {
   position: fixed;
-  inset: 0;
-  background: var(--overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-  padding: 24px;
+  left: 20px;
+  right: 20px;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 15;
 }
 
-.dialog {
+.confirm-bar .btn-solid {
   width: 100%;
-  max-width: 340px;
-  padding: var(--sp-3);
-  text-align: center;
-}
-
-.dialog-title {
-  font-size: var(--fs-head);
-  font-weight: var(--w-title);
-  margin-bottom: 8px;
-}
-
-.dialog-sub {
-  font-size: var(--fs-note);
-  color: var(--dim);
-  margin-bottom: 16px;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.dialog-actions > button {
-  flex: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dest.active,
-  .dest.filled {
-    animation: none;
-  }
 }
 </style>

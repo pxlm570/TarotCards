@@ -1,12 +1,10 @@
 <script setup>
-// 翻牌页：点一张翻一张（600ms 3D 翻转，逆位旋转 180°）；「全部翻开」大牌阵刚需。
-// 翻开状态直接来自 store.revealedKeys（乱序翻牌 + 刷新恢复都一致）。
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+// 翻牌页（Task 16 改版）：点牌背直接翻（600ms 3D + 金光斜扫），无二次确认弹窗。
+// 键盘（桌面）：Enter = 全部翻开。
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
-import AppIcon from '../../components/AppIcon.vue'
-import { useEscClose } from '../../composables/useEscClose.js'
 import { tap, success } from '../../lib/feedback.js'
 
 const router = useRouter()
@@ -19,22 +17,8 @@ const big = computed(() => store.cardCount > 5)
 // 牌越少牌越大：单张牌阵用 18% 会是一张小邮票孤零零躺在空画布中央
 const cardPct = computed(() => (big.value ? 14 : store.cardCount === 1 ? 32 : 18))
 
-// 逐张翻牌防误触：先弹确认
-const confirmCard = ref(null)
-const confirmLabel = computed(() => {
-  const pos = store.spread?.positions.find((p) => p.key === confirmCard.value?.positionKey)
-  return pos?.label ?? ''
-})
-
 function flip(card) {
   if (store.phase !== 'revealing' || revealed.value.has(card.positionKey)) return
-  confirmCard.value = card
-}
-
-function confirmFlip() {
-  const card = confirmCard.value
-  confirmCard.value = null
-  if (!card) return
   store.revealCard(card.positionKey)
   // 最后一张翻开 = 完成时刻
   if (store.revealedCount === store.cardCount) success()
@@ -53,15 +37,10 @@ function interpret() {
   router.replace('/reading/interpretation')
 }
 
-// 桌面键盘（Task 12）：Esc 关确认弹层；Enter 确认翻开 / 全部翻开
-useEscClose(() => (confirmCard.value = null))
+// 桌面键盘（Task 12）：Enter = 全部翻开
 function onKey(e) {
-  if (e.key !== 'Enter') return
-  if (confirmCard.value) {
-    confirmFlip()
-  } else if (!allRevealed.value) {
-    flipAll()
-  }
+  if (e.key !== 'Enter' || allRevealed.value) return
+  flipAll()
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
@@ -88,18 +67,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="actions">
       <button v-if="!allRevealed" class="wide btn-ghost" @click="flipAll">全部翻开</button>
       <button v-else class="wide primary btn-solid" @click="interpret">查看解读</button>
-    </div>
-
-    <!-- 逐张翻牌确认（防误触） -->
-    <div v-if="confirmCard" class="modal" @click.self="confirmCard = null">
-      <div class="dialog card">
-        <p class="dialog-title">翻开这张？</p>
-        <p class="dialog-sub">位置「{{ confirmLabel }}」</p>
-        <div class="dialog-actions">
-          <button class="btn-ghost" @click="confirmCard = null">取消</button>
-          <button class="btn-solid" @click="confirmFlip"><AppIcon name="check" :size="15" /> 翻开</button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -151,46 +118,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .wide {
   min-width: 200px;
   padding: 14px 32px;
-}
-
-/* 翻牌确认弹层 */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-  padding: 24px;
-}
-
-.dialog {
-  width: 100%;
-  max-width: 340px;
-  padding: var(--sp-3);
-  text-align: center;
-}
-
-.dialog-title {
-  font-size: var(--fs-head);
-  font-weight: var(--w-title);
-  margin-bottom: 8px;
-}
-
-.dialog-sub {
-  font-size: var(--fs-note);
-  color: var(--dim);
-  margin-bottom: 16px;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.dialog-actions > button {
-  flex: 1;
 }
 
 /* 全部翻开后的下一步引导：金辉脉冲（仪式链定稿 ⑤） */
