@@ -184,7 +184,7 @@ export const useReadingStore = defineStore('reading', {
       return true
     },
 
-    // 返回手势（UX #8）：占卜动线内逐级回退；questioning 再退则退出本局
+    // 返回手势（UX #8 / Task 15）：占卜动线内逐级回退；questioning 再退则退出本局
     stepBack() {
       const order = ['questioning', 'shuffling', 'picking', 'revealing', 'interpreting']
       const idx = order.indexOf(this.phase)
@@ -193,13 +193,21 @@ export const useReadingStore = defineStore('reading', {
         return null
       }
       const prev = order[idx - 1]
-      // 回退时清掉只会向前的中间态，避免回到旧步骤后状态错位
-      if (prev === 'picking') {
+      if (prev === 'shuffling') {
+        // 退回洗牌：清空已抽/待抽（finishShuffle 会重建牌池）
         this.drawn = []
         this.pending = []
         this.pickedIndices = []
-      }
-      if (prev === 'revealing') {
+        this.revealedKeys = []
+      } else if (prev === 'picking') {
+        // 退回抽牌：重建牌池（用户见过翻开的牌再回来，理应重新随机，不能保序复用旧池）
+        this.pending = drawCards(DECK_IDS, this.cardCount, {
+          allowReversed: this.snapshot?.reversalsEnabled ?? false
+        })
+        this.drawn = []
+        this.pickedIndices = []
+        this.revealedKeys = []
+      } else if (prev === 'revealing') {
         this.revealedKeys = []
       }
       this.phase = prev

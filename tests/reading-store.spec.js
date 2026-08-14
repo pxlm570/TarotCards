@@ -213,7 +213,7 @@ describe('reading store：状态机', () => {
     expect(store.stepBack()).toBe('picking')
     expect(store.revealedKeys).toEqual([])
     expect(store.drawn).toEqual([])
-    expect(store.pending).toEqual([])
+    expect(store.pending.length).toBe(store.cardCount) // 重建牌池，而非清空
     expect(store.pickedIndices).toEqual([])
   })
 
@@ -225,5 +225,45 @@ describe('reading store：状态机', () => {
     expect(store.question).toBe('测试问题') // 问题未丢
     expect(store.stepBack()).toBeNull() // 无前一步 → 重置
     expect(store.phase).toBe('idle')
+  })
+
+  // Task 15：回退缺陷修复的三条必写用例（TDD Red）
+  it('stepBack 回退到 picking 重建牌池：pickCard 正常放入不抛错', () => {
+    const store = useReadingStore()
+    walkToPicking(store)
+    store.pickAll()
+    store.revealCard('past')
+    expect(store.stepBack()).toBe('picking') // revealing → picking
+    expect(store.pending.length).toBe(store.cardCount) // 重建牌池
+    expect(() => store.pickCard(0)).not.toThrow()
+    store.pickCard(5)
+    store.pickCard(12)
+    expect(store.drawn.length).toBe(3)
+    expect(store.phase).toBe('revealing')
+  })
+
+  it('stepBack 回退到 shuffling 清空已选：重洗后可完整选满', () => {
+    const store = useReadingStore()
+    walkToPicking(store)
+    store.pickCard(0) // 已选 1 张
+    expect(store.stepBack()).toBe('shuffling')
+    expect(store.drawn).toEqual([])
+    expect(store.pickedIndices).toEqual([])
+    store.finishShuffle()
+    expect(store.phase).toBe('picking')
+    store.pickAll()
+    expect(store.drawn.length).toBe(3)
+    expect(store.phase).toBe('revealing')
+  })
+
+  it('stepBack 回退重抽仍按逆位快照', () => {
+    saveSettings({ reversalsEnabled: true })
+    const store = useReadingStore()
+    walkToPicking(store, SPREAD_10)
+    store.pickAll()
+    store.revealCard('heart')
+    store.stepBack() // revealing → picking
+    expect(store.pending.length).toBe(10)
+    expect(store.pending.some((p) => p.reversed)).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { computed, onMounted, onUnmounted } from 'vue'
 import TabBar from './components/TabBar.vue'
 import AppToast from './components/AppToast.vue'
@@ -10,18 +10,18 @@ import { useReadingStore } from './stores/reading.js'
 import { PHASE_ROUTE } from './router/index.js'
 
 const route = useRoute()
+const router = useRouter()
 // 占卜动线与引导页沉浸式展示，不显示 TabBar
 const showTabBar = computed(() => !route.path.startsWith('/reading') && route.path !== '/welcome')
 
-// UX #8：返回手势统一——占卜动线内返回键逐级回退，不误退
+// UX #8 / Task 15：返回手势统一——占卜动线内返回键逐级回退，不误退。
+// 回退落点经路由器导航（router.replace），保证 URL 与渲染组件始终一致（不能只改地址栏）。
 function onBack() {
   const store = useReadingStore()
   if (store.phase === 'idle') return // 非占卜中，交给浏览器默认
   const prev = store.stepBack()
   if (prev && PHASE_ROUTE[prev]) {
-    // pushState 第三参是整个 URL 路径：裸路径会抹掉基路径与 hash（线上刷新 404）。
-    // 这里保留 pathname/search 并拼上 #/reading/... 的 hash 形态。
-    history.pushState(null, '', location.pathname + location.search + '#' + PHASE_ROUTE[prev])
+    router.replace(PHASE_ROUTE[prev])
   }
   // prev === null → 已退出本局，允许浏览器回退到首页
 }
