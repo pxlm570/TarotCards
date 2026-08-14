@@ -7,6 +7,7 @@ import { useReadingStore } from '../../stores/reading.js'
 import { useSettingsStore } from '../../stores/settings.js'
 import AppIcon from '../../components/AppIcon.vue'
 import ClarifyDialog from '../../components/ClarifyDialog.vue'
+import FlowExit from '../../components/FlowExit.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,19 +72,11 @@ function confirm() {
     doSubmit(question.value.trim())
   }
 }
-
-function cancel() {
-  store.reset()
-  router.replace('/')
-}
 </script>
 
 <template>
   <div v-if="ready" class="question">
-    <button class="back btn-text" @click="cancel">
-      <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
-      取消这局
-    </button>
+    <FlowExit confirm />
 
     <div class="breathe-hint">
       <span class="ring"><span class="ring-inner" /></span>

@@ -5,6 +5,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
+import FlowExit from '../../components/FlowExit.vue'
 import { tap, success } from '../../lib/feedback.js'
 
 const router = useRouter()
@@ -48,6 +49,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 <template>
   <div class="reveal">
+    <FlowExit confirm />
     <p class="tip" :class="{ done: allRevealed }">
       {{ allRevealed ? '牌面已全部揭晓' : '点击牌背，逐张翻开' }}
     </p>

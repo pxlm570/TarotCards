@@ -18,6 +18,7 @@ import CardDetailSheet from '../../components/CardDetailSheet.vue'
 import AiPanel from '../../components/AiPanel.vue'
 import SelfReadPanel from '../../components/SelfReadPanel.vue'
 import ShareCardModal from '../../components/ShareCardModal.vue'
+import FlowExit from '../../components/FlowExit.vue'
 import { tap, success, toast } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
@@ -179,6 +180,7 @@ function again() {
 
 <template>
   <div class="interp">
+    <FlowExit :confirm="false" />
     <header class="head">
       <h1 class="title">{{ store.spread?.name }} · 解读</h1>
       <p v-if="store.question" class="question">「{{ store.question }}」</p>

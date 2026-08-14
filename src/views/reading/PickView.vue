@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import FlowExit from '../../components/FlowExit.vue'
 import { tap, success } from '../../lib/feedback.js'
 
 const TOTAL = 78
@@ -92,6 +93,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 <template>
   <div class="pick">
+    <FlowExit confirm />
     <header class="head">
       <p class="progress">
         已选 <span class="gold">{{ picked }}</span> / {{ target }}

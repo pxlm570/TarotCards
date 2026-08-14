@@ -8,6 +8,7 @@ import { safeGetItem, safeSetItem } from '../../lib/storage.js'
 import { tap, success } from '../../lib/feedback.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import FlowExit from '../../components/FlowExit.vue'
 
 const MODE_KEY = 'tarot.shuffle-mode.v1'
 const HINT_KEY = 'tarot.shuffle-hint.v1'
@@ -149,6 +150,7 @@ onUnmounted(() => {
 
 <template>
   <div class="shuffle">
+    <FlowExit confirm />
     <div class="mode-switch">
       <button class="mode" :class="{ on: mode === 'interactive' }" @click="switchMode('interactive')">互动拖洗</button>
       <button class="mode" :class="{ on: mode === 'riffle' }" @click="switchMode('riffle')">仪式翻洗</button>
