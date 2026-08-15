@@ -2,6 +2,8 @@
 // 占卜动线统一退出入口（Task 18 + Task 20-A 轻量化）：
 // 左上角纯图标（无文字、无按钮条），触摸目标 ≥44×44。五页形态一致。
 // confirm=true（中途）退出前确认整局作废；beforeExit 回调返回真（有未保存草稿）时先确认再退。
+// reset=false 只回首页不动 store——给动线外的页面（如 /spreads）复用同款返回，
+// 免得从首页带着进行中的一局逛过来再返回时把它静默作废。
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../stores/reading.js'
 import AppIcon from './AppIcon.vue'
@@ -9,7 +11,9 @@ import { tap } from '../lib/feedback.js'
 
 const props = defineProps({
   confirm: { type: Boolean, default: true },
-  beforeExit: { type: Function, default: null }
+  beforeExit: { type: Function, default: null },
+  reset: { type: Boolean, default: true },
+  label: { type: String, default: '退出占卜' }
 })
 
 const router = useRouter()
@@ -21,13 +25,13 @@ function exit() {
   }
   if (props.confirm && !window.confirm('退出后本局作废，确定吗？')) return
   tap()
-  store.reset()
+  if (props.reset) store.reset()
   router.replace('/')
 }
 </script>
 
 <template>
-  <button class="flow-exit" aria-label="退出占卜" @click="exit">
+  <button class="flow-exit" :aria-label="label" @click="exit">
     <AppIcon name="arrow" :size="24" style="transform: rotate(180deg)" />
   </button>
 </template>

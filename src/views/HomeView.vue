@@ -1,11 +1,9 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import spreads from '../data/spreads.json'
 import cardsData from '../data/cards.json'
-import moonPhases from '../data/moon-phases.json'
 import AppIcon from '../components/AppIcon.vue'
-import { tap, scrollBehavior } from '../lib/feedback.js'
+import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
 import { useJournalStore } from '../stores/journal.js'
 import { useLearningStore } from '../stores/learning.js'
@@ -17,6 +15,7 @@ import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { streamChat } from '../lib/ai-client.js'
 import { useDeck } from '../lib/use-deck.js'
+import { useRitualToday } from '../composables/use-ritual-today.js'
 
 const router = useRouter()
 const reading = useReadingStore()
@@ -104,10 +103,10 @@ function greetingText() {
   return aiGreeting.value || greeting.value
 }
 
-// 主 CTA：滚动到牌阵区
-function scrollToSpreads() {
+// 主 CTA：进选牌阵独立页（Task 21，首页不再挂牌阵列表）
+function goSpreads() {
   tap()
-  document.getElementById('spreads')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
+  router.push('/spreads')
 }
 
 function startDaily() {
@@ -132,27 +131,12 @@ function startReading(spreadId) {
   router.push({ path: '/reading/question', query: { spread: spreadId } })
 }
 
-// M5：仪式牌阵置顶——生日窗口（前 3 后 3 天）或新月/满月当天
-const birthdayWindow = computed(() => {
-  if (!profile.birthday) return false
-  const [y, m, d] = profile.birthday.split('-').map(Number)
-  const bday = new Date(y, m - 1, d)
-  const today = new Date()
-  const diff = Math.round((today - bday) / 86400000)
-  return Math.abs(diff) <= 3
-})
-const ritualToday = computed(() => {
-  const day = currentDayKey()
-  if (moonPhases.newMoon.includes(day)) return 'new-moon'
-  if (moonPhases.fullMoon.includes(day)) return 'full-moon'
-  if (birthdayWindow.value) return 'birthday'
-  return null
-})
-const orderedSpreads = computed(() => {
-  if (!ritualToday.value) return spreads
-  const r = spreads.find((s) => s.id === ritualToday.value)
-  return r ? [r, ...spreads.filter((s) => s.id !== ritualToday.value)] : spreads
-})
+// M5 仪式牌阵（Task 21 起只在首页留一行提示，完整列表在 /spreads）：
+// 新月/满月当天或生日窗口命中时出现，点击直达该牌阵，平日不占位。
+const { ritualToday, ritualSpread } = useRitualToday()
+const RITUAL_PREFIX = { 'new-moon': '今晚新月', 'full-moon': '今晚满月', birthday: '生日将至' }
+const ritualPrefix = computed(() => RITUAL_PREFIX[ritualToday.value] ?? '')
+const ritualIcon = computed(() => (ritualToday.value === 'birthday' ? 'star' : 'moon'))
 </script>
 
 <template>
@@ -178,11 +162,20 @@ const orderedSpreads = computed(() => {
       </span>
     </button>
 
-    <!-- 主 CTA：首屏可见「开始占卜」，滚到牌阵区（Task 17） -->
-    <button class="cta btn-solid" @click="scrollToSpreads">
-      <AppIcon name="reading" :size="20" />
-      开始占卜
-    </button>
+    <!-- 主 CTA：首屏可见「开始占卜」，进选牌阵页（Task 17 → Task 21 改为独立页） -->
+    <div class="cta-block">
+      <button class="cta btn-solid" @click="goSpreads">
+        <AppIcon name="reading" :size="20" />
+        开始占卜
+      </button>
+
+      <!-- 今日限定：仅仪式日出现，直达该牌阵 -->
+      <button v-if="ritualSpread" class="ritual-row" @click="startReading(ritualToday)">
+        <AppIcon :name="ritualIcon" :size="16" />
+        <span class="ritual-text">{{ ritualPrefix }} · {{ ritualSpread.name }}</span>
+        <span class="recommend">今日限定</span>
+      </button>
+    </div>
 
     <!-- 今日小目标 -->
     <section class="goals card">
@@ -224,29 +217,6 @@ const orderedSpreads = computed(() => {
       <template v-else>连续打卡，积累你的仪式感</template>
       · 历史最佳 {{ maxStreak }} 天
     </p>
-
-    <section id="spreads" class="spreads">
-      <h2 class="section-title">选择牌阵</h2>
-      <button
-        v-for="(spread, i) in orderedSpreads"
-        :key="spread.id"
-        class="spread-card card-press stagger-item"
-        :style="{ '--i': i }"
-        @click="startReading(spread.id)"
-      >
-        <span class="spread-n">
-          {{ spread.cardCount }}
-          <small>张</small>
-        </span>
-        <span class="spread-info">
-          <span class="spread-name">{{ spread.name }}</span>
-          <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
-        </span>
-        <span class="badge" :class="{ 'badge-plain': spread.difficulty === '进阶' }">{{ spread.difficulty }}</span>
-        <span v-if="spread.id === ritualToday" class="recommend">今日限定</span>
-        <span v-else-if="i === 0" class="recommend">推荐</span>
-      </button>
-    </section>
 
     <section class="learn-entry">
       <router-link to="/learn" class="learn-card card-dashed">
@@ -388,11 +358,52 @@ const orderedSpreads = computed(() => {
   margin-bottom: var(--sp-3);
 }
 
+.cta-block {
+  margin-bottom: var(--sp-3);
+}
+
 .cta {
   width: 100%;
   padding: 16px;
   font-size: var(--fs-head);
-  margin-bottom: var(--sp-3);
+}
+
+/* 今日限定提示行：贴在 CTA 下，仪式日才出现 */
+.ritual-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  color: var(--gold-text);
+  font-family: var(--sans);
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out);
+}
+
+.ritual-row:active {
+  transform: scale(0.98);
+}
+
+.ritual-row:focus-visible {
+  outline: 2px solid var(--gold-text);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.ritual-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .goals {
@@ -443,61 +454,6 @@ const orderedSpreads = computed(() => {
   border-radius: var(--radius-pill);
   padding: 2px 8px;
   flex-shrink: 0;
-}
-
-.section-title {
-  font-size: var(--fs-head);
-  margin-bottom: 14px;
-}
-
-.spread-card {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.spread-n {
-  min-width: 44px;
-  text-align: center;
-  font-size: 1.625rem;
-  font-weight: var(--w-title);
-  color: var(--gold-text);
-  line-height: 1;
-}
-
-.spread-n small {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: var(--w-medium);
-  color: var(--dim);
-  letter-spacing: 0.1em;
-  margin-top: 3px;
-}
-
-.spread-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-}
-
-.spread-name {
-  font-size: var(--fs-head);
-  font-weight: var(--w-title);
-}
-
-.spread-desc {
-  max-width: 100%;
-  font-size: var(--fs-note);
-  color: var(--dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .learn-entry {

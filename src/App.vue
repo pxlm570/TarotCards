@@ -11,8 +11,9 @@ import { PHASE_ROUTE } from './router/index.js'
 
 const route = useRoute()
 const router = useRouter()
-// 占卜动线与引导页沉浸式展示，不显示 TabBar
-const showTabBar = computed(() => !route.path.startsWith('/reading') && route.path !== '/welcome')
+// 占卜动线、引导页、选牌阵页沉浸式展示，不显示 TabBar
+const IMMERSIVE = ['/welcome', '/spreads']
+const showTabBar = computed(() => !route.path.startsWith('/reading') && !IMMERSIVE.includes(route.path))
 
 // UX #8 / Task 15：返回手势统一——占卜动线内返回键逐级回退，不误退。
 // 回退落点经路由器导航（router.replace），保证 URL 与渲染组件始终一致（不能只改地址栏）。

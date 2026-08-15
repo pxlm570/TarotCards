@@ -54,15 +54,23 @@ with sync_playwright() as p:
     page.click("text=下一步")
     page.click("text=下一步")
     page.click("text=开始体验")
-    page.wait_for_selector("text=选择牌阵")
-    check("A2 引导完成进入首页", "选择牌阵" in page.content())
+    page.wait_for_selector(".cta")
+    check("A2 引导完成进入首页", "开始占卜" in page.content())
+    check("A2b 首页不再挂牌阵列表（Task 21）", page.locator("#spreads").count() == 0)
     page.screenshot(path=f"{SHOT}/a2-home.png")
 
+    # Task 21：牌阵列表搬到 /spreads 独立页，首页 CTA 进入
+    page.click(".cta")
+    page.wait_for_selector("text=时间之流")
+    check("A2c 进入选牌阵页", "#/spreads" in page.url)
+    check("A2d 选牌阵页无 TabBar", page.locator(".tabbar").count() == 0)
+    check("A2e 选牌阵页有图标返回", page.locator(".flow-exit").count() == 1)
+    page.screenshot(path=f"{SHOT}/a2b-spreads.png")
+
     page.click("text=时间之流")
-    page.wait_for_selector("text=深呼吸，默念你的问题")
-    check("A3 静心页", True)
-    page.click("text=跳过")
+    # 836a564 起静心独立页已并入提问页（呼吸提示行），不再有「跳过」按钮
     page.wait_for_selector("text=你想问什么？")
+    check("A3 提问页含呼吸提示行", page.locator(".breathe-hint").count() == 1)
     check("A4 提问页", True)
     page.fill("textarea", "接下来三个月我的事业重心？")
     page.click("text=事业")
@@ -82,10 +90,15 @@ with sync_playwright() as p:
     slots = page.locator(".strip .slot")
     check("A6b 牌背数量 78", slots.count() == 78, f"实际 {slots.count()}")
     # 扇形叠放：每张牌可点的是左侧 44px 可见条（按钮中心被右侧邻牌覆盖，Playwright 默认点中心会被拦）
+    # 2949bbc 起选牌改为两步：内联选中 → 底部确认栏「放入」
     slots.nth(5).click(position={"x": 15, "y": 60})
+    check("A6c 选中出现内联确认栏", page.locator(".confirm-bar").count() == 1)
+    page.click(".confirm-bar button")
     slots.nth(30).click(position={"x": 15, "y": 60})
     page.screenshot(path=f"{SHOT}/a6-pick.png")
+    page.click(".confirm-bar button")
     slots.nth(60).click(position={"x": 15, "y": 60})
+    page.click(".confirm-bar button")
 
     page.wait_for_selector("text=点击牌背，逐张翻开")
     check("A7 选满自动进翻牌页", True)
@@ -136,8 +149,11 @@ with sync_playwright() as p:
     page.screenshot(path=f"{SHOT}/a14-interpretation.png", full_page=True)
 
     # ---------- 场景 B：续局横幅 ----------
+    # Task 15 起 popstate 在动线内是「逐级回退」，改 hash 直跳首页会被当成返回手势退回上一步；
+    # 这里用整文档加载模拟「关掉再打开」，流程态从 sessionStorage 恢复
+    page.goto("about:blank")
     page.goto(BASE + "#/")
-    page.wait_for_selector("text=选择牌阵")
+    page.wait_for_selector(".cta")
     check("B1 解读中回首页出现续局横幅", page.locator(".resume").count() == 1)
     page.screenshot(path=f"{SHOT}/b1-resume-banner.png")
     page.locator(".resume").click()
@@ -145,14 +161,14 @@ with sync_playwright() as p:
     check("B2 续局回到解读页", "interpretation" in page.url)
 
     page.click("text=再来一次")
-    page.wait_for_selector("text=选择牌阵")
+    page.wait_for_selector(".cta")
     check("B3 再来一次回首页", True)
     check("B3b 续局横幅已消失", page.locator(".resume").count() == 0)
 
     # ---------- 场景 C：凯尔特十字（堆叠点击 + 帮我抽完 + 全部翻开） ----------
+    page.click(".cta")
+    page.wait_for_selector("text=凯尔特十字")
     page.click("text=凯尔特十字")
-    page.wait_for_selector("text=深呼吸，默念你的问题")
-    page.click("text=跳过")
     page.wait_for_selector("text=你想问什么？")
     page.click("text=开始洗牌")
     page.wait_for_selector("text=洗好了")
@@ -193,7 +209,7 @@ with sync_playwright() as p:
     dpage = ctx.new_page()
     dpage.set_viewport_size({"width": 1280, "height": 860})
     dpage.goto(BASE + "#/")
-    dpage.wait_for_selector("text=选择牌阵")
+    dpage.wait_for_selector(".cta")
     tabbar = dpage.locator(".tabbar").bounding_box()
     check("D1 桌面宽屏 TabBar 变竖栏", tabbar and tabbar["width"] < 120, str(tabbar))
     dpage.screenshot(path=f"{SHOT}/d1-desktop.png")
