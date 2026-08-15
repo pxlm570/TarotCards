@@ -35,6 +35,7 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 - 占卜动线落库衔接：`stores/reading.js` 有 `journalId`/`isDaily`（随 flow 持久化），`InterpretationView` 挂载自动存一条、`?daily=1` 打卡。
 - **v1.0 后追加（2026-08，验收收尾）**：牌面/牌背分离自由组合（`public/backs/` 独立注册表 + `switchFace/switchBack`）、洗牌双模式（互动拖洗 / 仪式翻洗 + 切换键）、每日挑战（低调可选 +10XP）、测验四题型（单选/多选/看图认牌/正逆判断 + 无限重试）、返回手势逐级回退（`reading.stepBack` + App.vue 全局 popstate 处理，pushState 保留基路径与 hash）、AI 客户端 Anthropic 协议支持（baseUrl 含 `/anthropic` 自动走 `/v1/messages`）。
 - 裁决记录（2026-08-13，用户拍板）：**默认 AI 端点恢复留空**（回归定稿「不做官方端点绑定」），mimo 移入设置页「快捷填充」下拉（只帮填 baseUrl）；**音效暂缓为备选**——未实装、未删 `settings.sound` 字段，进 v1.5 backlog（产品安静定位，音效与深夜使用场景相悖，可能后续再做）。
+- ✅ **v1.1.0（2026-08-15，用户试用反馈迭代）**：选牌阵独立页 `/spreads`（首页仪表盘化：问候+每日一抽+「开始占卜」CTA+今日小目标；仪式日在 CTA 下方出「今日限定」提示行直达）、仪式日判定抽成 `composables/use-ritual-today.js`（生日窗口修复：按当年归一 ±3 天、跨年/闰年边界有测试；**修复前生日置顶是死逻辑**）、选牌改内联选中态+底部确认栏（弹窗全部移除，翻牌点击直翻）、动线五页左上角纯图标退出（`FlowExit.vue`，中途确认/解读页免确认+防丢草稿）、AI 占卜师技艺层（`lib/ai-craft.js`，人格差异以其为唯一源）、返回手势只在动线内接管（afterEach 记来源页）。验收档案：`docs/plans/2026-08-13-v1.0-acceptance-handoff.md`（本地，Task 1–21 已归档）。
 
 ## 架构与关键约定
 
