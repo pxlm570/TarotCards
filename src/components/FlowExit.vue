@@ -1,20 +1,24 @@
 <script setup>
-// 占卜动线统一退出入口（Task 18）：每页左上角「退出」。
-// 中途阶段(question~reveal)点退出 → 二次确认后整局作废回首页；
-// 解读页(已落库)confirm=false 直接回首页、不重复保存。
+// 占卜动线统一退出入口（Task 18 + Task 20-A 轻量化）：
+// 左上角纯图标（无文字、无按钮条），触摸目标 ≥44×44。五页形态一致。
+// confirm=true（中途）退出前确认整局作废；beforeExit 回调返回真（有未保存草稿）时先确认再退。
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../stores/reading.js'
 import AppIcon from './AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 
 const props = defineProps({
-  confirm: { type: Boolean, default: true }
+  confirm: { type: Boolean, default: true },
+  beforeExit: { type: Function, default: null }
 })
 
 const router = useRouter()
 const store = useReadingStore()
 
 function exit() {
+  if (typeof props.beforeExit === 'function' && props.beforeExit()) {
+    if (!window.confirm('你写下的感想/练习理解还没有保存，退出将丢失它们。确定吗？')) return
+  }
   if (props.confirm && !window.confirm('退出后本局作废，确定吗？')) return
   tap()
   store.reset()
@@ -23,16 +27,37 @@ function exit() {
 </script>
 
 <template>
-  <button class="flow-exit btn-ghost" @click="exit">
-    <AppIcon name="arrow" :size="15" style="transform: rotate(180deg)" />
-    退出
+  <button class="flow-exit" aria-label="退出占卜" @click="exit">
+    <AppIcon name="arrow" :size="24" style="transform: rotate(180deg)" />
   </button>
 </template>
 
 <style scoped>
 .flow-exit {
-  padding: 8px 12px;
-  font-size: var(--fs-note);
+  /* 纯图标 ghost：无文字无描边，内边距撑出 ≥44×44 触摸目标 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--dim);
+  cursor: pointer;
+  align-self: flex-start;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--t-fast);
+}
+
+.flow-exit:active {
+  color: var(--ink);
+}
+
+.flow-exit:focus-visible {
+  outline: 2px solid var(--gold-text);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 </style>

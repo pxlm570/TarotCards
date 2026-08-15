@@ -7,7 +7,8 @@ import {
   buildSelfReadMessages,
   buildRecapMessages,
   PERSONAS,
-  SAFETY
+  SAFETY,
+  TAROT_CRAFT
 } from '../src/lib/ai-prompts.js'
 import { saveSettings } from '../src/lib/storage.js'
 
@@ -66,28 +67,38 @@ describe('ai-prompts', () => {
     expect(msgs[1].content).toContain('事业出现 3 次')
   })
 
-  // Task 19：技艺层
-  it('system 注入「占卜师技艺」与解读方法论', () => {
+  // Task 19/20-F：技艺层与人格双源
+  it('system 完整注入 TAROT_CRAFT（一锤定音）', () => {
     const msgs = buildReadingMessages({ question: 'x', domain: null, spread, drawn, cardsData: cards })
     const s = msgs[0].content
-    expect(s).toContain('占卜师技艺')
-    expect(s).toContain('先整体')
-    expect(s).toContain('逆位不是坏牌')
+    expect(s).toContain(TAROT_CRAFT)
     expect(s).toContain(SAFETY) // 安全边界仍在
   })
 
-  it('三大人格在技艺层之上可分辨（盲测关键词）', () => {
-    const gent = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+  it('三大人格各含专属用词倾向且互不串层（交叉断言）', () => {
+    const get = () =>
+      buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards })
+        .map((m) => m.content)
+        .join(' ')
+    const gent = get()
     saveSettings({ persona: 'direct' })
-    const dir = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+    const dir = get()
     saveSettings({ persona: 'scholar' })
-    const sch = buildReadingMessages({ question: '', domain: null, spread, drawn, cardsData: cards }).map((m) => m.content).join(' ')
+    const sch = get()
+    // 各自专属关键词（身份句 + PERSONA_CRAFT 差异化层）
     expect(gent).toContain('或许')
+    expect(gent).toContain('慢慢来')
     expect(dir).toContain('别绕弯')
+    expect(dir).toContain('点出核心')
     expect(sch).toContain('符号学')
-    // 三者互不相同
-    expect(gent).not.toBe(dir)
-    expect(dir).not.toBe(sch)
+    expect(sch).toContain('元素对应')
+    // 交叉互斥：不包含其他人格的专属词
+    expect(gent).not.toContain('别绕弯')
+    expect(gent).not.toContain('符号学')
+    expect(dir).not.toContain('慢慢来')
+    expect(dir).not.toContain('元素对应')
+    expect(sch).not.toContain('或许')
+    expect(sch).not.toContain('点出核心')
   })
 
   it('澄清场景注入「只帮提问者把问题问清楚、不展开解读」侧重', () => {

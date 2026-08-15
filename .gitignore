@@ -40,3 +40,7 @@ public/decks/rws/raw/
 
 # 临时生图产物
 .imgtmp/
+
+# Playwright MCP 产物与根目录交付截图
+.playwright-mcp/
+首页截图-*.png

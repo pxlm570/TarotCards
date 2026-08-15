@@ -38,9 +38,12 @@ function interpret() {
   router.replace('/reading/interpretation')
 }
 
-// 桌面键盘（Task 12）：Enter = 全部翻开
+// 桌面键盘（Task 12/20-D）：Enter = 全部翻开；但焦点在画布内 slot 按钮时放行原生 click（单翻）
 function onKey(e) {
   if (e.key !== 'Enter' || allRevealed.value) return
+  const el = document.activeElement
+  if (el && el.closest && el.closest('.canvas')) return
+  e.preventDefault()
   flipAll()
 }
 onMounted(() => window.addEventListener('keydown', onKey))

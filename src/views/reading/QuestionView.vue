@@ -132,14 +132,6 @@ function confirm() {
   flex-direction: column;
 }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  padding-left: 0;
-  color: var(--dim);
-}
 
 .breathe-hint {
   display: flex;

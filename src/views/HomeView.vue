@@ -5,7 +5,7 @@ import spreads from '../data/spreads.json'
 import cardsData from '../data/cards.json'
 import moonPhases from '../data/moon-phases.json'
 import AppIcon from '../components/AppIcon.vue'
-import { tap } from '../lib/feedback.js'
+import { tap, scrollBehavior } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
 import { useJournalStore } from '../stores/journal.js'
 import { useLearningStore } from '../stores/learning.js'
@@ -107,7 +107,7 @@ function greetingText() {
 // 主 CTA：滚动到牌阵区
 function scrollToSpreads() {
   tap()
-  document.getElementById('spreads')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById('spreads')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
 }
 
 function startDaily() {

@@ -64,6 +64,8 @@ function onKey(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持
   if (store.phase !== 'picking') return
   if (e.key === 'Enter') {
+    // 焦点在按钮上（如「退出」「确认」）时放行原生 click，不被全局拦截转为放牌
+    if (document.activeElement?.tagName === 'BUTTON') return
     if (selectedIndex.value != null) {
       e.preventDefault()
       place()
@@ -122,7 +124,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           v-for="i in TOTAL"
           :key="i"
           class="slot"
-          :class="{ taken: store.pickedIndices.includes(i - 1) }"
+          :class="{ taken: store.pickedIndices.includes(i - 1), picked: selectedIndex === i - 1 }"
           @click="pick(i - 1)"
         >
           <CardBack :selected="store.pickedIndices.includes(i - 1) || selectedIndex === i - 1" />
@@ -207,6 +209,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .slot.taken {
   opacity: 0.32;
   cursor: default;
+}
+
+/* 选中牌层级提升：扇形叠放下右侧金边/金辉不被右邻牌压住（勿用 :has()，兼容红线） */
+.slot.picked {
+  position: relative;
+  z-index: 1;
 }
 
 .slots {

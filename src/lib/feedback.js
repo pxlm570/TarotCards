@@ -61,3 +61,9 @@ export function prefersReducedMotion() {
 export function applyMotionPreference() {
   document.documentElement.setAttribute('data-motion', prefersReducedMotion() ? 'reduced' : 'full')
 }
+
+/** 平滑滚动辅助（Task 20-E）：scrollIntoView 显式 smooth 会无视 reduced-motion 的 CSS 兜底，
+    这里按 <html data-motion> 返回 'auto'（瞬达）或 'smooth' */
+export function scrollBehavior() {
+  return prefersReducedMotion() ? 'auto' : 'smooth'
+}

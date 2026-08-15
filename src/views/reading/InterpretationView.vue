@@ -19,7 +19,7 @@ import AiPanel from '../../components/AiPanel.vue'
 import SelfReadPanel from '../../components/SelfReadPanel.vue'
 import ShareCardModal from '../../components/ShareCardModal.vue'
 import FlowExit from '../../components/FlowExit.vue'
-import { tap, success, toast } from '../../lib/feedback.js'
+import { tap, success, toast, scrollBehavior } from '../../lib/feedback.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
 
@@ -151,7 +151,7 @@ async function jumpTo(card) {
     practiceRevealed.value = true
     await nextTick()
   }
-  document.getElementById(`pos-${card.positionKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  document.getElementById(`pos-${card.positionKey}`)?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
 }
 
 function startPractice() {
@@ -176,11 +176,21 @@ function again() {
   store.reset()
   router.replace('/')
 }
+
+// 与 again() 同一未保存判断，供退出入口（FlowExit before-exit）防丢草稿
+function hasUnsavedDraft() {
+  return (note.value.trim() && !noteSaved.value) || practiceText.value.trim()
+}
+
+// 回到顶部（模板不能直接访问 window，收敛到方法里）
+function scrollTop() {
+  window.scrollTo({ top: 0, behavior: scrollBehavior() })
+}
 </script>
 
 <template>
   <div class="interp">
-    <FlowExit :confirm="false" />
+    <FlowExit :confirm="false" :before-exit="hasUnsavedDraft" />
     <header class="head">
       <h1 class="title">{{ store.spread?.name }} · 解读</h1>
       <p v-if="store.question" class="question">「{{ store.question }}」</p>
@@ -304,7 +314,7 @@ function again() {
     <CardDetailSheet v-if="detail" :card="detail.card" :reversed="detail.reversed" @close="detail = null" />
 
     <!-- 回到顶部（大牌阵阅读后快捷跳回全景） -->
-    <button class="to-top" aria-label="回到顶部" @click="window.scrollTo({ top: 0, behavior: 'smooth' })">
+    <button class="to-top" aria-label="回到顶部" @click="scrollTop">
       <AppIcon name="chevron" :size="18" style="transform: rotate(180deg)" />
     </button>
   </div>

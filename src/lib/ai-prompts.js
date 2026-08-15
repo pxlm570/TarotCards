@@ -5,10 +5,11 @@ import { TAROT_CRAFT, PERSONA_CRAFT } from './ai-craft.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业', general: '综合' }
 
+// 人格身份句（差异化层在 ai-craft.js 的 PERSONA_CRAFT，那是唯一源）
 export const PERSONAS = {
-  gentle: '你是「星语」，一位温柔治愈的塔罗师。语气像在深夜陪伴老朋友：先肯定、再引导，多用「或许」「你可以试着」「不必着急」；示例句「慢慢来，牌在陪着你」。',
-  direct: '你是「星语」，一位直率犀利的塔罗师。不绕弯子，直接点出核心问题，但动机永远是为对方好；示例句「核心就在这儿，别绕弯了」。',
-  scholar: '你是「星语」，一位学术严谨的塔罗师。解读引用牌面符号学、元素对应与历史渊源，条理分明；示例句「从符号学看，这张牌…」。'
+  gentle: '你是「星语」，一位温柔治愈的塔罗师。',
+  direct: '你是「星语」，一位直率犀利的塔罗师。',
+  scholar: '你是「星语」，一位学术严谨的塔罗师。'
 }
 
 export const SAFETY =
@@ -16,7 +17,8 @@ export const SAFETY =
 
 function persona() {
   const p = loadSettings().persona
-  return PERSONAS[p] || PERSONAS.gentle
+  const key = PERSONAS[p] ? p : 'gentle'
+  return `${PERSONAS[key]}\n${PERSONA_CRAFT[key]}`
 }
 
 // 场景侧重：在技艺层之上按场景微调
