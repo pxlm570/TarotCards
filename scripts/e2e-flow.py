@@ -205,6 +205,60 @@ with sync_playwright() as p:
     check("C5 凯尔特十字解读页（10 张折叠卡）", page.locator(".pos-card").count() == 10)
     page.screenshot(path=f"{SHOT}/c5-celtic-interp.png", full_page=True)
 
+    # ---------- 场景 E：返回手势语义 + 选牌阵页冷启动（Task 21 回归） ----------
+    # 动线各步之间走 router.replace（整条动线只占一个历史条目），返回手势由 App.vue 的 popstate
+    # 合成「逐级回退」。?r=N 让 goto 成为跨文档导航：整文档加载、历史栈干净、sessionStorage 保留
+    PHASE = "JSON.parse(sessionStorage.getItem('tarot.flow.v1')||'{}').phase"
+    page.goto(BASE + "?r=1#/")
+    page.evaluate("sessionStorage.removeItem('tarot.flow.v1')")  # 清掉场景 C 那局，免得被「另起一局」确认框挡住
+    page.reload()
+    page.wait_for_selector(".cta")
+    page.click(".cta")
+    page.wait_for_selector("text=时间之流")
+    page.click("text=时间之流")
+    page.wait_for_selector("text=你想问什么？")
+    page.click("text=开始洗牌")
+    page.wait_for_selector("text=洗好了")
+    check("E0 起一局并停在洗牌页", page.evaluate(PHASE) == "shuffling", str(page.evaluate(PHASE)))
+
+    # E1：动线内返回仍逐级回退（Task 15 行为不能被改坏）
+    page.go_back()
+    page.wait_for_timeout(900)
+    check(
+        "E1 动线内返回逐级回退到提问页",
+        "reading/question" in page.url and page.evaluate(PHASE) == "questioning",
+        f"{page.url} | phase={page.evaluate(PHASE)}",
+    )
+
+    # E2：动线外（/spreads）返回不该倒退那一局，也不该把人拽回占卜步骤
+    page.goto(BASE + "?r=2#/")
+    page.wait_for_selector(".cta")
+    e_before = page.evaluate(PHASE)
+    page.click(".cta")
+    page.wait_for_selector("text=圣三角")
+    page.go_back()
+    page.wait_for_timeout(900)
+    check("E2 从选牌阵页返回回到首页", page.locator(".cta").count() == 1, page.url)
+    check(
+        "E2b 返回未倒退进行中的一局",
+        page.evaluate(PHASE) == e_before,
+        f"{e_before} -> {page.evaluate(PHASE)}",
+    )
+
+    # E3：冷启动直达 /spreads 时 store 已水合 —— 点牌阵应弹确认而非静默作废
+    page.goto(BASE + "?r=3#/spreads")
+    page.wait_for_selector("text=圣三角")
+    dialogs = []
+    page.once("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
+    page.click("text=圣三角")
+    page.wait_for_timeout(900)
+    check("E3 冷启动进选牌阵页，另起一局会先确认", len(dialogs) == 1, str(dialogs))
+    check(
+        "E3b 取消确认后原局完好",
+        page.evaluate("JSON.parse(sessionStorage.getItem('tarot.flow.v1')).spreadId") == "time-flow",
+        str(page.evaluate("JSON.parse(sessionStorage.getItem('tarot.flow.v1')).spreadId")),
+    )
+
     # ---------- 场景 D：桌面视口冒烟 ----------
     dpage = ctx.new_page()
     dpage.set_viewport_size({"width": 1280, "height": 860})

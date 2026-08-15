@@ -11,6 +11,9 @@ import { tap } from '../lib/feedback.js'
 
 const router = useRouter()
 const reading = useReadingStore()
+// 冷启动直接落在本页（深链 / PWA 恢复 / 本页刷新）时 store 还没水合，phase 会恒读到 idle，
+// 点牌阵就会不弹确认、静默作废进行中的一局——先从 sessionStorage 恢复（同 HomeView）
+reading.hasActiveReading()
 const { ritualToday, ritualSpread, spreads } = useRitualToday()
 
 // 新手/进阶分组：今日限定已单独置顶一节，这里剔除，避免同一张牌阵出现两次

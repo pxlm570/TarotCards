@@ -47,7 +47,6 @@ const greeting = computed(() => {
 })
 
 // ---- 每日一抽与连胜 ----
-const today = currentDayKey()
 const dailyReading = computed(() => journal.dailyReading(currentDayKey()))
 const dailyCardName = computed(() => {
   const id = dailyReading.value?.cards?.[0]?.cardId
