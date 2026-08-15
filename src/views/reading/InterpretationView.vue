@@ -1,7 +1,7 @@
 <script setup>
 // 解读页：牌阵缩略全景导航 + 每位置折叠卡（一句话解读→展开全文）+ 领域短句兜底隐藏
 //        + 练习模式（静态，先写自己的理解再对比官方）+ 感想（M1 仅内存）+ 详情弹层。
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import cardsData from '../../data/cards.json'
 import { useReadingStore } from '../../stores/reading.js'
@@ -121,6 +121,10 @@ const practiceText = ref('')
 const practiceRevealed = ref(false)
 const note = ref('')
 const noteSaved = ref(false)
+// 已保存后再次编辑 → 重新视为有未保存草稿（否则二次编辑会被免确认退出静默丢弃）
+watch(note, () => {
+  noteSaved.value = false
+})
 const detail = ref(null) // 详情弹层展示的 item
 const shareOpen = ref(false)
 
@@ -169,15 +173,14 @@ function saveNote() {
 }
 
 function again() {
-  const unsaved = (note.value.trim() && !noteSaved.value) || practiceText.value.trim()
-  if (unsaved && !window.confirm('你写下的感想/练习理解还没有保存，开始新的占卜将丢失它们。确定吗？')) {
+  if (hasUnsavedDraft() && !window.confirm('你写下的感想/练习理解还没有保存，开始新的占卜将丢失它们。确定吗？')) {
     return
   }
   store.reset()
   router.replace('/')
 }
 
-// 与 again() 同一未保存判断，供退出入口（FlowExit before-exit）防丢草稿
+// 未保存判断的唯一出处：again() 与退出入口（FlowExit before-exit）共用，防丢草稿
 function hasUnsavedDraft() {
   return (note.value.trim() && !noteSaved.value) || practiceText.value.trim()
 }

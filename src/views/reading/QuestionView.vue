@@ -115,9 +115,9 @@ function confirm() {
 
     <ClarifyDialog
       v-if="clarifying"
-      :question="question.value.trim()"
+      :question="question.trim()"
       @done="doSubmit"
-      @skip="doSubmit(question.value.trim())"
+      @skip="doSubmit(question.trim())"
     />
   </div>
 </template>
@@ -131,7 +131,6 @@ function confirm() {
   display: flex;
   flex-direction: column;
 }
-
 
 .breathe-hint {
   display: flex;

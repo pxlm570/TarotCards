@@ -31,6 +31,9 @@ describe('isBirthdayWindow：按当年归一的前 3 后 3 天窗口', () => {
   it('2-29 生日在平年归到 3-1，不抛错', () => {
     expect(isBirthdayWindow('1992-02-29', '2026-03-01')).toBe(true)
     expect(isBirthdayWindow('1992-02-29', '2026-03-05')).toBe(false)
+    // 闰年当天原生路径：以 02-29 为中心的 ±3 窗口
+    expect(isBirthdayWindow('1992-02-29', '2028-02-29')).toBe(true)
+    expect(isBirthdayWindow('1992-02-29', '2028-03-04')).toBe(false)
   })
 
   it('未填 / 非法生日一律不命中', () => {

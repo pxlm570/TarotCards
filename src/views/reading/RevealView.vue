@@ -42,7 +42,7 @@ function interpret() {
 function onKey(e) {
   if (e.key !== 'Enter' || allRevealed.value) return
   const el = document.activeElement
-  if (el && el.closest && el.closest('.canvas')) return
+  if (el && el.closest && (el.closest('.canvas') || el.closest('.flow-exit'))) return
   e.preventDefault()
   flipAll()
 }

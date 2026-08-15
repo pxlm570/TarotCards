@@ -64,8 +64,10 @@ function onKey(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持
   if (store.phase !== 'picking') return
   if (e.key === 'Enter') {
-    // 焦点在按钮上（如「退出」「确认」）时放行原生 click，不被全局拦截转为放牌
-    if (document.activeElement?.tagName === 'BUTTON') return
+    // 焦点在牌堆外按钮（如「退出」「确认」）时放行原生 click；牌堆内 slot 本身是 button，
+    // 不豁免——否则点选后按 Enter 会重击同一 slot 取消选中，与「Enter=放入」相悖
+    const focusEl = document.activeElement
+    if (focusEl?.tagName === 'BUTTON' && !focusEl.closest('.strip')) return
     if (selectedIndex.value != null) {
       e.preventDefault()
       place()
