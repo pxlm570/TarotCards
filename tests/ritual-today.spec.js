@@ -1,6 +1,7 @@
 // 仪式牌阵判定（Task 21）：生日窗口必须按「当年」归一——原实现拿出生年份直接与今天相减，
 // 差值恒为几千天，永远不命中。跨年边界（12-30 生日在次年 1-2 号）也要命中。
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { effectScope } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useProfileStore } from '../src/stores/profile.js'
 import { isBirthdayWindow, useRitualToday } from '../src/composables/use-ritual-today.js'
@@ -71,5 +72,28 @@ describe('useRitualToday：今日限定判定与置顶', () => {
     expect(ritualToday.value).toBe(null)
     expect(ritualSpread.value).toBe(null)
     expect(spreads[0].id).toBe('single') // 牌阵清单本身不被改写
+  })
+})
+
+describe('useRitualToday 生产路径（不传 dayKey）：跨 4 点自动换日（Task 1）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it('应用挂着过夜，提示从无到有自动出现', () => {
+    vi.useFakeTimers()
+    // 直接从换日前 1 分钟起跑（setSystemTime 大跳不触发已武装的定时器，避免依赖跳变语义）
+    vi.setSystemTime(new Date('2026-08-13T03:59:00')) // 属 08-12，平日
+    const scope = effectScope()
+    try {
+      const { ritualToday } = scope.run(() => useRitualToday())
+      expect(ritualToday.value).toBe(null)
+      vi.advanceTimersByTime(2 * 60 * 1000) // 到 04:01，换日定时器触发 -> 08-13 新月
+      expect(ritualToday.value).toBe('new-moon')
+    } finally {
+      scope.stop() // 失败也要回收单例消费者，免得污染同 worker 后续测试文件
+      vi.useRealTimers()
+    }
   })
 })

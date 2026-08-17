@@ -5,6 +5,7 @@ import spreads from '../data/spreads.json'
 import moonPhases from '../data/moon-phases.json'
 import { useProfileStore } from '../stores/profile.js'
 import { currentDayKey } from '../lib/day-key.js'
+import { useDayKey } from './use-day-key.js'
 
 const DAY_MS = 86400000
 
@@ -27,11 +28,14 @@ export function isBirthdayWindow(birthday, dayKey = currentDayKey()) {
   )
 }
 
-/** @param {string} [dayKey] 覆盖「今天」，仅测试用；生产不传 */
+/** @param {string} [dayKey] 覆盖「今天」，仅测试用；生产不传（走 useDayKey 响应式换日） */
 export function useRitualToday(dayKey) {
   const profile = useProfileStore()
 
-  const today = computed(() => dayKey ?? currentDayKey())
+  // 显式 dayKey（测试）不启动换日单例：无 effectScope 的调用会让消费者计数泄漏，
+  // 污染同 worker 后续测试文件（vitest isolate:false 共享模块状态）
+  const liveDay = dayKey ? null : useDayKey()
+  const today = computed(() => dayKey ?? liveDay?.value)
 
   const ritualToday = computed(() => {
     const day = today.value
