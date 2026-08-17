@@ -42,12 +42,12 @@ function place() {
   const index = selectedIndex.value
   selectedIndex.value = null
   store.pickCard(index)
-  // 选满即完成时刻：手感与普通点选区分
+  // 选满即完成时刻：success 重手感；中途放入 tap 轻一档，区分层次
   if (store.phase === 'revealing') {
     success()
     toReveal()
   } else {
-    success()
+    tap()
   }
 }
 
