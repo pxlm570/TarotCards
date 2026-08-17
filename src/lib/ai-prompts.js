@@ -1,7 +1,7 @@
 // AI 提示词模块（M4 + Task 19 技艺层）：人格模板 + 安全边界 + 「占卜师技艺」技能手册。
 // 每次调用的 system = 人格差异化 + TAROT_CRAFT + SAFETY + 场景侧重。
 import { loadSettings } from './storage.js'
-import { TAROT_CRAFT, PERSONA_CRAFT } from './ai-craft.js'
+import { TAROT_CRAFT, PERSONA_CRAFT, CRAFT_SECTIONS } from './ai-craft.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业', general: '综合' }
 
@@ -21,6 +21,11 @@ function persona() {
   return `${PERSONAS[key]}\n${PERSONA_CRAFT[key]}`
 }
 
+// 人格段（身份句 + 差异化层）：首页问候等轻量场景复用，避免视图层再拼一遍
+export function personaPrompt() {
+  return persona()
+}
+
 // 场景侧重：在技艺层之上按场景微调
 const SCENARIO = {
   reading: '本场景是对一次完整占卜的深度解读，请发挥「先整体后逐位」的方法论。',
@@ -30,8 +35,19 @@ const SCENARIO = {
   recap: '基于一段时间的占卜记录做模式洞察，温和、向前看，不作评判。'
 }
 
+// v1.5 Task 2 场景化裁剪：解读类全量；clarify/tutor/recap 只留互动与语言红线
+// （这些场景不做牌面解读，方法论用不上--省几百 token 且不稀释指令）；
+// 多轮段只有解读追问这种多轮对话有意义。
+const CRAFT_BY_ROLE = {
+  reading: TAROT_CRAFT,
+  selfRead: [CRAFT_SECTIONS.method, CRAFT_SECTIONS.interaction, CRAFT_SECTIONS.language].join('\n'),
+  clarify: [CRAFT_SECTIONS.interaction, CRAFT_SECTIONS.language].join('\n'),
+  tutor: [CRAFT_SECTIONS.interaction, CRAFT_SECTIONS.language].join('\n'),
+  recap: [CRAFT_SECTIONS.interaction, CRAFT_SECTIONS.language].join('\n')
+}
+
 function system(role) {
-  return [persona(), TAROT_CRAFT, SCENARIO[role] ?? '', SAFETY].filter(Boolean).join('\n\n')
+  return [persona(), CRAFT_BY_ROLE[role] ?? TAROT_CRAFT, SCENARIO[role] ?? '', SAFETY].filter(Boolean).join('\n\n')
 }
 
 function orientationText(reversed) {
@@ -93,6 +109,14 @@ export function buildRecapMessages({ readingsSummary, mirrorStats }) {
       role: 'user',
       content: `这是我最近一段时间的占卜记录摘要：${readingsSummary}\n统计：${mirrorStats}\n请总结这段时间我反复面对的主题与潜在的模式，并给我一个温和的、向前看的建议。`
     }
+  ]
+}
+
+// 首页每日问候（v1.5 Task 2 收编人格 #15）：一句话轻量场景，不注技艺层
+export function buildGreetingMessages(streakStatus) {
+  return [
+    { role: 'system', content: `${personaPrompt()}\n只用一句话问候今天的占卜者，不超过 30 个字。` },
+    { role: 'user', content: `今天的状态：${streakStatus}。请给我一句开场问候。` }
   ]
 }
 

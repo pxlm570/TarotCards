@@ -14,6 +14,7 @@ import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { streamChat } from '../lib/ai-client.js'
+import { buildGreetingMessages } from '../lib/ai-prompts.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useRitualToday } from '../composables/use-ritual-today.js'
 
@@ -66,6 +67,7 @@ const goalsAllDone = computed(() => todayDrawn.value && reviewDone.value)
 watch(maxStreak, (v) => profile.updateMaxStreak(v), { immediate: true })
 
 // ---- 人格化提醒（M4）：AI 每日一次问候，缓存当天；无 key / 失败回退静态问候 ----
+// v1.5 Task 2（#15）：问候随人格--缓存带 persona 维度，当天切人格重新生成一次
 const GREETING_KEY = 'tarot.greeting.v1'
 const aiGreeting = ref('')
 
@@ -73,25 +75,22 @@ onMounted(() => {
   if (!settings.hasAI) return
   try {
     const cached = JSON.parse(safeGetItem(GREETING_KEY) || 'null')
-    if (cached && cached.day === currentDayKey()) {
+    if (cached && cached.day === currentDayKey() && cached.persona === settings.persona) {
       aiGreeting.value = cached.text
       return
     }
   } catch {
     /* ignore */
   }
-  // 生成问候（结合连胜状态）
+  // 生成问候（结合连胜状态；人格由 buildGreetingMessages 内部按 settings 注入）
   const streakText = streak.value >= 7 ? `你已经连续${streak.value}天打卡了` : streak.value > 0 ? `今天是连胜第${streak.value}天` : '新的一天'
-  const msgs = [
-    { role: 'system', content: '你是「星语」，温柔治愈的塔罗师，只用一句话问候今天的占卜者，语气像深夜陪伴老朋友，不超过 30 个字。' },
-    { role: 'user', content: `今天的状态：${streakText}。请给我一句温暖的开场问候。` }
-  ]
+  const msgs = buildGreetingMessages(streakText)
   let out = ''
   ;(async () => {
     try {
       for await (const d of streamChat({ messages: msgs })) out += d
       aiGreeting.value = out.trim()
-      safeSetItem(GREETING_KEY, JSON.stringify({ day: currentDayKey(), text: out.trim() }))
+      safeSetItem(GREETING_KEY, JSON.stringify({ day: currentDayKey(), persona: settings.persona, text: out.trim() }))
     } catch {
       /* 失败回退静态问候 */
     }

@@ -6,6 +6,7 @@ import {
   buildTutorMessages,
   buildSelfReadMessages,
   buildRecapMessages,
+  buildGreetingMessages,
   PERSONAS,
   SAFETY,
   TAROT_CRAFT
@@ -104,5 +105,52 @@ describe('ai-prompts', () => {
   it('澄清场景注入「只帮提问者把问题问清楚、不展开解读」侧重', () => {
     const msgs = buildClarifyMessages('我会不会成功')
     expect(msgs[0].content).toContain('不展开牌意解读')
+  })
+})
+
+// v1.5 Task 2：场景化裁剪--非解读场景不注入解读方法论（省 token、不稀释指令）
+describe('场景化技艺层裁剪', () => {
+  it('clarify 不含方法论与多轮段，保留互动/红线/安全边界', () => {
+    const s = buildClarifyMessages('x')[0].content
+    expect(s).not.toContain('一、解读方法论')
+    expect(s).not.toContain('先整体、后逐位')
+    expect(s).not.toContain('四、多轮与追问')
+    expect(s).toContain('与提问者的互动')
+    expect(s).toContain('不说空泛套话')
+    expect(s).toContain(SAFETY)
+  })
+
+  it('tutor / recap 同样不注入方法论', () => {
+    const t = buildTutorMessages({ chapterTitle: 'c', content: 'x', userQuestion: 'q' })[0].content
+    expect(t).not.toContain('一、解读方法论')
+    const r = buildRecapMessages({ readingsSummary: 's', mirrorStats: 'm' })[0].content
+    expect(r).not.toContain('一、解读方法论')
+  })
+
+  it('selfRead 保留方法论但不注入多轮段；reading 全量不变', () => {
+    const self = buildSelfReadMessages({ drawn, cardsData: cards, userInterpretation: 'u' })[0].content
+    expect(self).toContain('一、解读方法论')
+    expect(self).not.toContain('四、多轮与追问')
+    const reading = buildReadingMessages({ question: 'q', domain: null, spread, drawn, cardsData: cards })[0].content
+    expect(reading).toContain(TAROT_CRAFT) // 全量（四段都在）
+  })
+})
+
+// v1.5 Task 2（#15 顺手）：首页每日问候随人格
+describe('buildGreetingMessages：问候随人格', () => {
+  it('默认温柔人格；切 direct 后提示词随人格切换', () => {
+    const g = buildGreetingMessages('新的一天')
+    expect(g[0].content).toContain('温柔治愈')
+    expect(g[1].content).toContain('新的一天')
+    saveSettings({ persona: 'direct' })
+    const d = buildGreetingMessages('连胜第 3 天')
+    expect(d[0].content).toContain('直率犀利')
+    expect(d[0].content).not.toContain('温柔治愈')
+    expect(d[1].content).toContain('连胜第 3 天')
+  })
+
+  it('问候保持轻量：不注入技艺层', () => {
+    const g = buildGreetingMessages('新的一天')
+    expect(g[0].content).not.toContain('一、解读方法论')
   })
 })
