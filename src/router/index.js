@@ -39,6 +39,8 @@ const routes = [
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
   // 选牌阵独立页（Task 21）：刻意放在 /reading/* 之外——守卫会把无进行中占卜的 /reading/* 直链弹回首页
   { path: '/spreads', name: 'spreads', component: () => import('../views/SpreadSelectView.vue') },
+  // 自定义牌阵编辑器（v1.5 Task 5）：同样放 /reading/* 之外
+  { path: '/spread-editor', name: 'spread-editor', component: () => import('../views/SpreadEditorView.vue') },
   { path: '/learn', name: 'learn', component: () => import('../views/LearnView.vue') },
   { path: '/learn/review', name: 'learn-review', component: () => import('../views/learn/ReviewView.vue') },
   { path: '/learn/challenge', name: 'learn-challenge', component: () => import('../views/learn/DailyChallengeView.vue') },
