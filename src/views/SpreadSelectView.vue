@@ -1,13 +1,14 @@
 <script setup>
 // 选牌阵独立页（Task 21）：从首页搬移的牌阵列表，整页空间放大卡片。
 // 今日限定（新月/满月/生日窗口）置顶金标；新手/进阶分组；点选进提问页，动线零改动。
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import FlowExit from '../components/FlowExit.vue'
 import { useReadingStore } from '../stores/reading.js'
 import { useRitualToday } from '../composables/use-ritual-today.js'
-import { tap } from '../lib/feedback.js'
+import { listCustomSpreads, deleteCustomSpread } from '../lib/custom-spreads.js'
+import { tap, toast } from '../lib/feedback.js'
 
 const router = useRouter()
 const reading = useReadingStore()
@@ -34,6 +35,25 @@ function startReading(spreadId) {
   tap()
   reading.reset()
   router.push({ path: '/reading/question', query: { spread: spreadId } })
+}
+
+// ---- 我的牌阵（v1.5 Task 5/6）：本机自定义，占卜/编辑/删除 ----
+const customSpreads = ref(listCustomSpreads())
+
+function goEditor(id) {
+  tap()
+  router.push({ path: '/spread-editor', query: id ? { id } : undefined })
+}
+
+function removeCustom(spread) {
+  const inUse = reading.spreadId === spread.id && reading.phase !== 'idle'
+  const msg = inUse
+    ? `删除「${spread.name}」？有一局用它进行的占卜还在进行，删除后那一局将无法继续。`
+    : `删除「${spread.name}」？`
+  if (!window.confirm(msg)) return
+  deleteCustomSpread(spread.id)
+  customSpreads.value = listCustomSpreads()
+  toast('已删除')
 }
 </script>
 
@@ -104,6 +124,41 @@ function startReading(spreadId) {
           <span class="spread-name">{{ spread.name }}</span>
           <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
         </span>
+      </button>
+    </section>
+
+    <!-- 我的牌阵（v1.5）：卡上带编辑/删除小操作，外层不能再用 button（HTML 不允许嵌套按钮） -->
+    <section class="group">
+      <h2 class="group-title">我的牌阵</h2>
+      <div
+        v-for="spread in customSpreads"
+        :key="spread.id"
+        class="spread-card custom-card card-press"
+        role="button"
+        tabindex="0"
+        @click="startReading(spread.id)"
+        @keydown.enter="startReading(spread.id)"
+      >
+        <span class="spread-n">
+          {{ spread.cardCount }}
+          <small>张</small>
+        </span>
+        <span class="spread-info">
+          <span class="spread-name">{{ spread.name }}</span>
+          <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
+        </span>
+        <span class="mini-ops">
+          <button class="mini-btn" :aria-label="`编辑${spread.name}`" @click.stop="goEditor(spread.id)">
+            <AppIcon name="pen" :size="15" />
+          </button>
+          <button class="mini-btn" :aria-label="`删除${spread.name}`" @click.stop="removeCustom(spread)">
+            <AppIcon name="x" :size="15" />
+          </button>
+        </span>
+      </div>
+      <button class="new-spread card-press" @click="goEditor()">
+        <AppIcon name="pen" :size="16" />
+        {{ customSpreads.length ? '再建一个' : '新建自定义牌阵' }}
       </button>
     </section>
   </div>
@@ -211,5 +266,52 @@ function startReading(spreadId) {
   border-radius: var(--radius-pill);
   padding: 3px 10px;
   flex-shrink: 0;
+}
+
+/* 我的牌阵：外层是 div[role=button]（卡上嵌着编辑/删除真按钮），补回 card 底色 */
+.custom-card {
+  cursor: pointer;
+}
+
+.mini-ops {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mini-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  color: var(--dim);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: color var(--t-fast);
+}
+
+.mini-btn:active {
+  color: var(--ink);
+}
+
+.new-spread {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px;
+  font-size: var(--fs-note);
+  color: var(--dim);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 </style>

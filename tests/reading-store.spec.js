@@ -267,3 +267,73 @@ describe('reading store：状态机', () => {
     expect(store.pending.some((p) => p.reversed)).toBe(true)
   })
 })
+
+// v1.5 Task 6：自定义牌阵接入动线（合并注册表 + flow 恢复兜底）
+import { saveCustomSpread, deleteCustomSpread } from '../src/lib/custom-spreads.js'
+
+describe('reading store：自定义牌阵（v1.5 Task 6）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    sessionStorage.clear()
+    localStorage.clear()
+  })
+
+  function makeCustom() {
+    return saveCustomSpread({
+      name: '我的两张',
+      positions: [
+        { label: '因', x: 25, y: 35 },
+        { label: '果', x: 75, y: 65 }
+      ]
+    })
+  }
+
+  it('selectSpread 接受 custom- 牌阵，spread getter 命中自定义库', () => {
+    const store = useReadingStore()
+    const saved = makeCustom()
+    store.selectSpread(saved.id)
+    expect(store.phase).toBe('spreadSelected')
+    expect(store.spread.name).toBe('我的两张')
+    expect(store.cardCount).toBe(2)
+  })
+
+  it('自定义牌阵完整动线走通：位置 key 命中归一后的 p1/p2', () => {
+    const store = useReadingStore()
+    const saved = makeCustom()
+    walkToPicking(store, saved.id)
+    store.pickAll()
+    expect(store.drawn.map((d) => d.positionKey)).toEqual(['p1', 'p2'])
+    store.revealAll()
+    store.goInterpret()
+    expect(store.phase).toBe('interpreting')
+  })
+
+  it('flow 恢复：自定义牌阵仍在则恢复成功', () => {
+    const store = useReadingStore()
+    const saved = makeCustom()
+    walkToPicking(store, saved.id)
+    store.pickAll()
+    const fresh = useReadingStore // 换新 store 实例模拟刷新
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.spreadId).toBe(saved.id)
+    expect(restored.spread.name).toBe('我的两张')
+  })
+
+  it('flow 恢复兜底：自定义牌阵已删除 -> tryRestore 返回 false（守卫重定向首页）', () => {
+    const store = useReadingStore()
+    const saved = makeCustom()
+    walkToPicking(store, saved.id)
+    deleteCustomSpread(saved.id)
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(false)
+    expect(restored.phase).toBe('idle')
+  })
+
+  it('静态注册表不受影响：未知 id 仍拒绝', () => {
+    const store = useReadingStore()
+    expect(() => store.selectSpread('no-such-spread')).toThrow('未知牌阵')
+  })
+})

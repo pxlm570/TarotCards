@@ -9,9 +9,16 @@ import { defineStore } from 'pinia'
 import spreadsData from '../data/spreads.json'
 import cardsData from '../data/cards.json'
 import { drawCards } from '../lib/tarot-engine.js'
+import { listCustomSpreads } from '../lib/custom-spreads.js'
 import { loadSettings, loadFlow, saveFlow, clearFlow, DOMAIN_VALUES } from '../lib/storage.js'
 
 const DECK_IDS = cardsData.map((c) => c.id)
+
+// 合并注册表（v1.5 Task 6）：静态 spreads.json + 本机自定义牌阵；自定义被删时这里查不到，
+// 动线内的兜底见 tryRestore（恢复失败回首页），选择入口的兜底见选牌阵页的删除确认
+function findSpread(id) {
+  return spreadsData.find((sp) => sp.id === id) ?? listCustomSpreads().find((sp) => sp.id === id) ?? null
+}
 const PHASES = [
   'idle',
   'spreadSelected',
@@ -43,7 +50,7 @@ export const useReadingStore = defineStore('reading', {
   state: initialState,
 
   getters: {
-    spread: (s) => spreadsData.find((sp) => sp.id === s.spreadId) ?? null,
+    spread: (s) => findSpread(s.spreadId),
     cardCount() {
       return this.spread ? this.spread.cardCount : 0
     },
@@ -59,7 +66,7 @@ export const useReadingStore = defineStore('reading', {
 
     selectSpread(spreadId) {
       this._assert('idle', 'selectSpread')
-      if (!spreadsData.some((sp) => sp.id === spreadId)) {
+      if (!findSpread(spreadId)) {
         throw new Error(`[reading] 未知牌阵：${spreadId}`)
       }
       this.spreadId = spreadId
@@ -176,7 +183,7 @@ export const useReadingStore = defineStore('reading', {
         !saved ||
         !PHASES.includes(saved.phase) ||
         saved.phase === 'idle' ||
-        !spreadsData.some((sp) => sp.id === saved.spreadId)
+        !findSpread(saved.spreadId) // 含自定义牌阵被删的情况：恢复失败，守卫重定向首页
       ) {
         return false
       }
