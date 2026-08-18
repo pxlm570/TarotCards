@@ -68,6 +68,11 @@ const filtered = computed(() => {
   })
 })
 
+function goCollection() {
+  tap()
+  router.push('/collection')
+}
+
 function pickFilter(key) {
   filter.value = key
   tap()
@@ -94,7 +99,13 @@ function pickBack(id) {
 <template>
   <div class="deck">
     <header class="head">
-      <h1 class="title">牌库</h1>
+      <div class="title-row">
+        <h1 class="title">牌库</h1>
+        <button class="collection-link" @click="goCollection">
+          <AppIcon name="star" :size="15" />
+          收藏馆
+        </button>
+      </div>
       <div class="search">
         <input v-model="keyword" class="search-input" type="search" placeholder="搜牌名 / 英文名 / 关键词" />
       </div>
@@ -166,6 +177,29 @@ function pickBack(id) {
 
 .head {
   margin-bottom: var(--sp-3);
+}
+
+/* 标题行：标题左、收藏馆入口右；不用 float（会被下方 relative 的搜索框盖住点不到） */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 收藏馆入口：与标题同行，金色行动位 */
+.collection-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: var(--fs-note);
+  color: var(--gold-text);
+  background: none;
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--radius-pill);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
 .title {

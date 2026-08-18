@@ -6,7 +6,7 @@
 
 ## 指令与仓库约定
 
-- 指令/规划类文档只保留 `AGENTS.md` 一份在库；`docs/`（含 archive）、`.workbuddy/`、`.zcode/`、`CLAUDE.md`（已移入 archive）**都不入 git**，仅存本地——改它们直接改文件即可，不 commit。
+- 指令/规划类文档只保留 `AGENTS.md` 一份在库；`docs/`（含 archive）、`.workbuddy/`、`.zcode/`、`CLAUDE.md`**都不入 git**，仅存本地——改它们直接改文件即可，不 commit。根目录 `CLAUDE.md` 现为本地 Claude Code 专属补充桩（`@AGENTS.md` 引用本文件，旧全文已入 `docs/archive/`）；修订通用约定只改本文件，别动桩。
 - 远端仓库 `https://github.com/pxlm570/TarotCards` 只含代码与素材，已转公开并自动部署（push `master` 触发测试→构建→发布）。
 - **推送策略（2026-08 用户定，取代此前「绝不 push」规则）**：允许执行代理 push，但**每次 push 前必须征得用户同意或等用户明确指令**，不得擅自推送。
 - 提交信息风格：`feat:`/`fix:`/`chore:`/`docs:`/`test:` + 中文描述。
@@ -36,10 +36,14 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 - **v1.0 后追加（2026-08，验收收尾）**：牌面/牌背分离自由组合（`public/backs/` 独立注册表 + `switchFace/switchBack`）、洗牌双模式（互动拖洗 / 仪式翻洗 + 切换键）、每日挑战（低调可选 +10XP）、测验四题型（单选/多选/看图认牌/正逆判断 + 无限重试）、返回手势逐级回退（`reading.stepBack` + App.vue 全局 popstate 处理，pushState 保留基路径与 hash）、AI 客户端 Anthropic 协议支持（baseUrl 含 `/anthropic` 自动走 `/v1/messages`）。
 - 裁决记录（2026-08-13，用户拍板）：**默认 AI 端点恢复留空**（回归定稿「不做官方端点绑定」），mimo 移入设置页「快捷填充」下拉（只帮填 baseUrl）；**音效暂缓为备选**——未实装、未删 `settings.sound` 字段，进 v1.5 backlog（产品安静定位，音效与深夜使用场景相悖，可能后续再做）。
 - ✅ **v1.1.0（2026-08-15，用户试用反馈迭代）**：选牌阵独立页 `/spreads`（首页仪表盘化：问候+每日一抽+「开始占卜」CTA+今日小目标；仪式日在 CTA 下方出「今日限定」提示行直达）、仪式日判定抽成 `composables/use-ritual-today.js`（生日窗口修复：按当年归一 ±3 天、跨年/闰年边界有测试；**修复前生日置顶是死逻辑**）、选牌改内联选中态+底部确认栏（弹窗全部移除，翻牌点击直翻）、动线五页左上角纯图标退出（`FlowExit.vue`，中途确认/解读页免确认+防丢草稿）、AI 占卜师技艺层（`lib/ai-craft.js`，人格差异以其为唯一源）、返回手势只在动线内接管（afterEach 记来源页）。验收档案：`docs/plans/2026-08-13-v1.0-acceptance-handoff.md`（本地，Task 1–21 已归档）。
+- **v1.5 进行中（2026-08-17 起）**：
+  - 已提交：AI 提示词按场景裁剪（clarify/tutor/recap 不注方法论）+ 首页问候随人格；仪式提示跨凌晨 4 点自动换日（`composables/use-day-key.js` 响应式单例）；FlowExit 六分支测试 + 选牌中途放入降为轻触感；四季仪式牌阵（节气日期双源核实+北京时跨日边界，置顶优先级 生日>四季>月相）；自定义牌阵数据层与画布编辑器（`lib/custom-spreads.js`，key `tarot.custom-spreads.v1`，上限 20，id 强制 `custom-` 前缀防撞，路由 `/spread-editor`）；占卜动线接入自定义牌阵（静态+自定义合并注册表、选牌阵页「我的牌阵」分组、删阵后 flow 兜底）；自由摆放抽牌（翻牌后拖位+存为我的牌阵）+ 数字键选牌视口跟随 + 自定义牌阵直链校验（8cfa732）。
+  - ✅ Task 8 收藏馆已落地（2026-08-18）：`/collection`（`views/CollectionView.vue` + `lib/collection-stats.js`）三块内容（收集墙 78 格点亮+次数角标/皮肤墙/牌背墙连胜解锁梯度）+「我的」与牌库页双入口，不占 TabBar；统计从 journal readings 聚合、纯函数零新增存储。浏览器全链路走查通过（空态灰锁、真实每日一抽后点亮、鉴赏跳转 `/deck/:id`、FlowExit 免确认返回）。**坑：牌库页入口勿用 float 布局**--会被下方 relative 的搜索框盖住点不到，已改 flex title-row。
 
 ## 架构与关键约定
 
 - **内容与代码分离**：内容全是 JSON，代码只渲染。`src/data/cards.json`（78 牌，**牌 id 是全局契约** `major-00…21`、`wands|cups|swords|pentacles-01…14`）、`src/data/spreads.json`、`src/data/courses/`、`public/decks/<皮肤id>/`（皮肤包须注册进 `public/decks/index.json`）。
+- **牌阵注册表 = 静态 + 自定义运行时合并**：静态 `spreads.json` 与用户自定义牌阵（`lib/custom-spreads.js`）在运行时合并；自定义 id 强制 `custom-` 前缀永不撞车，位置 key 统一 `p1..pN`；自由摆放抽牌的布局也经该模块存为「我的牌阵」。
 - **路由是 hash 模式**（createWebHashHistory）——GitHub Pages 子路径下 HTML5 history 刷新会 404。`vite.config.js` 的 `base:'/TarotCards/'` 与仓库名绑定。
 - **占卜动线是 Pinia 状态机**（`src/stores/reading.js`）：`idle→spreadSelected→breathing→questioning→shuffling→picking→revealing→interpreting`；流程态持久化 sessionStorage `tarot.flow.v1`。
 - **取牌面图只走 `src/lib/deck-loader.js`/`use-deck.js`**，URL 必须带 `import.meta.env.BASE_URL` 前缀——硬编码 `/decks/...` 部署子路径全 404。皮肤切换用 `useDeck().switchDeck(id)`（写 `settings.deckId` 并重载）。

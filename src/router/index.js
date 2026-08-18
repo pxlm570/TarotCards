@@ -48,6 +48,8 @@ const routes = [
   { path: '/learn/:chapterId/:lessonId', name: 'lesson', component: () => import('../views/learn/LessonView.vue') },
   { path: '/deck', name: 'deck', component: () => import('../views/DeckView.vue') },
   { path: '/deck/:cardId', name: 'card', component: () => import('../views/CardDetailView.vue') },
+  // 牌面鉴赏收藏馆（v1.5 Task 8）：入口在「我的」与牌库页，不占 TabBar
+  { path: '/collection', name: 'collection', component: () => import('../views/CollectionView.vue') },
   { path: '/journal', name: 'journal', component: () => import('../views/JournalView.vue') },
   { path: '/journal/:readingId', name: 'reading-detail', component: () => import('../views/ReadingDetailView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },

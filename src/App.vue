@@ -12,7 +12,7 @@ import { PHASE_ROUTE } from './router/index.js'
 const route = useRoute()
 const router = useRouter()
 // 占卜动线、引导页、选牌阵页沉浸式展示，不显示 TabBar
-const IMMERSIVE = ['/welcome', '/spreads', '/spread-editor']
+const IMMERSIVE = ['/welcome', '/spreads', '/spread-editor', '/collection']
 const showTabBar = computed(() => !route.path.startsWith('/reading') && !IMMERSIVE.includes(route.path))
 
 // 记录每次导航的来源页。popstate 触发时 vue-router 的导航已经落地（两个 popstate 监听之间

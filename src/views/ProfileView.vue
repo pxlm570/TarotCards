@@ -3,6 +3,7 @@
 // M1.5 起提供主题三态（跟随系统 / 浅色 / 暗夜）。
 // M3：XP 等级条、本命牌（生日 → 人格/灵魂牌）。
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { loadSettings, saveSettings } from '../lib/storage.js'
 import { setTheme, THEME_VALUES } from '../lib/theme.js'
 import { useProfileStore } from '../stores/profile.js'
@@ -20,6 +21,7 @@ import { renderSVG } from 'uqr'
 import { useEscClose } from '../composables/useEscClose.js'
 
 const settingsStore = useSettingsStore()
+const router = useRouter()
 
 const settings = ref(loadSettings())
 const profile = useProfileStore()
@@ -69,6 +71,10 @@ function saveBirthday() {
 // ---- 数据导出/导入 ----
 const fileRef = ref(null)
 const pendingImport = ref(null)
+function goCollection() {
+  router.push('/collection')
+}
+
 function doExport() {
   const b = collectBackup()
   const blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' })
@@ -261,7 +267,11 @@ function clearAll() {
     <section class="card block">
       <h2 class="card-title">数据</h2>
       <p class="row-hint">记录、进度与设置都在本机。换设备可导出备份再导入。</p>
-      <button class="btn-ghost btn-block" @click="doExport">导出备份</button>
+      <button class="btn-ghost btn-block collection-entry" @click="goCollection">
+        <AppIcon name="star" :size="14" />
+        收藏馆 · 牌面收集与鉴赏
+      </button>
+      <button class="btn-ghost btn-block" style="margin-top: 8px" @click="doExport">导出备份</button>
       <button class="btn-ghost btn-block" style="margin-top: 8px" @click="fileRef.click()">导入备份</button>
       <input ref="fileRef" type="file" accept="application/json,.json" style="display: none" @change="onFileChange" />
       <div v-if="pendingImport" class="import-actions">
