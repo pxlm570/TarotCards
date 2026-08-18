@@ -39,6 +39,7 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 - **v1.5 进行中（2026-08-17 起）**：
   - 已提交：AI 提示词按场景裁剪（clarify/tutor/recap 不注方法论）+ 首页问候随人格；仪式提示跨凌晨 4 点自动换日（`composables/use-day-key.js` 响应式单例）；FlowExit 六分支测试 + 选牌中途放入降为轻触感；四季仪式牌阵（节气日期双源核实+北京时跨日边界，置顶优先级 生日>四季>月相）；自定义牌阵数据层与画布编辑器（`lib/custom-spreads.js`，key `tarot.custom-spreads.v1`，上限 20，id 强制 `custom-` 前缀防撞，路由 `/spread-editor`）；占卜动线接入自定义牌阵（静态+自定义合并注册表、选牌阵页「我的牌阵」分组、删阵后 flow 兜底）；自由摆放抽牌（翻牌后拖位+存为我的牌阵）+ 数字键选牌视口跟随 + 自定义牌阵直链校验（8cfa732）。
   - ✅ Task 8 收藏馆已落地（2026-08-18）：`/collection`（`views/CollectionView.vue` + `lib/collection-stats.js`）三块内容（收集墙 78 格点亮+次数角标/皮肤墙/牌背墙连胜解锁梯度）+「我的」与牌库页双入口，不占 TabBar；统计从 journal readings 聚合、纯函数零新增存储。浏览器全链路走查通过（空态灰锁、真实每日一抽后点亮、鉴赏跳转 `/deck/:id`、FlowExit 免确认返回）。**坑：牌库页入口勿用 float 布局**--会被下方 relative 的搜索框盖住点不到，已改 flex title-row。
+  - ✅ Task 9 皮肤包已落地（2026-08-18）：`night-city`「夜之城·霓虹」（赛博朋克壁画风，22 大牌 gpt-image-2 生图 + 56 小牌 PIL 霓虹构图 + AI 牌背）；管线 `scripts/gen-deck-ai.py`（key 走环境变量/`.workbuddy/local-secrets.md`，绝不入库；可断点续跑）。**坑：bytecatcode 代理有 CF 指纹拦截，Python urllib 直连 403/1010，须走 curl 子进程**；恶魔(major-15) 提示词含「锁链+被俘者」会被内容安全误拦，已改写为装饰性意象。
 
 ## 架构与关键约定
 
