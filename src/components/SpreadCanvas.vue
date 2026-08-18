@@ -2,7 +2,8 @@
 // 牌阵画布：位置按 spreads.json 的 x/y 百分比绝对定位，牌宽取容器宽度百分比。
 // portrait（3:4 竖版）供大牌阵（凯尔特十字）使用，避免纵向溢出与右列互相遮挡。
 // cards: store.drawn；revealed: Set<positionKey>，null = 全部翻开（readonly 场景）。
-import { computed } from 'vue'
+// draggable（v1.5 自由摆放）：已翻开的牌可拖动，实时 emit move(key, x%, y%)。
+import { computed, ref } from 'vue'
 import { useDeck } from '../lib/use-deck.js'
 
 const props = defineProps({
@@ -11,10 +12,11 @@ const props = defineProps({
   revealed: { type: Object, default: null }, // Set；null = 全部翻开
   readonly: { type: Boolean, default: false },
   cardWidthPct: { type: Number, default: 18 },
-  portrait: { type: Boolean, default: false }
+  portrait: { type: Boolean, default: false },
+  draggable: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['flip', 'inspect'])
+const emit = defineEmits(['flip', 'inspect', 'move'])
 
 const { manifest, cardUrl, backUrl, error, retry } = useDeck()
 
@@ -51,14 +53,46 @@ function onTap(card) {
   }
   emit('inspect', stack[inspectCycle++ % stack.length])
 }
+
+// ---- 拖动摆位（draggable 且已翻开的牌）----
+// 点按与拖动共用 pointerdown：位移超过约 1% 画布宽才算拖，避免手抖点按挪动牌
+const canvasEl = ref(null)
+let dragKey = null
+let dragStart = null
+
+function canvasPoint(e) {
+  const rect = canvasEl.value.getBoundingClientRect()
+  return { x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 }
+}
+
+function onDragDown(card, e) {
+  if (!props.draggable || !isRevealed(card.positionKey)) return
+  dragKey = card.positionKey
+  dragStart = canvasPoint(e)
+  e.currentTarget.setPointerCapture?.(e.pointerId)
+}
+
+function onDragMove(e) {
+  if (!dragKey) return
+  const pt = canvasPoint(e)
+  if (dragStart && Math.hypot(pt.x - dragStart.x, pt.y - dragStart.y) < 1) return
+  dragStart = null // 已过阈值，后续移动实时生效
+  emit('move', dragKey, pt.x, pt.y)
+}
+
+function onDragEnd() {
+  dragKey = null
+  dragStart = null
+}
 </script>
 
 <template>
-  <div class="canvas" :class="{ portrait, readonly }">
+  <div ref="canvasEl" class="canvas" :class="{ portrait, readonly, draggable }">
     <button
       v-for="card in placed"
       :key="card.positionKey"
       class="slot"
+      :class="{ movable: draggable && isRevealed(card.positionKey) }"
       :style="{
         left: card.position.x + '%',
         top: card.position.y + '%',
@@ -66,6 +100,10 @@ function onTap(card) {
         zIndex: card.position.rotate ? 2 : 1
       }"
       @click="onTap(card)"
+      @pointerdown="onDragDown(card, $event)"
+      @pointermove="onDragMove"
+      @pointerup="onDragEnd"
+      @pointercancel="onDragEnd"
     >
       <div
         class="flipper"
@@ -107,6 +145,19 @@ function onTap(card) {
 
 .canvas.portrait {
   aspect-ratio: 3 / 4;
+}
+
+/* 自由摆放：拖牌不触发页面滚动；已翻开的牌提示可拖 */
+.canvas.draggable .slot {
+  touch-action: none;
+}
+
+.canvas.draggable .slot.movable {
+  cursor: grab;
+}
+
+.canvas.draggable .slot.movable:active {
+  cursor: grabbing;
 }
 
 .slot {

@@ -55,6 +55,20 @@ function removeCustom(spread) {
   customSpreads.value = listCustomSpreads()
   toast('已删除')
 }
+
+// ---- 自由摆放（v1.5 Task 7）：选张数 -> 提问 -> 翻牌后拖位，摆法可存为我的牌阵 ----
+const freePicking = ref(false)
+
+function startFree(n) {
+  freePicking.value = false
+  if (reading.phase !== 'idle' && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
+    return
+  }
+  tap()
+  reading.reset()
+  reading.selectFreeSpread(n)
+  router.push({ path: '/reading/question', query: { spread: 'free' } })
+}
 </script>
 
 <template>
@@ -127,9 +141,16 @@ function removeCustom(spread) {
       </button>
     </section>
 
-    <!-- 我的牌阵（v1.5）：卡上带编辑/删除小操作，外层不能再用 button（HTML 不允许嵌套按钮） -->
+    <!-- 我的牌阵（v1.5）：自由摆放模式 + 本机自定义；卡上带编辑/删除小操作，外层不能再用 button -->
     <section class="group">
       <h2 class="group-title">我的牌阵</h2>
+      <button class="free-card card-press" @click="freePicking = true">
+        <span class="spread-info">
+          <span class="spread-name">自由摆放</span>
+          <span class="spread-desc">翻牌后随心拖位，摆法可存为我的牌阵</span>
+        </span>
+        <AppIcon name="drag" :size="18" />
+      </button>
       <div
         v-for="spread in customSpreads"
         :key="spread.id"
@@ -161,6 +182,16 @@ function removeCustom(spread) {
         {{ customSpreads.length ? '再建一个' : '新建自定义牌阵' }}
       </button>
     </section>
+
+    <!-- 自由摆放：选张数轻面板 -->
+    <div v-if="freePicking" class="sheet-mask" @click.self="freePicking = false">
+      <div class="sheet card">
+        <p class="sheet-title">自由摆放，抽几张？</p>
+        <div class="count-row">
+          <button v-for="n in 10" :key="n" class="chip count-chip" @click="startFree(n)">{{ n }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -313,5 +344,61 @@ function removeCustom(spread) {
   background: none;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
+}
+
+/* 自由摆放模式入口：虚线框与新建入口同语言，但通栏更醒目 */
+.free-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 16px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--gold-deep);
+  color: var(--dim);
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.free-card .spread-name {
+  color: var(--ink);
+}
+
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(6, 10, 22, 0.45);
+}
+
+.sheet {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.sheet-title {
+  font-size: var(--fs-head);
+  font-weight: var(--w-title);
+  margin-bottom: 14px;
+}
+
+.count-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.count-chip {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-weight: var(--w-strong);
 }
 </style>

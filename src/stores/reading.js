@@ -39,18 +39,43 @@ function initialState() {
     pending: [], // 预抽结果 [{ id, reversed }]，长度 = cardCount
     pickedIndices: [], // 用户点过的牌背下标（UI 动画 + 防重复点选）
     drawn: [], // 已落位 [{ cardId, reversed, positionKey }]
-    revealedKeys: [], // 实际翻开的 positionKey（保序）——只存计数会让刷新恢复错位
+    revealedKeys: [], // 实际翻开的 positionKey（保序）--只存计数会让刷新恢复错位
     snapshot: null, // finishShuffle 时的设置快照 { reversalsEnabled, autoDraw }
     journalId: null, // M3：本局已写入记录库的 reading id（随 flow 持久化，一局只存一次）
-    isDaily: false // M3：每日一抽局（?daily=1），落库时打卡
+    isDaily: false, // M3：每日一抽局（?daily=1），落库时打卡
+    freeMode: false, // v1.5 Task 7：自由摆放局（翻牌后拖位，不依赖任何注册表牌阵）
+    freePositions: [] // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
   }
+}
+
+// 自由摆放初始落位：最多 3 列的居中网格，翻开后拖动调整
+function freeGridLayout(count) {
+  const cols = Math.min(3, count)
+  const rows = Math.ceil(count / cols)
+  return Array.from({ length: count }, (_, i) => {
+    const col = i % cols
+    const row = Math.floor(i / cols)
+    return {
+      key: `p${i + 1}`,
+      label: `第 ${i + 1} 张`,
+      meaning: '',
+      x: cols === 1 ? 50 : Math.round(20 + (60 * col) / (cols - 1)),
+      y: rows === 1 ? 50 : Math.round(22 + (56 * row) / (rows - 1))
+    }
+  })
 }
 
 export const useReadingStore = defineStore('reading', {
   state: initialState,
 
   getters: {
-    spread: (s) => findSpread(s.spreadId),
+    // 自由摆放局用 freePositions 合成牌阵对象（含拖动中的实时坐标）；其余走合并注册表
+    spread(s) {
+      if (this.freeMode && s.spreadId === 'free') {
+        return { id: 'free', name: '自由摆放', cardCount: s.freePositions.length, positions: s.freePositions }
+      }
+      return findSpread(s.spreadId)
+    },
     cardCount() {
       return this.spread ? this.spread.cardCount : 0
     },
@@ -71,6 +96,31 @@ export const useReadingStore = defineStore('reading', {
       }
       this.spreadId = spreadId
       this.phase = 'spreadSelected'
+      this.persistNow()
+    },
+
+    // 自由摆放局（v1.5 Task 7）：不依赖注册表，位置在翻牌阶段拖动生成
+    selectFreeSpread(count) {
+      this._assert('idle', 'selectFreeSpread')
+      if (!Number.isInteger(count) || count < 1 || count > 10) {
+        throw new Error(`[reading] 自由摆放张数须为 1-10：${count}`)
+      }
+      this.freeMode = true
+      this.freePositions = freeGridLayout(count)
+      this.spreadId = 'free'
+      this.phase = 'spreadSelected'
+      this.persistNow()
+    },
+
+    // 翻牌后拖动摆位：夹紧安全区，防止拖出画布找不回
+    moveFreePosition(key, x, y) {
+      if (!this.freeMode || this.phase !== 'revealing') {
+        throw new Error('[reading] moveFreePosition 仅自由摆放局的翻牌阶段可用')
+      }
+      const pos = this.freePositions.find((p) => p.key === key)
+      if (!pos) throw new Error(`[reading] 未知自由摆放位置：${key}`)
+      pos.x = Math.min(96, Math.max(4, Math.round(x * 10) / 10))
+      pos.y = Math.min(96, Math.max(4, Math.round(y * 10) / 10))
       this.persistNow()
     },
 
@@ -172,21 +222,22 @@ export const useReadingStore = defineStore('reading', {
     },
 
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, freeMode, freePositions } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, freeMode, freePositions: freePositions.map((p) => ({ ...p })) })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页
     tryRestore() {
       const saved = loadFlow()
-      if (
-        !saved ||
-        !PHASES.includes(saved.phase) ||
-        saved.phase === 'idle' ||
-        !findSpread(saved.spreadId) // 含自定义牌阵被删的情况：恢复失败，守卫重定向首页
-      ) {
+      if (!saved || !PHASES.includes(saved.phase) || saved.phase === 'idle') {
         return false
       }
+      // 自由摆放局自包含（位置随 flow 持久化）；注册表局要求牌阵仍存在（含自定义被删 -> 恢复失败回首页）
+      const spreadOk =
+        saved.freeMode && saved.spreadId === 'free'
+          ? Array.isArray(saved.freePositions) && saved.freePositions.length > 0
+          : !!findSpread(saved.spreadId)
+      if (!spreadOk) return false
       Object.assign(this, { ...initialState(), ...saved })
       return true
     },

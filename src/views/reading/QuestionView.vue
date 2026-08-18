@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import spreads from '../../data/spreads.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useSettingsStore } from '../../stores/settings.js'
+import { getCustomSpread } from '../../lib/custom-spreads.js'
 import AppIcon from '../../components/AppIcon.vue'
 import ClarifyDialog from '../../components/ClarifyDialog.vue'
 import FlowExit from '../../components/FlowExit.vue'
@@ -34,16 +35,26 @@ onMounted(() => {
   const spreadId = isDaily ? 'single' : route.query.spread
   if (isDaily || spreadId) {
     const sid = spreadId || 'single'
-    if (!spreads.some((s) => s.id === sid)) {
-      router.replace('/')
-      return
-    }
-    if (store.phase !== 'questioning' || store.spreadId !== sid || store.isDaily !== isDaily) {
-      store.reset()
-      store.isDaily = isDaily
-      store.selectSpread(sid)
-      store.beginBreathing()
-      store.toQuestion()
+    if (sid === 'free') {
+      // 自由摆放局只能由选牌阵页发起（张数在那时定）；直链/刷新进来须已有进行中的 free 局
+      if (store.phase !== 'questioning' || store.spreadId !== 'free') {
+        router.replace('/')
+        return
+      }
+    } else {
+      // 静态注册表 + 本机自定义牌阵（custom- 前缀）都放行；store.selectSpread 内还有一道防线
+      const known = spreads.some((s) => s.id === sid) || (sid.startsWith('custom-') && !!getCustomSpread(sid))
+      if (!known) {
+        router.replace('/')
+        return
+      }
+      if (store.phase !== 'questioning' || store.spreadId !== sid || store.isDaily !== isDaily) {
+        store.reset()
+        store.isDaily = isDaily
+        store.selectSpread(sid)
+        store.beginBreathing()
+        store.toQuestion()
+      }
     }
   } else if (store.phase !== 'questioning') {
     router.replace('/')

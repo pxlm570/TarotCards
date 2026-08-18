@@ -8,7 +8,7 @@ import { useReadingStore } from '../../stores/reading.js'
 import CardBack from '../../components/CardBack.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import FlowExit from '../../components/FlowExit.vue'
-import { tap, success } from '../../lib/feedback.js'
+import { tap, success, scrollBehavior } from '../../lib/feedback.js'
 
 const TOTAL = 78
 
@@ -59,6 +59,14 @@ function pickRest() {
 }
 
 // 桌面键盘（Task 12/16 微调）：数字键=选中、Enter=放入、Esc=取消选中
+// v1.5 #12：数字键选中的牌可能在视口外（78 张长条），滚动跟随让选中态可见
+const slotEls = []
+function setSlotRef(i, el) {
+  slotEls[i] = el
+}
+function focusSlot(i) {
+  slotEls[i]?.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest', inline: 'nearest' })
+}
 function onKey(e) {
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return // 输入框内不劫持
@@ -86,6 +94,7 @@ function onKey(e) {
       if (n === 0) {
         selectedIndex.value = i
         tap()
+        focusSlot(i)
         return
       }
     }
@@ -125,6 +134,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <button
           v-for="i in TOTAL"
           :key="i"
+          :ref="(el) => setSlotRef(i - 1, el)"
           class="slot"
           :class="{ taken: store.pickedIndices.includes(i - 1), picked: selectedIndex === i - 1 }"
           @click="pick(i - 1)"

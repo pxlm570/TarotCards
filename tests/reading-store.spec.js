@@ -337,3 +337,76 @@ describe('reading store：自定义牌阵（v1.5 Task 6）', () => {
     expect(() => store.selectSpread('no-such-spread')).toThrow('未知牌阵')
   })
 })
+
+// v1.5 Task 7：自由摆放--翻牌后拖位，存为我的牌阵
+import { getCustomSpread } from '../src/lib/custom-spreads.js'
+
+describe('reading store：自由摆放（v1.5 Task 7）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    sessionStorage.clear()
+    localStorage.clear()
+  })
+
+  it('selectFreeSpread：合成牌阵对象、p1..pN 位置、默认网格落位', () => {
+    const store = useReadingStore()
+    store.selectFreeSpread(3)
+    expect(store.phase).toBe('spreadSelected')
+    expect(store.freeMode).toBe(true)
+    expect(store.spread.id).toBe('free')
+    expect(store.spread.name).toBe('自由摆放')
+    expect(store.spread.cardCount).toBe(3)
+    expect(store.spread.positions.map((p) => p.key)).toEqual(['p1', 'p2', 'p3'])
+    expect(store.spread.positions.every((p) => p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100)).toBe(true)
+  })
+
+  it('张数越界拒绝', () => {
+    const store = useReadingStore()
+    expect(() => store.selectFreeSpread(0)).toThrow()
+    expect(() => store.selectFreeSpread(11)).toThrow()
+  })
+
+  it('自由摆放完整动线 + moveFreePosition 更新坐标并持久化', () => {
+    const store = useReadingStore()
+    store.selectFreeSpread(2)
+    store.beginBreathing()
+    store.toQuestion()
+    store.submitQuestion('随心一问', null)
+    store.finishShuffle()
+    store.pickAll()
+    expect(store.phase).toBe('revealing')
+    store.moveFreePosition('p2', 88, 12)
+    expect(store.spread.positions.find((p) => p.key === 'p2').x).toBe(88)
+    // 越界被夹紧
+    store.moveFreePosition('p1', 120, -5)
+    const p1 = store.spread.positions.find((p) => p.key === 'p1')
+    expect(p1.x).toBeLessThanOrEqual(96)
+    expect(p1.y).toBeGreaterThanOrEqual(4)
+    // 持久化含自由摆放状态，刷新恢复
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.freeMode).toBe(true)
+    expect(restored.spread.positions.find((p) => p.key === 'p2').x).toBe(88)
+  })
+
+  it('moveFreePosition 只在自由摆放局可用', () => {
+    const store = useReadingStore()
+    walkToPicking(store, SPREAD_3)
+    store.pickAll()
+    expect(() => store.moveFreePosition('past', 50, 50)).toThrow()
+  })
+
+  it('摆位可存为自定义牌阵：位置与标签随摆法固化', () => {
+    const store = useReadingStore()
+    store.selectFreeSpread(2)
+    store.beginBreathing()
+    store.toQuestion()
+    store.submitQuestion('', null)
+    store.finishShuffle()
+    store.pickAll()
+    store.moveFreePosition('p2', 30, 70)
+    const saved = saveCustomSpread({ name: '随心摆', positions: store.spread.positions })
+    expect(getCustomSpread(saved.id).positions.find((p) => p.key === 'p2').y).toBe(70)
+  })
+})
