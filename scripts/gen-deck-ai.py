@@ -25,8 +25,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-DECK_ID = "night-city"
-DECK_NAME = "夜之城·霓虹"
+DECK_ID = "neon-glow"
+DECK_NAME = "绚烂霓虹"
 DECK_DIR = ROOT / "public" / "decks" / DECK_ID
 SECRETS = ROOT / ".workbuddy" / "local-secrets.md"
 API_URL = "https://www.bytecatcode.org/v1/images/generations"
