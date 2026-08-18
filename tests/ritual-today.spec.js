@@ -61,10 +61,10 @@ describe('useRitualToday：今日限定判定与置顶', () => {
     expect(useRitualToday('2026-08-28').ritualToday.value).toBe('full-moon')
   })
 
-  it('生日窗口内返回 birthday；与月相撞车时月相优先', () => {
+  it('生日窗口内返回 birthday；与月相撞车时生日优先（2026-08-17 裁决翻转）', () => {
     useProfileStore().setBirthday('1990-08-14')
     expect(useRitualToday('2026-08-15').ritualToday.value).toBe('birthday')
-    expect(useRitualToday('2026-08-13').ritualToday.value).toBe('new-moon')
+    expect(useRitualToday('2026-08-13').ritualToday.value).toBe('birthday') // 08-13 是新月且在生日窗口内，生日压过月相
   })
 
   it('平日不命中：首页提示行与置顶节都不出现', () => {
@@ -72,6 +72,23 @@ describe('useRitualToday：今日限定判定与置顶', () => {
     expect(ritualToday.value).toBe(null)
     expect(ritualSpread.value).toBe(null)
     expect(spreads[0].id).toBe('single') // 牌阵清单本身不被改写
+  })
+
+  // v1.5 Task 4：四季节气（seasons.json 为双源核实的北京时间节气日，跨日边界值尤其要守住）
+  it('节气当天返回对应牌阵，含三个北京时间跨日边界', () => {
+    expect(useRitualToday('2026-03-20').ritualToday.value).toBe('spring-equinox')
+    expect(useRitualToday('2026-12-22').ritualToday.value).toBe('winter-solstice') // UTC 12-21 20:50，北京已是 12-22
+    expect(useRitualToday('2027-03-21').ritualToday.value).toBe('spring-equinox') // UTC 03-20 20:25，北京 03-21
+    expect(useRitualToday('2028-06-21').ritualToday.value).toBe('summer-solstice') // UTC 06-20 20:02，北京 06-21
+    expect(useRitualToday('2027-09-23').ritualSpread.value.name).toBe('秋分归仓')
+    expect(useRitualToday('2027-09-22').ritualToday.value).toBe(null) // 前一天不命中
+  })
+
+  it('优先级：生日 > 四季（四季 > 月相在数据窗口内无自然撞日，以代码次序保证）', () => {
+    useProfileStore().setBirthday('1990-03-20')
+    expect(useRitualToday('2026-03-20').ritualToday.value).toBe('birthday') // 生日压过春分
+    useProfileStore().setBirthday('1990-01-01')
+    expect(useRitualToday('2026-03-20').ritualToday.value).toBe('spring-equinox')
   })
 })
 

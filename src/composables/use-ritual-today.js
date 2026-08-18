@@ -6,6 +6,15 @@ import moonPhases from '../data/moon-phases.json'
 import { useProfileStore } from '../stores/profile.js'
 import { currentDayKey } from '../lib/day-key.js'
 import { useDayKey } from './use-day-key.js'
+import seasons from '../data/seasons.json'
+
+// 四季节气 -> 牌阵 id；seasons.json 日期为北京时间的节气日（权威日历双源核实，勿凭推算增改）
+const SEASON_SPREAD = {
+  springEquinox: 'spring-equinox',
+  summerSolstice: 'summer-solstice',
+  autumnEquinox: 'autumn-equinox',
+  winterSolstice: 'winter-solstice'
+}
 
 const DAY_MS = 86400000
 
@@ -37,11 +46,14 @@ export function useRitualToday(dayKey) {
   const liveDay = dayKey ? null : useDayKey()
   const today = computed(() => dayKey ?? liveDay?.value)
 
+  // 优先级（2026-08-17 用户裁决）：生日 > 四季 > 月相（冬至撞满月取节气）
   const ritualToday = computed(() => {
     const day = today.value
+    if (isBirthdayWindow(profile.birthday, day)) return 'birthday'
+    const season = Object.keys(SEASON_SPREAD).find((k) => seasons[k].includes(day))
+    if (season) return SEASON_SPREAD[season]
     if (moonPhases.newMoon.includes(day)) return 'new-moon'
     if (moonPhases.fullMoon.includes(day)) return 'full-moon'
-    if (isBirthdayWindow(profile.birthday, day)) return 'birthday'
     return null
   })
 

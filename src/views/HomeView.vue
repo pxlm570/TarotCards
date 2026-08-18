@@ -132,9 +132,21 @@ function startReading(spreadId) {
 // M5 仪式牌阵（Task 21 起只在首页留一行提示，完整列表在 /spreads）：
 // 新月/满月当天或生日窗口命中时出现，点击直达该牌阵，平日不占位。
 const { ritualToday, ritualSpread } = useRitualToday()
-const RITUAL_PREFIX = { 'new-moon': '今晚新月', 'full-moon': '今晚满月', birthday: '生日将至' }
+const RITUAL_PREFIX = {
+  'new-moon': '今晚新月',
+  'full-moon': '今晚满月',
+  birthday: '生日将至',
+  'spring-equinox': '今日春分',
+  'summer-solstice': '今日夏至',
+  'autumn-equinox': '今日秋分',
+  'winter-solstice': '今日冬至'
+}
 const ritualPrefix = computed(() => RITUAL_PREFIX[ritualToday.value] ?? '')
-const ritualIcon = computed(() => (ritualToday.value === 'birthday' ? 'star' : 'moon'))
+const ritualIcon = computed(() => {
+  if (ritualToday.value === 'birthday') return 'star'
+  if (ritualToday.value?.endsWith('-equinox') || ritualToday.value?.endsWith('-solstice')) return 'sun'
+  return 'moon'
+})
 </script>
 
 <template>

@@ -21,7 +21,11 @@ const restSpreads = computed(() => spreads.filter((s) => s.id !== ritualToday.va
 const rookieSpreads = computed(() => restSpreads.value.filter((s) => s.difficulty === '新手'))
 const advancedSpreads = computed(() => restSpreads.value.filter((s) => s.difficulty === '进阶'))
 
-const ritualIcon = computed(() => (ritualToday.value === 'birthday' ? 'star' : 'moon'))
+const ritualIcon = computed(() => {
+  if (ritualToday.value === 'birthday') return 'star'
+  if (ritualToday.value?.endsWith('-equinox') || ritualToday.value?.endsWith('-solstice')) return 'sun'
+  return 'moon'
+})
 
 function startReading(spreadId) {
   if (reading.phase !== 'idle' && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {

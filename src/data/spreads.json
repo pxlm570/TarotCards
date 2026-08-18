@@ -55,5 +55,34 @@
       { "key": "gift", "label": "礼物", "meaning": "你收获的礼物与能力", "x": 20, "y": 55 },
       { "key": "theme", "label": "新一年主题", "meaning": "新一年的主题", "x": 80, "y": 55 },
       { "key": "blessing", "label": "祝福", "meaning": "给新一年的祝福", "x": 50, "y": 82 }
+    ] },
+  { "id": "spring-equinox", "name": "春分萌芽", "difficulty": "新手", "cardCount": 4, "ritual": "spring-equinox",
+    "positions": [
+      { "key": "balance", "label": "昼夜之衡", "meaning": "此刻你最需要摆平的两端", "x": 20, "y": 30 },
+      { "key": "seed", "label": "萌芽", "meaning": "值得破土的新开始", "x": 80, "y": 30 },
+      { "key": "thaw", "label": "解冻", "meaning": "需要慢慢融化的僵局", "x": 20, "y": 72 },
+      { "key": "light", "label": "向光", "meaning": "滋养它生长的光源", "x": 80, "y": 72 }
+    ] },
+  { "id": "summer-solstice", "name": "夏至盛放", "difficulty": "新手", "cardCount": 4, "ritual": "summer-solstice",
+    "positions": [
+      { "key": "peak", "label": "盛放", "meaning": "当前最旺盛的能量", "x": 20, "y": 30 },
+      { "key": "passion", "label": "心火", "meaning": "真正点燃你的事", "x": 80, "y": 30 },
+      { "key": "shade", "label": "一寸阴凉", "meaning": "过盛处需要的一分收敛", "x": 20, "y": 72 },
+      { "key": "ripen", "label": "灌浆", "meaning": "离收获还差的那一步", "x": 80, "y": 72 }
+    ] },
+  { "id": "autumn-equinox", "name": "秋分归仓", "difficulty": "新手", "cardCount": 4, "ritual": "autumn-equinox",
+    "positions": [
+      { "key": "harvest", "label": "收成", "meaning": "这段时间真实的收获", "x": 20, "y": 30 },
+      { "key": "gratitude", "label": "感恩", "meaning": "最该谢谢的人与事", "x": 80, "y": 30 },
+      { "key": "shed", "label": "落叶", "meaning": "可以安心放手的", "x": 20, "y": 72 },
+      { "key": "store", "label": "归仓", "meaning": "值得储存过冬的资本", "x": 80, "y": 72 }
+    ] },
+  { "id": "winter-solstice", "name": "冬至守夜", "difficulty": "进阶", "cardCount": 5, "ritual": "winter-solstice",
+    "positions": [
+      { "key": "longest", "label": "长夜", "meaning": "当下最沉重的课题", "x": 30, "y": 22 },
+      { "key": "ember", "label": "火种", "meaning": "支撑你度过寒冬的东西", "x": 70, "y": 22 },
+      { "key": "still", "label": "静守", "meaning": "此刻适合的休养方式", "x": 20, "y": 55 },
+      { "key": "dream", "label": "孕梦", "meaning": "在暗中悄悄孕育的愿望", "x": 80, "y": 55 },
+      { "key": "return", "label": "一阳来复", "meaning": "转机将出现的方向", "x": 50, "y": 82 }
     ] }
 ]

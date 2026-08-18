@@ -73,9 +73,20 @@ describe('cards.json', () => {
 })
 
 describe('spreads.json', () => {
-  it('包含 8 个牌阵且 id 唯一', () => {
-    expect(spreads).toHaveLength(8)
-    expect(new Set(spreads.map((s) => s.id)).size).toBe(8)
+  it('包含 12 个牌阵且 id 唯一', () => {
+    expect(spreads).toHaveLength(12)
+    expect(new Set(spreads.map((s) => s.id)).size).toBe(12)
+  })
+
+  it('四个四季仪式牌阵 ritual 标记与 id 一致（v1.5 Task 4）', () => {
+    const seasons = spreads.filter((s) => s.id.endsWith('-equinox') || s.id.endsWith('-solstice'))
+    expect(seasons.map((s) => s.id).sort()).toEqual([
+      'autumn-equinox',
+      'spring-equinox',
+      'summer-solstice',
+      'winter-solstice'
+    ])
+    for (const s of seasons) expect(s.ritual, s.id).toBe(s.id)
   })
 
   it('cardCount 与 positions 长度一致', () => {
