@@ -41,6 +41,14 @@ public/decks/rws/raw/
 # 临时生图产物
 .imgtmp/
 
+# 本地专属皮肤（版权素材仅本机用，不随公开仓库分发；经 public/decks/local-index.json 注册）
+public/decks/local-index.json
+public/decks/cp2077-local/
+
+# 风格样张与原画参考（临时）
+public/style-samples/
+scripts/_style-samples.py
+
 # Playwright MCP 产物与根目录交付截图
 .playwright-mcp/
 首页截图-*.png

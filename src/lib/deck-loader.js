@@ -12,8 +12,18 @@ export async function listDecks() {
   if (deckIdsCache) return deckIdsCache
   const res = await fetch(`${BASE}decks/index.json`)
   if (!res.ok) throw new Error(`加载皮肤索引失败：${res.status}`)
-  deckIdsCache = await res.json()
-  return deckIdsCache
+  const ids = await res.json()
+  // 本地专属皮肤：public/decks/local-index.json 已 gitignore、不随仓库分发，
+  // 与公开注册表合并去重；文件缺失/损坏按无本地皮肤处理
+  try {
+    const local = await fetch(`${BASE}decks/local-index.json`)
+    if (local.ok) {
+      const extra = await local.json()
+      if (Array.isArray(extra)) for (const id of extra) if (!ids.includes(id)) ids.push(id)
+    }
+  } catch { /* 本地皮肤是可选能力 */ }
+  deckIdsCache = ids
+  return ids
 }
 
 // 牌背注册表（与牌面解耦，用户可自由组合）：[{ id, name, file }]

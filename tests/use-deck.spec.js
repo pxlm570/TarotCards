@@ -6,12 +6,17 @@ function jsonResponse(body, status = 200) {
   return { ok: status === 200, status, json: async () => body }
 }
 
-function mockFetch(manifests, backs) {
+function mockFetch(manifests, backs, localIndex, publicIds) {
+  // publicIds 缺省取全部 manifest key；本地皮肤用例显式传入不含本地项的公开索引
+  const ids = publicIds ?? Object.keys(manifests)
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url) => {
       const u = String(url)
-      if (u.includes('/decks/index.json')) return jsonResponse(Object.keys(manifests))
+      if (u.includes('/decks/local-index.json')) {
+        return localIndex ? jsonResponse(localIndex) : jsonResponse({ error: 'not found' }, 404)
+      }
+      if (u.includes('/decks/index.json')) return jsonResponse(ids)
       if (u.includes('/backs/index.json')) return jsonResponse(backs)
       const m = u.match(/\/decks\/([^/]+)\/manifest\.json/)
       if (m && manifests[m[1]]) return jsonResponse(manifests[m[1]])
@@ -89,5 +94,20 @@ describe('useDeck：牌面/牌背独立', () => {
     await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
     expect(d.faceId.value).toBe('rws')
     expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws')
+  })
+
+  it('local-index.json 存在时本地皮肤并入列表（与公开索引去重），缺失时静默跳过', async () => {
+    const LOCAL = { id: 'my-local', name: '本地皮肤', back: 'back.webp', cards: { 'major-00': 'm0.webp' } }
+    vi.resetModules()
+    mockFetch(
+      { rws: RWS, 'rws-sepia': SEPIA, 'my-local': LOCAL },
+      BACKS,
+      ['my-local', 'rws'], // rws 重复出现，验证去重
+      ['rws', 'rws-sepia'] // 公开索引不含本地皮肤
+    )
+    const loader = await import('../src/lib/deck-loader.js')
+    await expect(loader.listDecks()).resolves.toEqual(['rws', 'rws-sepia', 'my-local'])
+    const m = await loader.loadDeck('my-local')
+    expect(m.id).toBe('my-local')
   })
 })
