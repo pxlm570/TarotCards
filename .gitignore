@@ -52,3 +52,8 @@ scripts/_style-samples.py
 # Playwright MCP 产物与根目录交付截图
 .playwright-mcp/
 首页截图-*.png
+
+# 夜城壁画生成期的原画参照缓存（可断点续跑用，不提交）
+/ref_mural_*.png
+
+__pycache__/
