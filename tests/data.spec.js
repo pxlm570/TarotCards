@@ -95,6 +95,15 @@ describe('spreads.json', () => {
     }
   })
 
+  it('每个牌阵都带选择指引三要素（v1.5 牌阵说明弹窗）', () => {
+    for (const spread of spreads) {
+      expect(spread.guide, spread.id).toBeTruthy()
+      expect(spread.guide.fit, `${spread.id}/fit`).toBeTruthy()
+      expect(spread.guide.who, `${spread.id}/who`).toBeTruthy()
+      expect(spread.guide.tip, `${spread.id}/tip`).toBeTruthy()
+    }
+  })
+
   it('每个位置字段完整且坐标合法', () => {
     for (const spread of spreads) {
       const keys = new Set()

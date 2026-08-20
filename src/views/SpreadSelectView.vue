@@ -69,6 +69,21 @@ function startFree(n) {
   reading.selectFreeSpread(n)
   router.push({ path: '/reading/question', query: { spread: 'free' } })
 }
+
+// ---- 牌阵选择指引（v1.5 追加）：按使用情境分组，数据来自 spreads.json 的 guide 字段 ----
+const guideOpen = ref(false)
+
+const GUIDE_GROUPS = [
+  { title: '日常与状态', ids: ['single', 'time-flow', 'holy-trinity'] },
+  { title: '事件与抉择', ids: ['two-choice', 'celtic-cross'] },
+  { title: '周期与仪式', ids: ['new-moon', 'full-moon', 'birthday', 'spring-equinox', 'summer-solstice', 'autumn-equinox', 'winter-solstice'] }
+]
+const guideGroups = computed(() =>
+  GUIDE_GROUPS.map((g) => ({
+    title: g.title,
+    items: g.ids.map((id) => spreads.find((s) => s.id === id)).filter(Boolean)
+  }))
+)
 </script>
 
 <template>
@@ -79,6 +94,10 @@ function startFree(n) {
     <header class="head">
       <h1 class="title">选择牌阵</h1>
       <p class="subtitle">牌阵把问题拆成几个角度，从一张的轻问到十张的深看</p>
+      <button class="guide-entry" @click="guideOpen = true; tap()">
+        <AppIcon name="star" :size="14" />
+        怎么选牌阵？
+      </button>
     </header>
 
     <!-- 今日限定置顶（新月/满月/生日窗口） -->
@@ -190,6 +209,42 @@ function startFree(n) {
         <div class="count-row">
           <button v-for="n in 10" :key="n" class="chip count-chip" @click="startFree(n)">{{ n }}</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 牌阵选择指引：底部弹层（v1.5 追加，数据源 spreads.json 的 guide 字段） -->
+    <div v-if="guideOpen" class="sheet-mask" @click.self="guideOpen = false">
+      <div class="sheet card guide-sheet">
+        <p class="sheet-title">牌阵怎么选</p>
+        <p class="guide-intro">先想清楚问题，再挑牌阵--问题越具体，牌答得越准。想不好怎么问？参考四条：</p>
+        <div class="ask-chips">
+          <span class="chip">问得开放</span>
+          <span class="chip">聚焦自己</span>
+          <span class="chip">拿回主动</span>
+          <span class="chip">聚焦当下</span>
+        </div>
+        <p class="guide-eg">✗「我能拿到 offer 吗」　✓「我可以为求职做什么」</p>
+
+        <section v-for="g in guideGroups" :key="g.title" class="guide-group">
+          <h3 class="guide-group-title">{{ g.title }}</h3>
+          <div v-for="s in g.items" :key="s.id" class="guide-item">
+            <p class="gi-head">
+              {{ s.name }}
+              <span class="gi-meta">{{ s.cardCount }} 张 · {{ s.difficulty }}</span>
+            </p>
+            <p class="gi-fit">{{ s.guide.fit }}</p>
+            <p class="gi-sub">适合：{{ s.guide.who }}</p>
+            <p class="gi-sub gi-tip">{{ s.guide.tip }}</p>
+          </div>
+        </section>
+
+        <p class="guide-note">「自由摆放」与「我的牌阵」：当你已有明确的问题拆解思路，随心摆就好。</p>
+        <div class="guide-cautions">
+          <p>· 是否题往往源于焦虑，试着换成「这件事的支持与阻力各是什么」</p>
+          <p>· 时间类问题没有标准答案，改问「事成之前需要先发生什么」</p>
+          <p>· 同一问题反复抽不会带来新信息，换个问法再问</p>
+        </div>
+        <button class="btn-solid btn-block guide-close" @click="guideOpen = false">明白了</button>
       </div>
     </div>
   </div>
@@ -400,5 +455,120 @@ function startFree(n) {
   padding: 10px 14px;
   font-size: 1rem;
   font-weight: var(--w-strong);
+}
+
+/* ---- 牌阵选择指引 ---- */
+.guide-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 6px 14px;
+  font-size: var(--fs-note);
+  color: var(--gold-text);
+  background: none;
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--radius-pill);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.guide-sheet {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.guide-intro {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.guide-eg {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  margin-bottom: 14px;
+}
+
+.guide-group {
+  margin-bottom: 14px;
+}
+
+.guide-group-title {
+  font-size: var(--fs-note);
+  color: var(--dim);
+  font-weight: var(--w-strong);
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+
+.guide-item {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.gi-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-body);
+  font-weight: var(--w-title);
+}
+
+.gi-meta {
+  font-size: 0.6875rem;
+  font-weight: var(--w-medium);
+  color: var(--dim);
+}
+
+.gi-fit {
+  margin-top: 4px;
+  font-size: var(--fs-note);
+  line-height: 1.6;
+}
+
+.gi-sub {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+.gi-tip {
+  color: var(--ink);
+  opacity: 0.75;
+}
+
+.guide-note {
+  font-size: 0.75rem;
+  color: var(--dim);
+  line-height: 1.6;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.guide-cautions {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--sunk);
+  border-radius: var(--radius-sm);
+}
+
+.guide-cautions p {
+  font-size: 0.75rem;
+  color: var(--dim);
+  line-height: 1.7;
+}
+
+.guide-close {
+  margin-top: 14px;
 }
 </style>
