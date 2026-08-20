@@ -298,6 +298,16 @@ def register():
         idx_path.write_text(json.dumps(idx, ensure_ascii=False), encoding="utf-8")
     print("registered:", idx)
 
+    # 牌背同步注册进独立牌背注册表：牌背选择/牌背墙只读 backs/index.json，
+    # 皮肤自带 back.webp 不注册就是死资产
+    backs_path = ROOT / "public" / "backs" / "index.json"
+    backs = json.loads(backs_path.read_text(encoding="utf-8"))
+    if not any(b["id"] == "night-mural" for b in backs):
+        (ROOT / "public" / "backs" / "night-mural.webp").write_bytes((DECK / "back.webp").read_bytes())
+        backs.append({"id": "night-mural", "name": "致敬夜之城", "file": "night-mural.webp"})
+        backs_path.write_text(json.dumps(backs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("backs registered:", [b["id"] for b in backs])
+
 def main():
     DECK.mkdir(parents=True, exist_ok=True)
     if "--minors" in sys.argv:

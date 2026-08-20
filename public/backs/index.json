@@ -31,5 +31,15 @@
     "name": "百日铭刻",
     "file": "streak100.webp",
     "unlock": 100
+  },
+  {
+    "id": "neon-glow",
+    "name": "绚烂霓虹",
+    "file": "neon-glow.webp"
+  },
+  {
+    "id": "night-mural",
+    "name": "致敬夜之城",
+    "file": "night-mural.webp"
   }
 ]
