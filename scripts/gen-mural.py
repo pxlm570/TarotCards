@@ -94,6 +94,21 @@ def key():
     return re.search(r"api-key:\s*(\S+)", SECRETS.read_text(encoding="utf-8")).group(1)
 
 
+def fit_crop(im, w, h):
+    """按目标比例居中裁切再缩放（图源 2:3 竖版 -> 裁宽保高，勿裁高产生黑边）。"""
+    src_ratio = im.width / im.height
+    dst_ratio = w / h
+    if src_ratio > dst_ratio:  # 图源更宽：裁宽
+        tw = int(im.height * dst_ratio)
+        x = (im.width - tw) // 2
+        im = im.crop((x, 0, x + tw, im.height))
+    else:                      # 图源更高：裁高
+        th = int(im.width / dst_ratio)
+        y = (im.height - th) // 2
+        im = im.crop((0, y, im.width, y + th))
+    return im.resize((w, h), Image.LANCZOS)
+
+
 def edits_gen(ref_png, prompt, out_webp, k):
     proc = subprocess.run(
         ["curl", "-s", "--noproxy", "*", "-m", "300", "-X", "POST", API,
@@ -106,11 +121,8 @@ def edits_gen(ref_png, prompt, out_webp, k):
     if not b64:
         raise RuntimeError(f"生图失败: {str(d)[:200]}")
     im = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
-    # 1024x1536 -> 500x839 居中裁切
-    th = int(im.width * CARD_H / CARD_W)
-    y = (im.height - th) // 2
-    im.crop((0, y, im.width, y + th)).resize((CARD_W, CARD_H), Image.LANCZOS).save(
-        out_webp, "WEBP", quality=85)
+    im = fit_crop(im, CARD_W, CARD_H)
+    im.save(out_webp, "WEBP", quality=85)
 
 
 def sim(f1, f2):
@@ -274,7 +286,7 @@ def register():
         for n in range(1, 15):
             cards[f"{suit}-{n:02d}"] = f"{suit}-{n:02d}.webp"
     manifest = {
-        "id": "night-mural", "name": "夜城壁画",
+        "id": "night-mural", "name": "致敬夜之城",
         "author": "AI 二次创作（gpt-image-2，CP2077 塔罗壁画画风致敬）+ PIL 构图",
         "back": "back.webp", "cards": cards,
     }
@@ -307,8 +319,9 @@ def main():
     # 愚者：复用已确认的 D1 样稿
     fool = DECK / "major-00.webp"
     if not fool.exists():
-        Image.open(ROOT / "public/style-samples/draft-rework1.webp").save(fool, "WEBP", quality=85)
-        print("[major-00] 复用 D1 样稿")
+        fit_crop(Image.open(ROOT / "public/style-samples/draft-rework1.webp").convert("RGB"),
+                 CARD_W, CARD_H).save(fool, "WEBP", quality=85)
+        print("[major-00] 复用 C1 样稿并规整为 500x839")
     order = sorted(SUBJECTS.items())
     for app_id, (mode, subject) in order:
         game_no = int(app_id.split("-")[1]) + 1
