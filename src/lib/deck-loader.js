@@ -35,14 +35,16 @@ export async function listBacks() {
   return backsCache
 }
 
-export async function loadDeck(id) {
+export async function loadDeck(id, _seen = new Set()) {
   if (manifestCache.has(id)) return manifestCache.get(id)
+  if (_seen.has(id)) throw new Error(`皮肤 cardsFrom 循环引用：${id}`) // A→B→A 会无限递归爆栈
+  _seen.add(id)
   const res = await fetch(`${BASE}decks/${id}/manifest.json`)
   if (!res.ok) throw new Error(`加载皮肤 ${id} 失败：${res.status}`)
   const manifest = await res.json()
   // 皮肤可复用另一套皮肤的牌面图（只换牌背）：cardsFrom 指向基础皮肤 id
   if (manifest.cardsFrom) {
-    const base = await loadDeck(manifest.cardsFrom)
+    const base = await loadDeck(manifest.cardsFrom, _seen)
     manifest.cards = base.cards
   }
   manifestCache.set(id, manifest)
@@ -53,10 +55,6 @@ export function cardImageUrl(manifest, cardId) {
   const file = manifest.cards[cardId]
   if (!file) throw new Error(`皮肤 ${manifest.id} 缺少牌面：${cardId}`)
   return `${BASE}decks/${manifest.id}/${file}`
-}
-
-export function backImageUrl(manifest) {
-  return `${BASE}decks/${manifest.id}/${manifest.back}`
 }
 
 // 独立牌背图（不依赖某套牌面皮肤）

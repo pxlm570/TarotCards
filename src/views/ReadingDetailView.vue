@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import cardsData from '../data/cards.json'
 import spreadsData from '../data/spreads.json'
+import { listCustomSpreads } from '../lib/custom-spreads.js'
 import { useJournalStore } from '../stores/journal.js'
 import { useDeck } from '../lib/use-deck.js'
 import SpreadCanvas from '../components/SpreadCanvas.vue'
@@ -17,7 +18,18 @@ const { cardUrl } = useDeck()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 const reading = computed(() => journal.getById(route.params.readingId))
-const spread = computed(() => spreadsData.find((s) => s.id === reading.value?.spreadId))
+// 合并注册表：自定义牌阵的记录也要能还原全景；free/recap 无注册表项，给可读名称
+const spread = computed(() => {
+  const sid = reading.value?.spreadId
+  if (!sid || sid === 'free' || sid === 'recap') return null
+  return spreadsData.find((s) => s.id === sid) ?? listCustomSpreads().find((s) => s.id === sid) ?? null
+})
+const titleName = computed(() => {
+  const sid = reading.value?.spreadId
+  if (sid === 'free') return '自由摆放'
+  if (sid === 'recap') return '周期复盘'
+  return spread.value?.name ?? '占卜'
+})
 const note = ref('')
 let loaded = false
 
@@ -27,19 +39,20 @@ if (reading.value && !loaded) {
 }
 
 const items = computed(() =>
-  (reading.value?.cards ?? []).map((d) => {
+  (reading.value?.cards ?? []).map((d, i) => {
     const card = cardById.get(d.cardId)
     const pos = spread.value?.positions.find((p) => p.key === d.positionKey)
     return {
       ...d,
       card,
-      position: pos,
+      position: pos ?? { label: `第 ${i + 1} 张` },
       meaning: card ? card.meaning[d.reversed ? 'reversed' : 'upright'] : ''
     }
   })
 )
 
 function saveNote() {
+  if (!reading.value) return
   journal.saveNote(reading.value.id, note.value)
   reading.value.note = note.value
   success()
@@ -47,6 +60,7 @@ function saveNote() {
 }
 
 function remove() {
+  if (!reading.value) return
   if (!window.confirm('确定删除这条记录吗？此操作不可恢复。')) return
   journal.remove(reading.value.id)
   toast('已删除')
@@ -61,47 +75,55 @@ function remove() {
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         记录
       </button>
-      <h1 class="title">{{ spread?.name ?? '占卜' }} · 详情</h1>
+      <h1 class="title">{{ titleName }} · 详情</h1>
       <p v-if="reading?.question" class="question">「{{ reading.question }}」</p>
     </header>
 
-    <div v-if="reading && spread" class="overview card">
-      <SpreadCanvas
-        :spread="spread"
-        :cards="reading.cards"
-        :revealed="null"
-        readonly
-        :portrait="spread.cardCount > 5"
-        :card-width-pct="spread.cardCount > 5 ? 12 : 16"
-      />
+    <!-- 深链到不存在/已删除的记录（旧分享链接、换设备）：空态兜底而非白屏/点击崩溃 -->
+    <div v-if="!reading" class="empty card">
+      <p class="empty-text">记录不存在或已被删除</p>
+      <button class="btn-ghost" @click="router.replace('/journal')">回到记录列表</button>
     </div>
 
-    <section class="cards" v-if="items.length">
-      <article v-for="(item, i) in items" :key="i" class="pos card">
-        <div class="pos-head">
-          <img v-if="cardUrl(item.cardId)" class="thumb" :src="cardUrl(item.cardId)" :class="{ reversed: item.reversed }" alt="" />
-          <div class="pos-main">
-            <p class="pos-label">{{ item.position?.label ?? '' }}</p>
-            <p class="card-name">
-              {{ item.card?.name ?? '' }}
-              <span class="orientation badge" :class="{ 'badge-plain': item.reversed }">{{ item.reversed ? '逆位' : '正位' }}</span>
-            </p>
+    <template v-else>
+      <div v-if="spread" class="overview card">
+        <SpreadCanvas
+          :spread="spread"
+          :cards="reading.cards"
+          :revealed="null"
+          readonly
+          :portrait="spread.cardCount > 5"
+          :card-width-pct="spread.cardCount > 5 ? 12 : 16"
+        />
+      </div>
+
+      <section class="cards" v-if="items.length">
+        <article v-for="(item, i) in items" :key="i" class="pos card">
+          <div class="pos-head">
+            <img v-if="cardUrl(item.cardId)" class="thumb" :src="cardUrl(item.cardId)" :class="{ reversed: item.reversed }" alt="" />
+            <div class="pos-main">
+              <p class="pos-label">{{ item.position?.label ?? '' }}</p>
+              <p class="card-name">
+                {{ item.card?.name ?? '' }}
+                <span class="orientation badge" :class="{ 'badge-plain': item.reversed }">{{ item.reversed ? '逆位' : '正位' }}</span>
+              </p>
+            </div>
           </div>
-        </div>
-        <p class="meaning">{{ item.meaning }}</p>
-      </article>
-    </section>
+          <p class="meaning">{{ item.meaning }}</p>
+        </article>
+      </section>
 
-    <section class="note-area card">
-      <h2 class="note-title"><AppIcon name="note" :size="18" /> 我的日记</h2>
-      <textarea v-model="note" rows="4" class="note-input" placeholder="写下此刻的回顾与感悟……" />
-      <button class="save btn-ghost btn-block" :disabled="!note.trim()" @click="saveNote">保存</button>
-    </section>
+      <section class="note-area card">
+        <h2 class="note-title"><AppIcon name="note" :size="18" /> 我的日记</h2>
+        <textarea v-model="note" rows="4" class="note-input" placeholder="写下此刻的回顾与感悟……" />
+        <button class="save btn-ghost btn-block" :disabled="!note.trim()" @click="saveNote">保存</button>
+      </section>
 
-    <button class="delete btn-text" @click="remove">
-      <AppIcon name="journal" :size="15" />
-      删除这条记录
-    </button>
+      <button class="delete btn-text" @click="remove">
+        <AppIcon name="journal" :size="15" />
+        删除这条记录
+      </button>
+    </template>
   </div>
 </template>
 
@@ -126,6 +148,18 @@ function remove() {
   color: var(--dim);
   font-size: var(--fs-note);
   margin-top: 4px;
+}
+
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.empty-text {
+  color: var(--dim);
 }
 
 .overview {

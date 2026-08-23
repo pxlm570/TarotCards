@@ -1,6 +1,6 @@
 <script setup>
 // Mirror 统计面板（M3 Task 5）+ 周期复盘（M4 Task 6，AI 流式 + 保存为日记）。
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import cardsData from '../data/cards.json'
 import { topCards, suitDist, orientationDist, domainDist, dailyFreq } from '../lib/mirror.js'
 import { useDeck } from '../lib/use-deck.js'
@@ -40,9 +40,11 @@ const freqMax = computed(() => Math.max(1, ...freq.value.map((f) => f.count)))
 const recapping = ref(false)
 const streamingRecap = ref(false)
 const recapText = ref('')
+const recapError = ref('')
+const recapController = ref(null)
 
 function startRecap() {
-  if (streamingRecap.value || recapText.value) return
+  if (streamingRecap.value || recapText.value) return // 失败态（recapText 为空）可重试
   const top = topCards(props.readings, 5)
     .map((t) => `${cardById.get(t.cardId)?.name}×${t.count}`)
     .join('、')
@@ -56,14 +58,20 @@ async function streamRecap(messages) {
   recapping.value = true
   streamingRecap.value = true
   recapText.value = ''
+  recapError.value = ''
+  recapController.value = new AbortController()
   try {
-    for await (const d of streamChat({ messages })) recapText.value += d
+    for await (const d of streamChat({ messages, signal: recapController.value.signal })) recapText.value += d
   } catch {
-    recapText.value = '复盘失败，请检查 AI 配置。'
+    // 失败态独立承载：不再复用 recapText（错误文案曾被「保存为日记」存进记录库）
+    recapError.value = '复盘失败，请稍后重试或检查 AI 配置。'
   } finally {
     streamingRecap.value = false
+    recapController.value = null
   }
 }
+
+onUnmounted(() => recapController.value?.abort())
 
 function saveRecap() {
   const text = recapText.value
@@ -139,7 +147,11 @@ function saveRecap() {
     <section v-if="recapping" class="block card">
       <h2 class="sec-title">周期复盘</h2>
       <p class="recap-text">{{ recapText }}<span v-if="streamingRecap" class="caret" /></p>
-      <button v-if="!streamingRecap && recapText" class="btn-solid btn-block" @click="saveRecap">保存为日记</button>
+      <p v-if="recapError" class="recap-error">{{ recapError }}</p>
+      <template v-if="!streamingRecap">
+        <button v-if="recapError" class="btn-ghost btn-block" @click="startRecap">重试</button>
+        <button v-else-if="recapText" class="btn-solid btn-block" @click="saveRecap">保存为日记</button>
+      </template>
     </section>
   </div>
 
@@ -291,6 +303,11 @@ function saveRecap() {
 .empty-hint {
   font-size: var(--fs-note);
   color: var(--dim);
+}
+
+.recap-error {
+  color: var(--coral);
+  font-size: var(--fs-note);
 }
 
 .recap-text {

@@ -85,7 +85,7 @@ function openCard(card) {
           @click="openCard(card)"
         >
           <img
-            v-if="stats[card.id]?.count"
+            v-if="stats[card.id]?.count && cardUrl(card.id)"
             :src="cardUrl(card.id)"
             :alt="card.name"
             loading="lazy"

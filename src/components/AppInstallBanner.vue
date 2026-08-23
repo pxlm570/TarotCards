@@ -6,7 +6,7 @@ import AppIcon from './AppIcon.vue'
 
 const INSTALL_DISMISS_KEY = 'tarot.install-dismiss.v1'
 const visible = ref(false)
-let deferred = null
+const deferred = ref(null)
 
 function inStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
@@ -21,17 +21,26 @@ function maybeShow() {
 
 function onPrompt(e) {
   e.preventDefault()
-  deferred = e
+  deferred.value = e
   maybeShow()
 }
 
+// iOS Safari/Chrome 永不触发 beforeinstallprompt，deferred 恒 null（旧版在此平台显示死按钮）
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
 function install() {
-  if (!deferred) return
-  deferred.prompt()
-  deferred.userChoice.then(() => {
-    visible.value = false
-  })
-  deferred = null
+  if (!deferred.value) return
+  const prompt = deferred.value
+  deferred.value = null
+  prompt.prompt()
+  prompt.userChoice
+    .then(() => {
+      visible.value = false
+    })
+    .catch(() => {})
 }
 
 function dismiss() {
@@ -41,7 +50,8 @@ function dismiss() {
 
 onMounted(() => {
   window.addEventListener('beforeinstallprompt', onPrompt)
-  if (!inStandalone()) maybeShow()
+  // iOS 走指引文案；其余平台只在收到 BIP 事件（onPrompt）后才显示安装按钮
+  if (isIOS() && !inStandalone()) maybeShow()
 })
 onUnmounted(() => window.removeEventListener('beforeinstallprompt', onPrompt))
 </script>
@@ -50,11 +60,13 @@ onUnmounted(() => window.removeEventListener('beforeinstallprompt', onPrompt))
   <div v-if="visible" class="install card">
     <div class="install-main">
       <span class="install-icon"><AppIcon name="star" :size="18" /></span>
-      <p class="install-text">安装到主屏幕，像 App 一样使用</p>
+      <p class="install-text">
+        {{ deferred ? '安装到主屏幕，像 App 一样使用' : '用 Safari「分享 → 添加到主屏幕」，像 App 一样使用' }}
+      </p>
     </div>
     <div class="install-actions">
       <button class="btn-text" @click="dismiss">稍后</button>
-      <button class="btn-solid" @click="install">安装</button>
+      <button v-if="deferred" class="btn-solid" @click="install">安装</button>
     </div>
   </div>
 </template>

@@ -40,11 +40,12 @@ ORIG_FILES = {
     17: "TarotCard_17_TheTower.png", 18: "TarotCard_18_TheStar.png",
     19: "TarotCard_19_TheMoon.png", 20: "TarotCard_20_TheSun.png",
     21: "TarotCard_21_Judgement.png", 22: "TarotCard_22_TheWorld.png",
-    # 往日之影 DLC 四王（用户 2026-08-22 要求补全卡面，原画作锚点）
-    23: "Tarot_23_KingOfCups_CP2077PL.png.png",
-    24: "Tarot_24_KingOfPentacles_CP2077PL.png.png",
-    25: "Tarot_25_KingOfSwords_CP2077PL.png.png",
-    26: "Tarot_26_KingOfWands_CP2077PL.png.png",
+    # 往日之影 DLC 四王（用户 2026-08-22 要求补全卡面，原画作锚点；
+    # 源文件曾因下载命名事故带 .png.png 双扩展名，2026-08-24 已统一改为 .png）
+    23: "Tarot_23_KingOfCups_CP2077PL.png",
+    24: "Tarot_24_KingOfPentacles_CP2077PL.png",
+    25: "Tarot_25_KingOfSwords_CP2077PL.png",
+    26: "Tarot_26_KingOfWands_CP2077PL.png",
 }
 
 ANCHOR = (
@@ -514,8 +515,10 @@ def gen_major(app_id, game_no, mode, subject, k):
         if attempt == 1:
             out.unlink()  # 越界：删除重生成一次
     s = sim(out, orig)
-    flag = "KEEP(marginal)" if abs(s) <= 0.35 else "FAIL"
-    return f"{flag} {app_id} sim={s:+.3f}"
+    if abs(s) <= 0.35:
+        return f"KEEP(marginal) {app_id} sim={s:+.3f}"
+    out.unlink()  # 真越界：直接删除，不许进 manifest（版权护栏，勿改回保留）
+    return f"FAIL {app_id} sim={s:+.3f}（已删除）"
 
 
 def gen_back(k):
@@ -560,8 +563,11 @@ def gen_kings(k):
                     out.unlink()  # 越界：删除重生成一次
             else:
                 s = sim(out, orig)
-                flag = "KEEP(marginal)" if abs(s) <= 0.35 else "FAIL"
-                print(f"{flag} {app_id} sim={s:+.3f}", flush=True)
+                if abs(s) <= 0.35:
+                    print(f"KEEP(marginal) {app_id} sim={s:+.3f}", flush=True)
+                else:
+                    out.unlink()  # 真越界：删除不许入库（与大牌同口径）
+                    print(f"FAIL {app_id} sim={s:+.3f}（已删除）", flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ERROR {app_id}: {e}", flush=True)
 
@@ -657,10 +663,18 @@ def minor_card(suit, num):
             cy = 130 + ry * (CARD_H - 240)
             stencil(GLYPHS[suit], ((cx - s / 2, cy - s), (cx + s / 2, cy + s)))
     else:
-        try:
-            font = ImageFont.truetype(r"C:\Windows\Fonts\msyhbd.ttc", 44)
-        except OSError:
-            font = ImageFont.load_default()
+        font = None
+        for cand in (r"C:\Windows\Fonts\msyhbd.ttc",
+                     "/System/Library/Fonts/PingFang.ttc",
+                     "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+                     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"):
+            try:
+                font = ImageFont.truetype(cand, 44)
+                break
+            except OSError:
+                continue
+        if font is None:
+            raise SystemExit("找不到中文字体（msyhbd/PingFang/Noto CJK/WQY），宫廷牌无法生成")
         txt = COURT_CN[num]
         bb = d.textbbox((0, 0), txt, font=font)
         d.text(((CARD_W - bb[2] + bb[0]) / 2, 66), txt, font=font, fill=edge)
@@ -673,18 +687,34 @@ def minor_card(suit, num):
 # ---------------- 注册 ----------------
 
 def register():
+    manifest_path = DECK / "manifest.json"
+    if manifest_path.exists():
+        # 注册幂等：已有定稿 manifest（手改过 author 等）只校验不覆写，
+        # 防止重跑 --register 把定稿内容回退到模板（2026-08-24 审查修复）
+        existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        missing = [f for f in existing.get("cards", {}).values() if not (DECK / f).exists()]
+        if missing:
+            raise SystemExit(f"manifest 引用了不存在的文件：{missing[:3]}")
+        print(f"manifest 已存在（{existing.get('name')}，{len(existing.get('cards', {}))} 张），跳过覆写")
+        return
+
     cards = {}
     for i in range(22):
         cards[f"major-{i:02d}"] = f"major-{i:02d}.webp"
     for suit in ("wands", "cups", "swords", "pentacles"):
         for n in range(1, 15):
             cards[f"{suit}-{n:02d}"] = f"{suit}-{n:02d}.webp"
+    expected = set(cards.values()) | {"back.webp"}
+    present = {f.name for f in DECK.glob("*.webp")}
+    if present != expected:
+        raise SystemExit(f"卡面不齐（缺 {sorted(expected - present)[:3]}，多 {sorted(present - expected)[:3]}），拒绝注册")
     manifest = {
         "id": "night-mural", "name": "致敬夜之城",
-        "author": "AI 二次创作（gpt-image-2，CP2077 塔罗壁画画风致敬）+ PIL 构图",
+        "author": "AI 二创（gpt-image-2，CP2077 塔罗壁画画风致敬）",
         "back": "back.webp", "cards": cards,
     }
-    (DECK / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    DECK.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     idx_path = ROOT / "public" / "decks" / "index.json"
     idx = json.loads(idx_path.read_text(encoding="utf-8"))
     if "night-mural" not in idx:

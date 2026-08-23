@@ -60,4 +60,35 @@ describe('backup', () => {
     expect(() => parseImport(JSON.stringify({ foo: 1 }))).toThrow()
     expect(() => parseImport(JSON.stringify({ version: 99, data: {} }))).toThrow()
   })
+
+  it('自定义牌阵与挑战数据纳入导出（审查修复：换机不丢创作）', () => {
+    seed()
+    localStorage.setItem('tarot.custom-spreads.v1', JSON.stringify([{ id: 'custom-x', name: '我的阵', positions: [] }]))
+    localStorage.setItem('tarot.challenge.v1', JSON.stringify({ count: 3, last: '2026-08-24' }))
+    const b = collectBackup()
+    expect(b.data['tarot.custom-spreads.v1']).toHaveLength(1)
+    expect(b.data['tarot.challenge.v1'].count).toBe(3)
+  })
+
+  it('collectBackup 单键损坏跳过，不致整体崩溃', () => {
+    seed()
+    localStorage.setItem('tarot.profile.v1', '{corrupt')
+    const b = collectBackup()
+    expect(b.data['tarot.profile.v1']).toBeUndefined()
+    expect(b.data['tarot.journal.v1'].readings).toHaveLength(1)
+  })
+
+  it('导入 journal 结构非法时拒绝写入（防静默清空现库）', () => {
+    seed()
+    const backup = { version: 1, data: { 'tarot.journal.v1': { readings: [{ id: 'x', ts: 1, cards: [] }] } } } // 缺 dailyDraws
+    expect(() => applyImport(backup, 'overwrite')).toThrow()
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).readings).toHaveLength(1) // 现库未动
+  })
+
+  it('导入超过 500 条时裁剪到容量上限', () => {
+    const readings = Array.from({ length: 600 }, (_, i) => ({ id: `r${i}`, ts: i, cards: [] }))
+    const backup = { version: 1, data: { 'tarot.journal.v1': { readings, dailyDraws: {} } } }
+    applyImport(backup, 'overwrite')
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).readings).toHaveLength(500)
+  })
 })

@@ -96,6 +96,20 @@ describe('useDeck：牌面/牌背独立', () => {
     expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws')
   })
 
+  it('cardsFrom 循环引用时抛明确错误而非无限递归（审查修复）', async () => {
+    vi.resetModules()
+    mockFetch(
+      {
+        rws: RWS,
+        a: { id: 'a', name: 'A', cardsFrom: 'b' },
+        b: { id: 'b', name: 'B', cardsFrom: 'a' }
+      },
+      BACKS
+    )
+    const loader = await import('../src/lib/deck-loader.js')
+    await expect(loader.loadDeck('a')).rejects.toThrow('循环引用')
+  })
+
   it('local-index.json 存在时本地皮肤并入列表（与公开索引去重），缺失时静默跳过', async () => {
     const LOCAL = { id: 'my-local', name: '本地皮肤', back: 'back.webp', cards: { 'major-00': 'm0.webp' } }
     vi.resetModules()

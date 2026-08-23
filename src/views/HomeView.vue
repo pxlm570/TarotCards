@@ -206,7 +206,7 @@ const ritualIcon = computed(() => {
     <!-- 每日一抽大卡 -->
     <button class="daily card-press" :class="{ done: dailyReading }" @click="startDaily">
       <img
-        v-if="dailyReading"
+        v-if="dailyReading && cardUrl(dailyReading.cards?.[0]?.cardId)"
         class="daily-thumb"
         :src="cardUrl(dailyReading.cards?.[0]?.cardId)"
         :alt="dailyCardName"

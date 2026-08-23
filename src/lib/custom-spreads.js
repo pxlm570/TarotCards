@@ -30,7 +30,7 @@ function normalizePositions(positions) {
   if (!Array.isArray(positions) || positions.length < 1) fail('至少需要 1 个牌位')
   if (positions.length > 10) fail('最多 10 个牌位')
   return positions.map((p, i) => {
-    const label = typeof p?.label === 'string' ? p.label.trim() : ''
+    const label = typeof p?.label === 'string' ? p.label.trim().slice(0, 12) : ''
     if (!label) fail(`第 ${i + 1} 个牌位名称不能为空`)
     const meaning = typeof p.meaning === 'string' ? p.meaning.trim().slice(0, 50) : ''
     if (typeof p.x !== 'number' || typeof p.y !== 'number' || Number.isNaN(p.x) || Number.isNaN(p.y)) {
@@ -69,8 +69,12 @@ export function saveCustomSpread({ id, name, positions }) {
   }
 
   if (list.length >= MAX_CUSTOM_SPREADS) fail(`最多保存 ${MAX_CUSTOM_SPREADS} 个自定义牌阵，请先删掉不用的`)
-  // 时间戳 + 随机尾巴：同毫秒连建两个也不撞
-  const newId = `custom-${now.toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, '0')}`
+  // 时间戳 + 随机尾巴；尾巴只有 2 位 36 进制（随机域 1296），撞车时重摇（同 id 会
+  // 让 get/delete 永远只命中第一条）
+  let newId
+  do {
+    newId = `custom-${now.toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, '0')}`
+  } while (list.some((s) => s.id === newId))
   const created = { id: newId, name: cleanName, positions: cleanPositions, cardCount: cleanPositions.length, createdAt: now, updatedAt: now }
   list.push(created)
   persist(list)

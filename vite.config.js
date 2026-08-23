@@ -27,6 +27,10 @@ export default defineConfig({
         // 牌面/牌背图不进预缓存（150+ 张 webp 会让首访/每次发版全量拉 20MB）：
         // 改为运行时缓存（CacheFirst，30 天）。已浏览过的离线可见，未浏览允许缺图。
         globPatterns: ['**/*.{js,css,html,svg,jpg,png,json}'],
+        // 本地样张目录（含 CP2077 原版对照图）绝不进 SW 预缓存：gitignore 挡不住
+        // Vite 拷贝 publicDir，本地构建时 dist 里会有它，预缓存会把版权图随 SW 分发
+        globIgnores: ['**/style-samples/**', 'style-samples/**'],
+        navigateFallbackDenylist: [/style-samples/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -34,7 +38,9 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'deck-images',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              // 4 皮肤 x 78 张 = 312：收藏馆皮肤墙全量浏览会击穿 200 上限，
+              // 导致「已浏览过的离线可见」承诺破产，提到 400（约 36MB，配额内）
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] }
             }
           },

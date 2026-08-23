@@ -53,6 +53,40 @@ export function safeSetItem(key, value) {
   }
 }
 
+export function safeRemoveItem(key) {
+  try {
+    localStorage.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function safeKeys() {
+  try {
+    return Object.keys(localStorage)
+  } catch {
+    return []
+  }
+}
+
+// 已知字段逐项校验：存储里的坏值（null/类型漂移/旧版本残留）不得覆盖默认值
+const SETTINGS_VALIDATORS = {
+  apiKey: (v) => (typeof v === 'string' ? v : ''),
+  baseUrl: (v) => (typeof v === 'string' ? v : ''),
+  model: (v) => (typeof v === 'string' ? v : ''),
+  persona: (v) => (['gentle', 'direct', 'scholar'].includes(v) ? v : 'gentle'),
+  reversalsEnabled: (v) => (typeof v === 'boolean' ? v : false),
+  autoDraw: (v) => (typeof v === 'boolean' ? v : false),
+  theme: (v) => (['auto', 'light', 'dark'].includes(v) ? v : 'auto'),
+  sound: (v) => (typeof v === 'boolean' ? v : false),
+  haptics: (v) => (typeof v === 'boolean' ? v : true),
+  deckId: (v) => (typeof v === 'string' && v ? v : 'rws'),
+  backId: (v) => (typeof v === 'string' && v ? v : 'star-gold'),
+  reducedMotion: (v) => (v === null || typeof v === 'boolean' ? v : null),
+  fontSize: (v) => (['standard', 'large'].includes(v) ? v : 'standard')
+}
+
 export function loadSettings() {
   let raw = null
   try {
@@ -60,7 +94,13 @@ export function loadSettings() {
   } catch {
     raw = null
   }
-  return raw && typeof raw === 'object' ? { ...DEFAULT_SETTINGS, ...raw } : { ...DEFAULT_SETTINGS }
+  const settings = { ...DEFAULT_SETTINGS }
+  if (raw && typeof raw === 'object') {
+    for (const k of Object.keys(DEFAULT_SETTINGS)) {
+      if (k in raw) settings[k] = SETTINGS_VALIDATORS[k](raw[k])
+    }
+  }
+  return settings
 }
 
 export function saveSettings(patch) {

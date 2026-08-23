@@ -22,6 +22,7 @@ const isDone = () => !!learning.progress[props.chapterId]?.[props.lessonId]
 
 function go() {
   if (reading.phase !== 'idle') {
+    if (!window.confirm('有一局占卜正在进行，开始实战练习将放弃这一局，确定吗？')) return
     reading.reset()
   }
   setPracticePending(props.chapterId, props.lessonId)

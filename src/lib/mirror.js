@@ -50,8 +50,8 @@ export function dailyFreq(readings, days = 30, today = new Date()) {
   }
   const arr = []
   for (let i = days - 1; i >= 0; i--) {
+    // 凌晨 4 点分界由 currentDayKey 内部处理，这里不能再手动减 4 小时（双重偏移 bug，见 mirror.spec 边界用例）
     const d = new Date(today)
-    d.setHours(d.getHours() - 4) // 与 dayKey 分界一致
     d.setDate(d.getDate() - i)
     const key = currentDayKey(d)
     arr.push({ key, count: counts[key] || 0 })
@@ -63,7 +63,9 @@ export function dailyFreq(readings, days = 30, today = new Date()) {
 // （含正逆位、含普通占卜，不只每日一抽）。纯函数，UI 只调用。
 export function recentCardCount(readings, cardId, { days = 30, today = new Date() } = {}) {
   const end = currentDayKey(today)
-  const start = currentDayKey(new Date(today.getTime() - (days - 1) * 24 * 3600 * 1000))
+  const startD = new Date(today) // 与 dailyFreq 同用 setDate 口径（DST 时区下 ms 减法会偏一天）
+  startD.setDate(startD.getDate() - (days - 1))
+  const start = currentDayKey(startD)
   let n = 0
   for (const r of readings) {
     const day = currentDayKey(new Date(r.ts))

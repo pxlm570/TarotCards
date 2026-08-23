@@ -32,7 +32,7 @@ export const toasts = reactive([])
 
 let seq = 0
 
-/** type: 'info' | 'success'（M2 的成就 Toast 复用同一组件） */
+/** type: 'info' | 'success' | 'warn'（warn=珊瑚色警示，M2 的成就 Toast 复用同一组件） */
 export function toast(text, type = 'info') {
   const id = ++seq
   toasts.push({ id, text, type })

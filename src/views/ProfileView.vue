@@ -4,7 +4,7 @@
 // M3：XP 等级条、本命牌（生日 → 人格/灵魂牌）。
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { loadSettings, saveSettings } from '../lib/storage.js'
+import { loadSettings, saveSettings, safeKeys, safeRemoveItem } from '../lib/storage.js'
 import { setTheme, THEME_VALUES } from '../lib/theme.js'
 import { useProfileStore } from '../stores/profile.js'
 import { birthCards } from '../lib/birth-cards.js'
@@ -18,7 +18,7 @@ import { useSettingsStore } from '../stores/settings.js'
 import { streamChat } from '../lib/ai-client.js'
 import { applyMotionPreference } from '../lib/feedback.js'
 import { renderSVG } from 'uqr'
-import { useEscClose } from '../composables/useEscClose.js'
+import { useEscClose } from '../composables/use-esc-close.js'
 
 const settingsStore = useSettingsStore()
 const router = useRouter()
@@ -141,7 +141,8 @@ function saveAI(patch) {
 async function testConnection() {
   testing.value = true
   try {
-    await streamChat({ messages: [{ role: 'user', content: 'ping' }], signal: new AbortController().signal }).next()
+    // for-await + break：让 generator 走完 finally 释放 reader/连接（.next() 丢弃 generator 会泄漏）
+    for await (const _d of streamChat({ messages: [{ role: 'user', content: 'ping' }] })) break
     toast('连接正常', 'success')
   } catch (e) {
     toast(e.status === 401 ? '密钥无效' : e.status ? `失败（${e.status}）` : '连接失败，检查 baseUrl 或网络', 'info')
@@ -180,8 +181,8 @@ function copyShareLink() {
 function clearAll() {
   if (!window.confirm('确定清空所有数据吗？记录、进度、设置、成就都将被删除，且不可恢复。建议先导出备份。')) return
   if (!window.confirm('再次确认：真的要清空全部数据吗？')) return
-  for (const k of Object.keys(localStorage)) {
-    if (k.startsWith('tarot.')) localStorage.removeItem(k)
+  for (const k of safeKeys()) {
+    if (k.startsWith('tarot.')) safeRemoveItem(k) // 裸 localStorage 在 iOS「阻止所有 Cookie」下会抛 SecurityError
   }
   toast('已清空')
   setTimeout(() => location.reload(), 600)

@@ -28,7 +28,8 @@ export function buildShareLayout(reading, spread, { includeQuestion } = {}) {
   }))
   return {
     positions,
-    question: includeQuestion ? truncate(reading.question || '', 40) : '',
+    // 30 字上限：30px 字号 x 30 字 + 引号 ≈ 960px < 1080px 画布宽（旧 40 字会尾部裁切）
+    question: includeQuestion ? truncate(reading.question || '', 30) : '',
     keywords: (reading.cards[0] ? ['星语塔罗'] : []).slice(0, 1)
   }
 }
@@ -54,7 +55,8 @@ export async function generateShareCard(reading, spread, { includeQuestion = fal
   ctx.textAlign = 'center'
   ctx.fillText('星语塔罗', SHARE_W / 2, 150)
 
-  // 牌面缩略（占位矩形 + 若可加载图片）
+  // 牌面缩略：金边占位矩形（不加载牌面图——异步装配复杂度高，v1.x 用占位语言；
+  // 载入真图列入 backlog）
   for (const p of layout.positions) {
     ctx.fillStyle = '#232850'
     ctx.fillRect(p.x, p.y, p.w, p.h)
@@ -86,5 +88,8 @@ export async function generateShareCard(reading, spread, { includeQuestion = fal
   ctx.textAlign = 'center'
   ctx.fillText(`来自 星语塔罗 · ${location.origin}${import.meta.env.BASE_URL}`, SHARE_W / 2, SHARE_H - 60)
 
-  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'))
+  // toBlob 失败（画布过大被浏览器拒绝等）必须 reject，让调用方走失败分支而不是拿 null blob
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('分享卡生成失败'))), 'image/png')
+  )
 }

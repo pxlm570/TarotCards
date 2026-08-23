@@ -84,4 +84,12 @@ describe('journal-store', () => {
     expect(getById('r504')).toBeTruthy()
     expect(getById('r0')).toBeUndefined()
   })
+
+  it('容量淘汰时同步清理 dailyDraws 悬空引用（审查修复）', () => {
+    for (let i = 0; i < 500; i++) saveReading(sample({ id: `r${i}`, ts: i }))
+    setDailyDraw('2026-07-25', 'r0') // r0 将在下一次写入时被淘汰
+    saveReading(sample({ id: 'new', ts: 999 }))
+    expect(getById('r0')).toBeUndefined()
+    expect(getDailyDraw('2026-07-25')).toBeUndefined() // 不再「已打卡→点进去是空记录」
+  })
 })

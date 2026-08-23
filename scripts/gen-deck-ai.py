@@ -266,10 +266,17 @@ def minor_card(suit, num):
             cx, cy = CARD_W / 2, CARD_H * 0.58
             GLYPHS[suit](d, ((cx - 80, cy - 90), (cx + 80, cy + 90)), col)
             d.line([(cx - 60, cy + 130), (cx + 60, cy + 130)], fill=col, width=2)
-        try:
-            court.font = ImageFont.truetype(r"C:\Windows\Fonts\msyhbd.ttc", 44)
-        except OSError:
-            court.font = ImageFont.load_default()
+        for cand in (r"C:\Windows\Fonts\msyhbd.ttc",
+                     "/System/Library/Fonts/PingFang.ttc",
+                     "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+                     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"):
+            try:
+                court.font = ImageFont.truetype(cand, 44)
+                break
+            except OSError:
+                continue
+        else:
+            raise SystemExit("找不到中文字体（msyhbd/PingFang/Noto CJK/WQY），宫廷牌无法生成")
         neon(im, court, color, blur=9)
     return im.convert("RGB")
 

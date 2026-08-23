@@ -1,5 +1,5 @@
 <script setup>
-// 轻提示层（M1.5 Task 4.5）：两档 info / success，队列在 lib/feedback.js。
+// 轻提示层（M1.5 Task 4.5）：info / success / warn 三档，队列在 lib/feedback.js。
 // 全层 pointer-events: none —— 提示永远不挡操作，也不打断动线。
 import { toasts } from '../lib/feedback.js'
 import AppIcon from './AppIcon.vue'
@@ -9,7 +9,7 @@ import AppIcon from './AppIcon.vue'
   <div class="toast-layer" role="status" aria-live="polite">
     <TransitionGroup name="toast">
       <div v-for="t in toasts" :key="t.id" class="toast" :class="t.type">
-        <AppIcon :name="t.type === 'success' ? 'check' : 'star'" :size="16" />
+        <AppIcon :name="t.type === 'success' ? 'check' : t.type === 'warn' ? 'x' : 'star'" :size="16" />
         <span>{{ t.text }}</span>
       </div>
     </TransitionGroup>
@@ -52,6 +52,11 @@ import AppIcon from './AppIcon.vue'
   background-color: var(--surface);
   background-image: linear-gradient(var(--gold-soft), var(--gold-soft));
   color: var(--gold-text);
+}
+
+.toast.warn {
+  border-color: var(--coral);
+  color: var(--coral);
 }
 
 .toast-enter-active {

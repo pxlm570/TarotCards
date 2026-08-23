@@ -7,6 +7,7 @@ import { useLearningStore } from '../../stores/learning.js'
 import { useProfileStore } from '../../stores/profile.js'
 import { useDeck } from '../../lib/use-deck.js'
 import { safeGetItem, safeSetItem } from '../../lib/storage.js'
+import { currentDayKey } from '../../lib/day-key.js'
 import { tap, success, toast } from '../../lib/feedback.js'
 import AppIcon from '../../components/AppIcon.vue'
 
@@ -85,8 +86,16 @@ function advance() {
 
 function finish() {
   finished.value = true
-  const rec = safeGetItem(CHALLENGE_KEY) ? JSON.parse(safeGetItem(CHALLENGE_KEY)) : { count: 0 }
+  let rec = { count: 0, last: '' }
+  try {
+    rec = { ...rec, ...(JSON.parse(safeGetItem(CHALLENGE_KEY)) || {}) }
+  } catch {
+    /* 损坏按空记录处理，不让奖励静默丢失 */
+  }
+  const today = currentDayKey()
+  if (rec.last === today) return // 每日只发一次奖励（旧版可无限刷 +10 XP）
   rec.count += 1
+  rec.last = today
   safeSetItem(CHALLENGE_KEY, JSON.stringify(rec))
   profile.addXp(10) // 每日挑战奖励
   toast('挑战完成 +10 XP', 'success')

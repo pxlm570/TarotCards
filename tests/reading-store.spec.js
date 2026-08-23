@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useReadingStore } from '../src/stores/reading.js'
+import { saveReading as journalSave, getById as journalGetById } from '../src/lib/journal-store.js'
 import { FLOW_KEY, DEFAULT_SETTINGS, loadSettings, saveSettings } from '../src/lib/storage.js'
 import spreads from '../src/data/spreads.json'
 
@@ -215,6 +216,24 @@ describe('reading store：状态机', () => {
     expect(store.drawn).toEqual([])
     expect(store.pending.length).toBe(store.cardCount) // 重建牌池，而非清空
     expect(store.pickedIndices).toEqual([])
+  })
+
+  it('stepBack 回退重抽时删除已落库记录并清 journalId（审查修复：防旧牌面留库）', () => {
+    const store = useReadingStore()
+    walkToPicking(store)
+    store.pickAll()
+    store.revealAll()
+    store.goInterpret()
+    // 模拟解读页已落库
+    const recId = 'rec-stepback'
+    journalSave({ id: recId, ts: 1, cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed })) })
+    store.journalId = recId
+    expect(store.stepBack()).toBe('revealing') // 不重抽：记录保留
+    expect(store.journalId).toBe(recId)
+    expect(journalGetById(recId)).toBeTruthy()
+    expect(store.stepBack()).toBe('picking') // 重抽：记录删除并失效
+    expect(store.journalId).toBeNull()
+    expect(journalGetById(recId)).toBeUndefined()
   })
 
   it('stepBack：picking→shuffling→questioning，问题保留；questioning 再退则重置', () => {

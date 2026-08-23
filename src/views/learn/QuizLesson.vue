@@ -69,9 +69,10 @@ function advance() {
 }
 
 function finish() {
+  const firstTime = !learning.progress[props.chapterId]?.[props.lessonId]
   done.value = true
   learning.completeLesson(props.chapterId, props.lessonId)
-  profile.addXp(30) // 通过一章测验
+  if (firstTime) profile.addXp(30) // 首次通过一章测验（重玩不再发）
 }
 
 function retry() {

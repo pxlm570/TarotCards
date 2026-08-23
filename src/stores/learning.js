@@ -12,7 +12,7 @@ import ch06 from '../data/courses/chapter-06.json'
 import ch07 from '../data/courses/chapter-07.json'
 import { currentDayKey } from '../lib/day-key.js'
 import { newCard, review, dueCards } from '../lib/spaced-repetition.js'
-import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../lib/storage.js'
 import { useAchievementsStore } from './achievements.js'
 import { useProfileStore } from './profile.js'
 
@@ -85,6 +85,10 @@ export const useLearningStore = defineStore('learning', {
       if (!CHAPTER_LESSONS[chapterId].includes(lessonId)) {
         throw new Error(`[learning] 未知 lesson：${lessonId}`)
       }
+      // 幂等：已完成章节的末课重玩（测验可无限重试/闪卡复习）不再重复发 XP 与成就
+      if (this.progress[chapterId]?.[lessonId]) {
+        return { chapterCompleted: this._chapterComplete(chapterId), chapterId }
+      }
       this.progress = { ...this.progress, [chapterId]: { ...(this.progress[chapterId] ?? {}), [lessonId]: true } }
 
       const chapterCompleted = this._chapterComplete(chapterId)
@@ -94,7 +98,8 @@ export const useLearningStore = defineStore('learning', {
         if (nextId && !this.unlocked.includes(nextId)) {
           this.unlocked = [...this.unlocked, nextId]
         }
-        useAchievementsStore().unlock(`ch-${String(idx + 1).padStart(2, '0')}-done`)
+        // 直接用 chapterId 拼成就 id（其本身就是 ch-NN 格式）：按数组序号拼在章节重排时会锁错成就
+        useAchievementsStore().unlock(`${chapterId}-done`)
         useProfileStore().addXp(50) // 完成一章
       }
       this._persist()
@@ -137,14 +142,13 @@ export const useLearningStore = defineStore('learning', {
     },
 
     _persist() {
+      // reviewLog 只留最近 90 天（dayKey 字典序即时间序）：小目标只看当天，旧键纯占存储
+      const keep = Object.keys(this.reviewLog).sort().slice(-90)
+      this.reviewLog = Object.fromEntries(keep.map((k) => [k, this.reviewLog[k]]))
       safeSetItem(KEY, JSON.stringify({ progress: this.progress, unlocked: this.unlocked, reviewLog: this.reviewLog, totalReviews: this.totalReviews, sr: this.sr }))
     },
     _clear() {
-      try {
-        localStorage.removeItem(KEY)
-      } catch {
-        /* ignore */
-      }
+      safeRemoveItem(KEY)
     }
   }
 })

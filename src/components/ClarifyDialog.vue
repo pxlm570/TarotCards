@@ -3,7 +3,7 @@
 import { ref, onMounted } from 'vue'
 import { buildClarifyMessages } from '../lib/ai-prompts.js'
 import { streamChat, AI_NOT_CONFIGURED } from '../lib/ai-client.js'
-import { useEscClose } from '../composables/useEscClose.js'
+import { useEscClose } from '../composables/use-esc-close.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({

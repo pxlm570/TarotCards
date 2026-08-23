@@ -113,7 +113,7 @@ function onDragEnd() {
         <div class="inner">
           <!-- 皮肤未就位时是骨架占位，不是空白渐变（等待也要有反馈） -->
           <div class="face back" :class="{ skeleton: !manifest }">
-            <img v-if="manifest" :src="backUrl()" alt="牌背" draggable="false" />
+            <img v-if="manifest && backUrl()" :src="backUrl()" alt="牌背" draggable="false" />
           </div>
           <div class="face front" :class="{ reversed: card.reversed, skeleton: !manifest }">
             <img v-if="manifest && cardUrl(card.cardId)" :src="cardUrl(card.cardId)" :alt="card.cardId" draggable="false" />

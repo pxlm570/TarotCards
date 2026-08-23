@@ -36,8 +36,15 @@ export function saveReading(reading) {
   let next = [...readings]
   if (idx > -1) next[idx] = reading
   else next = [reading, ...next]
-  if (next.length > JOURNAL_MAX) next = next.slice(0, JOURNAL_MAX)
-  persist({ readings: next, dailyDraws })
+  let daily = dailyDraws
+  if (next.length > JOURNAL_MAX) {
+    // 淘汰最旧时同步清掉 dailyDraws 悬空引用（与 deleteReading 同口径），
+    // 否则「今日已打卡→点进去是空记录」
+    const evicted = new Set(next.slice(JOURNAL_MAX).map((r) => r.id))
+    next = next.slice(0, JOURNAL_MAX)
+    daily = Object.fromEntries(Object.entries(dailyDraws).filter(([, rid]) => !evicted.has(rid)))
+  }
+  persist({ readings: next, dailyDraws: daily })
   return reading
 }
 

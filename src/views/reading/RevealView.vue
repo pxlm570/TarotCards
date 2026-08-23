@@ -83,8 +83,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <div class="reveal">
     <FlowExit confirm />
     <p class="tip" :class="{ done: allRevealed }">
-      <template v-if="free.value && !allRevealed">点击牌背翻开，翻开后可拖动摆位</template>
-      <template v-else-if="free.value && allRevealed">拖动调整位置，摆好了去看解读</template>
+      <template v-if="free && !allRevealed">点击牌背翻开，翻开后可拖动摆位</template>
+      <template v-else-if="free && allRevealed">拖动调整位置，摆好了去看解读</template>
       <template v-else>{{ allRevealed ? '牌面已全部揭晓' : '点击牌背，逐张翻开' }}</template>
     </p>
 

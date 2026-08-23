@@ -70,7 +70,7 @@ function isDone(json) {
   return false
 }
 
-async function* streamBody(body, signal) {
+async function* streamBody(body, onChunk) {
   if (!body) throw new AIError(0, '响应无内容')
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -79,6 +79,7 @@ async function* streamBody(body, signal) {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
+      onChunk?.() // 每收到数据重置空闲超时：服务器挂起不吐字时整体会被掐断
       buf += decoder.decode(value, { stream: true })
       let idx
       while ((idx = buf.indexOf('\n')) !== -1) {
@@ -99,10 +100,7 @@ async function* streamBody(body, signal) {
       }
     }
   } finally {
-    if (signal && signal._onAbort) {
-      signal.removeEventListener('abort', signal._onAbort)
-      delete signal._onAbort
-    }
+    reader.cancel().catch(() => {})
   }
 }
 
@@ -111,12 +109,18 @@ export async function* streamChat({ messages, signal } = {}) {
   if (!baseUrl || !model || !apiKey) throw new Error(AI_NOT_CONFIGURED)
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // 超时语义 = 空闲超时：建连或流中途超过 TIMEOUT_MS 没有任何新数据即中止
+  // （此前只保护建连，服务器保持连接不吐字时 generator 永久 pending）
+  let timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const resetTimer = () => {
+    clearTimeout(timer)
+    timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  }
+  let onAbort = null
   if (signal) {
     if (signal.aborted) controller.abort()
     else {
-      const onAbort = () => controller.abort()
-      signal._onAbort = onAbort
+      onAbort = () => controller.abort()
       signal.addEventListener('abort', onAbort)
     }
   }
@@ -125,15 +129,14 @@ export async function* streamChat({ messages, signal } = {}) {
     ? buildAnthropicRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
     : buildOpenAIRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
 
-  let res
   try {
-    res = await fetch(req.url, req.init)
+    const res = await fetch(req.url, req.init)
+    if (!res.ok || !res.body) {
+      throw new AIError(res.status, await res.text().catch(() => ''))
+    }
+    for await (const delta of streamBody(res.body, resetTimer)) yield delta
   } finally {
     clearTimeout(timer)
+    if (signal && onAbort) signal.removeEventListener('abort', onAbort)
   }
-
-  if (!res.ok || !res.body) {
-    throw new AIError(res.status, await res.text().catch(() => ''))
-  }
-  for await (const delta of streamBody(res.body, signal)) yield delta
 }

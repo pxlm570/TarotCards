@@ -19,13 +19,20 @@ const showTabBar = computed(() => !route.path.startsWith('/reading') && !IMMERSI
 // 会排空微任务），route.path 读到的是「返回后的目标页」，判断不了「按返回前在哪」——
 // 而 afterEach 的 from 正是这一次返回所离开的那一页。
 let leftFrom = ''
+let lastPosition = 0 // vue-router 写入 history.state 的位置游标，用于分辨前进/后退
 router.afterEach((to, from) => {
   leftFrom = from.path
+  lastPosition = window.history.state?.position ?? lastPosition
 })
 
 // UX #8 / Task 15：返回手势统一——占卜动线内返回键逐级回退，不误退。
 // 回退落点经路由器导航（router.replace），保证 URL 与渲染组件始终一致（不能只改地址栏）。
-function onBack() {
+function onBack(event) {
+  // popstate 前进同样触发：前进回 /reading/* 不是「再退一步」，不能接管（审查修复）
+  const target = event.state?.position
+  const isBack = target == null || target < lastPosition
+  if (target != null) lastPosition = target
+  if (!isBack) return
   // 只在动线内接管：动线外（首页/选牌阵/学习…）带着进行中的一局按返回，是普通的页面返回，
   // 不该把那一局倒退一步、更不该把人拽回占卜步骤。
   if (!leftFrom.startsWith('/reading')) return

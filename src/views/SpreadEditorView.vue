@@ -111,7 +111,7 @@ function save() {
 
 <template>
   <div class="editor-page">
-    <FlowExit :confirm="true" :before-exit="() => dirty" label="退出编辑" />
+    <FlowExit :confirm="false" :before-exit="() => dirty" label="退出编辑" />
 
     <header class="head">
       <h1 class="title">{{ editId ? '编辑牌阵' : '新建牌阵' }}</h1>

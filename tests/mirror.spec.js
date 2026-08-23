@@ -51,4 +51,14 @@ describe('mirror 聚合', () => {
     const total = freq.reduce((s, f) => s + f.count, 0)
     expect(total).toBe(4)
   })
+
+  it('dailyFreq：凌晨 4-8 点窗口不双重偏移（修复回归，旧代码末位会记到昨天）', () => {
+    const today = new Date('2026-08-23T06:00:00')
+    const todayReadings = [r([{ cardId: 'major-00', reversed: false }], null, Date.parse('2026-08-23T05:30:00'))]
+    const freq = dailyFreq(todayReadings, 3, today)
+    expect(freq[freq.length - 1].key).toBe('2026-08-23')
+    expect(freq[freq.length - 1].count).toBe(1)
+    expect(freq[freq.length - 2].key).toBe('2026-08-22')
+    expect(freq[freq.length - 2].count).toBe(0)
+  })
 })

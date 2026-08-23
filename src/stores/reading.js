@@ -10,6 +10,7 @@ import spreadsData from '../data/spreads.json'
 import cardsData from '../data/cards.json'
 import { drawCards } from '../lib/tarot-engine.js'
 import { listCustomSpreads } from '../lib/custom-spreads.js'
+import { deleteReading } from '../lib/journal-store.js'
 import { loadSettings, loadFlow, saveFlow, clearFlow, DOMAIN_VALUES } from '../lib/storage.js'
 
 const DECK_IDS = cardsData.map((c) => c.id)
@@ -251,6 +252,14 @@ export const useReadingStore = defineStore('reading', {
         return null
       }
       const prev = order[idx - 1]
+      if (prev === 'shuffling' || prev === 'picking') {
+        // 退回洗牌/抽牌都会重抽：已落库的记录与本局永久不一致（旧牌面存库、
+        // 新牌面展示/AI/分享），必须删除旧记录（连带 dailyDraws 引用）并失效 journalId
+        if (this.journalId) {
+          deleteReading(this.journalId)
+          this.journalId = null
+        }
+      }
       if (prev === 'shuffling') {
         // 退回洗牌：清空已抽/待抽（finishShuffle 会重建牌池）
         this.drawn = []

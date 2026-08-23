@@ -3,6 +3,7 @@
 // 支持触摸左滑露出删除按钮（二次确认后删除，走 journal store）。
 import { ref } from 'vue'
 import spreadsData from '../data/spreads.json'
+import { getCustomSpread } from '../lib/custom-spreads.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useJournalStore } from '../stores/journal.js'
 import { toast, tap } from '../lib/feedback.js'
@@ -15,7 +16,12 @@ const props = defineProps({
 const emit = defineEmits(['open'])
 const journal = useJournalStore()
 const { cardUrl } = useDeck()
-const spreadName = spreadsData.find((s) => s.id === props.reading.spreadId)?.name ?? '占卜'
+const SPREAD_LABEL = { free: '自由摆放', recap: '周期复盘' }
+const spreadName =
+  spreadsData.find((s) => s.id === props.reading.spreadId)?.name ??
+  getCustomSpread(props.reading.spreadId)?.name ??
+  SPREAD_LABEL[props.reading.spreadId] ??
+  '占卜'
 
 // ---- 左滑删除 ----
 const offset = ref(0) // 卡片内容 translateX
@@ -71,15 +77,16 @@ function del() {
       </div>
       <p v-if="reading.question" class="question">{{ reading.question }}</p>
       <div class="thumbs">
-        <img
-          v-for="(c, i) in reading.cards.slice(0, 5)"
-          :key="i"
-          class="thumb"
-          :class="{ reversed: c.reversed }"
-          :src="cardUrl(c.cardId)"
-          :alt="c.cardId"
-          loading="lazy"
-        />
+        <template v-for="(c, i) in reading.cards.slice(0, 5)" :key="i">
+          <img
+            v-if="cardUrl(c.cardId)"
+            class="thumb"
+            :class="{ reversed: c.reversed }"
+            :src="cardUrl(c.cardId)"
+            :alt="c.cardId"
+            loading="lazy"
+          />
+        </template>
       </div>
     </button>
   </div>

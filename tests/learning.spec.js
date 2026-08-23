@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useLearningStore } from '../src/stores/learning.js'
+import { useProfileStore } from '../src/stores/profile.js'
 import ch01 from '../src/data/courses/chapter-01.json'
 import ch02 from '../src/data/courses/chapter-02.json'
 
@@ -63,6 +64,23 @@ describe('learning store', () => {
     completeChapter(s, 'ch-01', L1)
     s.completeLesson('ch-01', L1[0]) // 重复
     expect(s.unlocked).toEqual(['ch-01', 'ch-02'])
+  })
+
+  it('已完成章节末课重玩不再重复发 XP（审查修复）', () => {
+    const s = useLearningStore()
+    completeChapter(s, 'ch-01', L1)
+    const profile = useProfileStore()
+    const before = profile.xp
+    s.completeLesson('ch-01', L1[L1.length - 1]) // 重玩最后一课（此前每次 +50）
+    expect(profile.xp).toBe(before)
+  })
+
+  it('reviewLog 持久化时只保留最近 90 个 dayKey（审查修复：防无限增长）', () => {
+    const s = useLearningStore()
+    s.reviewLog = Object.fromEntries(Array.from({ length: 95 }, (_, i) => [`d${String(i).padStart(3, '0')}`, 1]))
+    s.recordReview()
+    const saved = JSON.parse(localStorage.getItem('tarot.learning.v1')).reviewLog
+    expect(Object.keys(saved).length).toBeLessThanOrEqual(90)
   })
 
   it('recordReview 累加今日复习数（走 currentDayKey）', () => {

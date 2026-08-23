@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import cards from '../src/data/cards.json'
 import spreads from '../src/data/spreads.json'
+import moonPhases from '../src/data/moon-phases.json'
+import seasons from '../src/data/seasons.json'
 
 const DOMAINS = ['love', 'career', 'wealth', 'study']
 const ARCANA = ['major', 'wands', 'cups', 'swords', 'pentacles']
@@ -191,6 +193,25 @@ describe('内容规范', () => {
       } else {
         expect(card.element, `${card.id} element`).toBe(`${main}之${COURT_ELEMENT[card.number]}`)
       }
+    }
+  })
+})
+
+// 数据地平线守卫（2026-08-24 审查补）：仪式数据只到 2027/2028 年底，到期后
+// ritualToday 永远为 null 且无告警。此守卫在数据到期前约一年转红，提醒补数据。
+describe('仪式数据新鲜度', () => {
+  const horizon = new Date()
+  horizon.setFullYear(horizon.getFullYear() + 1)
+  const h = horizon.toISOString().slice(0, 10)
+
+  it('月相数据至少覆盖未来 12 个月', () => {
+    expect(moonPhases.newMoon.at(-1) >= h, `newMoon 末项 ${moonPhases.newMoon.at(-1)} 应不早于 ${h}，请补数据`).toBe(true)
+    expect(moonPhases.fullMoon.at(-1) >= h, `fullMoon 末项 ${moonPhases.fullMoon.at(-1)} 应不早于 ${h}，请补数据`).toBe(true)
+  })
+
+  it('节气数据每键至少覆盖未来 12 个月', () => {
+    for (const [k, dates] of Object.entries(seasons)) {
+      expect(dates.at(-1) >= h, `${k} 末项 ${dates.at(-1)} 应不早于 ${h}，请补数据`).toBe(true)
     }
   })
 })
