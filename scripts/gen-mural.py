@@ -40,6 +40,11 @@ ORIG_FILES = {
     17: "TarotCard_17_TheTower.png", 18: "TarotCard_18_TheStar.png",
     19: "TarotCard_19_TheMoon.png", 20: "TarotCard_20_TheSun.png",
     21: "TarotCard_21_Judgement.png", 22: "TarotCard_22_TheWorld.png",
+    # 往日之影 DLC 四王（用户 2026-08-22 要求补全卡面，原画作锚点）
+    23: "Tarot_23_KingOfCups_CP2077PL.png.png",
+    24: "Tarot_24_KingOfPentacles_CP2077PL.png.png",
+    25: "Tarot_25_KingOfSwords_CP2077PL.png.png",
+    26: "Tarot_26_KingOfWands_CP2077PL.png.png",
 }
 
 ANCHOR = (
@@ -55,7 +60,9 @@ MODE = {
            "whose interiors are filled with tiny flat city lights, window grids and neon "
            "signs, against flat color fields and simple geometric shapes. "),
 }
-TAIL = "Only the art style, palette and mood come from the reference. No text, no watermark."
+TAIL = ("Only the art style, palette and mood come from the reference. Absolutely no text "
+        "of any kind - no letters, no numbers, no Roman numerals, no captions, no "
+        "signatures, no watermarks.")
 
 SUBJECTS = {  # 应用 major-NN -> (模式, 题材)
     "major-01": ("C1", "The Magician - a gold-jacketed skull-faced street conjurer behind a console table holding knives and a star-marked beverage can, an infinity symbol glowing below their chest, a wall of red masks behind them."),
@@ -85,6 +92,343 @@ BACK_SUBJECT = (
     "circuit traces at the center, surrounded by concentric rings of neon signs and alchemical "
     "glyphs, on a deep blood-red field, bold flat black shapes with tiny city lights."
 )
+
+# 往日之影四王：应用id -> (游戏编号, C1 题材)。
+# 二稿策略（2026-08-22 用户反馈一稿与原画太相似）：不用各王自己的 PL 原画当参考图
+# （edits 模式下模型会向参考构图靠拢），改用本套牌已确认的皇帝大牌作统一画风锚点，
+# 构图完全由文字题材驱动；题材为夜城原创演绎，不复述原画特征。
+# 花色主色与套牌小牌一致（SUIT_COLOR）。
+KING_ANCHOR_NO = 4  # 皇帝：主题最贴（王座上的王者），已是用户确认过的成品
+KING_MODE = (
+    "Narrative scene: {subject} Invent the composition freely - do NOT imitate the "
+    "reference image's layout, figures or symbols; take ONLY its painting style, "
+    "texture and mood. "
+)
+# 评审记录（2026-08-22）：宝剑国王三稿定稿；圣杯国王三稿保留（另出 alt 备选待用户二选一）；
+# 权杖国王二稿保留；星币国王三/四稿重绘（富商坐像两版被否，四稿改天台花园站立像）。
+KING_SUBJECTS = {
+    "cups-14": (23, (
+        "The King of Cups - a silver-tongued river-king in layered robes of deep magenta "
+        "silk and cables, seated on a floating throne of glass bottle-buoys and copper "
+        "pipes on a dark canal, one hand raising a chalice that overflows with rosy light, "
+        "golden robotic koi leaping in arcs around him, flat magentas and deep reds, red "
+        "heart-lanterns reflected in the rippling water.")),
+    "pentacles-14": (24, (
+        "The King of Pentacles - a broad patient gardener-tycoon in a charcoal coat with "
+        "gold chain epaulettes, standing proudly in a rooftop victory garden high above "
+        "the night city, one arm cradling a huge golden pentacle like a harvested sun, "
+        "the other hand resting on a bull-skull throne overgrown with grapevines and "
+        "fiber optics, glowing coin-flowers in the planter rows, dark gold and warm black "
+        "fields, towers with window-grid lights far below.")),
+    "swords-14": (25, (
+        "The King of Swords - a hawk-eyed strategist-king in a sharp violet coat with a "
+        "collar of blades, enthroned on a stack of radar dishes and crossed girders high "
+        "above a night highway, one great translucent sword held out sideways in calm "
+        "judgment, white paper-moths and signal rings orbiting him, flat purples and cold "
+        "greys, a grid of distant window lights far below.")),
+    # 已获用户确认保留（2026-08-22 三稿评审），勿改题材
+    "wands-14": (26, (
+        "The King of Wands - a lion-hearted street-crew king in a blood-orange long coat "
+        "with a crown of antenna shards, standing tall on a scaffolding throne, raising a "
+        "staff wound with wires that sprouts a small living flame at the top, sparks and "
+        "salamander glyphs at his feet, blood orange and flat black fields.")),
+}
+
+# 小牌 AI 全量题材（2026-08-22 样张确认后开始补全套）：
+#  - 数字牌无原画参考，构图纯文字驱动，皇帝大牌锚定画风（同四王）
+#  - 数量=牌义：数字牌一律「总数算术式 + 不得有其他」写法，生成后需人工过数
+#  - 花色主色贯穿全组：权杖 血橙/黑（火+蝾螈）、圣杯 品红/深红（水+心灯+锦鲤）、
+#    宝剑 紫/冷灰（风+纸蛾+信号环）、星币 暗金/暖黑（土+硬币花+藤蔓+公牛）
+#  - 已定稿的 6 张样张标注「已定稿」，勿改题材
+MINOR_SUBJECTS = {
+    # ===== 权杖（fire）=====
+    "wands-01": (  # 已定稿（丰碑式）
+        "The Ace of Wands - a single colossal living wand sprouting from a cracked rooftop "
+        "floor, wound with copper wires and blooming with a crown of small flames at the "
+        "top, sparks drifting upward around it, blood orange and flat black fields, tiny "
+        "salamander glyphs carved at its base."),
+    "wands-02": (
+        "The Two of Wands - a watchful crew boss in a blood-orange coat standing on a "
+        "balcony, holding one small glowing globe of the city map, two tall living wands "
+        "planted upright at the balcony's two corners, two wands in total, blood orange "
+        "and flat black fields, the district's window-grid lights spreading below."),
+    "wands-03": (
+        "The Three of Wands - a planner in an orange windbreaker standing on a harbor "
+        "crane watching three sky-ships depart into the dark, three tall masts with "
+        "pennant flames in the foreground, three wands in total, blood orange and flat "
+        "black fields."),
+    "wands-04": (
+        "The Four of Wands - a rooftop homecoming festival, four tall wands planted "
+        "upright in a square and strung with garlands of festival lights and salamander "
+        "banners, figures dancing between them, four wands in total, blood orange and "
+        "flat black fields."),
+    "wands-05": (
+        "The Five of Wands - five rival street-crew youths sparring playfully on a "
+        "rooftop court, five staffs in the scene, five in total and no other staves, "
+        "sparks flying where they clash, blood orange and flat black fields."),
+    "wands-06": (  # 五审：随行人数画不准，改「骑行持1+前景插立一排5」
+        "The Six of Wands - a champion rider in a laurel crown on a hovering bike draped "
+        "with a victory wreath, holding one laurel-wreathed wand high, and five pennant "
+        "wands planted upright in a single row in the foreground, one plus five equals "
+        "six wands in total and no other wands anywhere, a cheering crowd in the "
+        "background, blood orange and flat black fields."),
+    "wands-07": (
+        "The Seven of Wands - one defiant defender atop a raised barricade of "
+        "scaffolding, holding one staff against six staves raised toward him from below, "
+        "seven staffs in total, sparks and grit flying, blood orange and flat black "
+        "fields."),
+    "wands-08": (  # 五审定稿候选B：屋顶插立两排各四（散飞/单列均数不准）
+        "The Eight of Wands - eight living wands planted upright on a rooftop in two "
+        "neat rows of four, two times four equals eight wands and no others, each "
+        "sparking at the tip, the dark city and window lights behind, blood orange "
+        "and flat black fields."),
+    "wands-09": (
+        "The Nine of Wands - a weary but unbroken sentry leaning on one staff atop a "
+        "wall, eight more staffs planted upright as a palisade behind him, nine staffs "
+        "in total, first light of dawn on the horizon, blood orange and flat black "
+        "fields."),
+    "wands-10": (  # 三审：一稿束内权杖超过 10，改两排各五可数
+        "The Ten of Wands - a bent courier struggling up a night street under a heavy "
+        "load of long staffs roped to his shoulder in two visible rows of five, two "
+        "times five equals ten staffs in total and no others, a bright gate glowing in "
+        "the distance ahead, blood orange and flat black fields."),
+    "wands-11": (
+        "The Page of Wands - an eager young explorer in an orange field jacket holding "
+        "up one sparking staff like a torch, salamander glyphs stitched on his patches, "
+        "standing before a wall of antennas, blood orange and flat black fields."),
+    "wands-12": (
+        "The Knight of Wands - a bold rider in a blood-orange long coat charging on a "
+        "roaring hoverbike, one living staff raised like a lance and trailing flame, "
+        "salamander pennants flying from the bike, sparks and dust, blood orange and "
+        "flat black fields."),
+    "wands-13": (  # 已定稿（宫廷配方·王后）
+        "The Queen of Wands - a fierce festival queen in a blood-orange gown with a crown "
+        "of small golden suns, seated confidently on a throne built from drum amps and "
+        "stage trusses, one hand holding a living wand wreathed in flame, a black cat "
+        "with antenna ears sitting at her feet, blood orange and flat black fields."),
+    # ===== 圣杯（water）=====
+    "cups-01": (
+        "The Ace of Cups - a single ornate chalice held out of the darkness by a slender "
+        "drone arm, overflowing with rosy light and five small heart-sparks, one chalice "
+        "in total, flat magentas and deep reds, still canal water reflecting below."),
+    "cups-02": (
+        "The Two of Cups - two friends facing each other at a canal railing at night, "
+        "each raising one glowing chalice in a toast, exactly two chalices, a "
+        "heart-lantern glowing between them, flat magentas and deep reds."),
+    "cups-03": (  # 已定稿（场景式）
+        "The Three of Cups - three friends in night-market jackets dancing and toasting "
+        "on a rooftop, three glowing magenta chalices raised high, flat magentas and deep "
+        "reds, heart-lanterns strung between antenna towers behind them."),
+    "cups-04": (
+        "The Four of Cups - a bored figure sitting cross-legged on a rooftop with three "
+        "glowing chalices set before them, ignoring a fourth chalice offered from above "
+        "by a small drone, four chalices in total, flat magentas and deep reds."),
+    "cups-05": (
+        "The Five of Cups - a grieving figure in a long coat kneeling by a canal, three "
+        "toppled chalices spilling fading rose light on the wet stones, two intact "
+        "chalices still glowing upright on the ledge behind, five chalices in total, "
+        "flat magentas and deep reds."),
+    "cups-06": (  # 四审：三稿连人手持 8 杯，收紧为恰好六且封死其他
+        "The Six of Cups - two children in a holo-arcade garden, each child holding "
+        "exactly one small glowing chalice, and exactly four more chalices set on the "
+        "carousel of memory behind them, one plus one plus four equals six chalices in "
+        "total and no other cups anywhere in the image, soft nostalgia haze, flat "
+        "magentas and deep reds."),
+    "cups-07": (
+        "The Seven of Cups - seven chalices floating in a ring of mist, each holding a "
+        "different tiny hologram - a heart, a mask, a coin, a serpent, a tower, a star, "
+        "a wreath - exactly seven chalices, a small figure gazing up from below, flat "
+        "magentas and deep reds."),
+    "cups-08": (  # 四审：三稿 9 杯，保留画面收紧为两排各四
+        "The Eight of Cups - a lone figure with a staff walking away into river fog, "
+        "exactly eight chalices stacked neatly on a rooftop shrine behind him in two "
+        "rows of four, two times four equals eight chalices and no other cups anywhere, "
+        "an eclipsed moon above, flat magentas and deep reds."),
+    "cups-09": (  # 六审：用户定调保留店主手持一杯；架改 2x4 网格，手持 1+架上 8=9
+        "The Nine of Cups - a content host seated proudly at a small night bar holding "
+        "exactly one glowing chalice to his chest, and exactly eight more chalices "
+        "standing on the back-bar shelf arranged in a grid of two rows of four, one "
+        "plus eight equals nine chalices in total and no other cups anywhere in the "
+        "image, heart-lanterns strung above, flat magentas and deep reds."),
+    "cups-10": (  # 四审：三稿连边缘 12 杯，改左右各五
+        "The Ten of Cups - a family of three silhouetted on a rooftop, exactly ten "
+        "chalices strung like lanterns glowing in a great rainbow arc across the night "
+        "sky, five chalices on the left half of the arc and five on the right half, "
+        "five plus five equals ten and no other cups anywhere in the image, city towers "
+        "far below, flat magentas and deep reds."),
+    "cups-11": (  # 已定稿（宫廷配方·侍从）
+        "The Page of Cups - a dreamy young courier in an oversized magenta jacket "
+        "standing at a canal railing at night, holding out one ornate cup from which a "
+        "small golden robotic fish leaps with a rolled message in its mouth, flat "
+        "magentas and deep reds, heart-lanterns reflected in the dark water."),
+    "cups-12": (
+        "The Knight of Cups - a gentle dreamer in a magenta cloak riding a slow "
+        "two-legged cargo walker, holding one overflowing chalice forward as an "
+        "offering, a heart-lantern swaying from the walker's mast, river mist, flat "
+        "magentas and deep reds."),
+    "cups-13": (
+        "The Queen of Cups - an empath queen in flowing magenta robes seated on a throne "
+        "of whale-bone arches and glass buoys at the water's edge, holding one covered "
+        "chalice crowned with a glowing scallop, golden koi circling in the dark water, "
+        "flat magentas and deep reds."),
+    # ===== 宝剑（air）=====
+    "swords-01": (
+        "The Ace of Swords - a single great blade of pure white light held upright at "
+        "center, piercing through a crown of golden circuitry wreathed in olive cables, "
+        "one blade in total, paper moths scattered by the wind of its light, flat "
+        "purples and cold greys."),
+    "swords-02": (
+        "The Two of Swords - a blindfolded woman in a grey coat seated calmly before a "
+        "dark sea of fog, arms crossed over her chest holding two long blades of pale "
+        "light horizontally, exactly two blades, flat purples and cold greys."),
+    "swords-03": (
+        "The Three of Swords - three blades of pale light piercing a great "
+        "heart-shaped metal sign in the rain, exactly three blades, rain streaks and "
+        "distant towers, flat purples and cold greys."),
+    "swords-04": (
+        "The Four of Swords - a weary soldier sleeping peacefully on a chapel pew, "
+        "three blades of light mounted on the wall above and one blade set flat beneath "
+        "the pew, four blades in total, stained window light, flat purples and cold "
+        "greys."),
+    "swords-05": (
+        "The Five of Swords - a smug duelist walking off with two blades of pale light "
+        "over his shoulder while three more lie dropped on the rooftop court, five "
+        "blades in total, two defeated figures retreating into the rain behind, flat "
+        "purples and cold greys."),
+    "swords-06": (
+        "The Six of Swords - a ferryman poling a flat boat across dark water, six "
+        "upright blades of pale light standing in the boat like passengers with one "
+        "cloaked figure among them, exactly six blades, distant shore lights, flat "
+        "purples and cold greys."),
+    "swords-07": (  # 三审：一稿 6 剑，改算术式
+        "The Seven of Swords - a cunning scout tiptoeing away from a night camp carrying "
+        "an armful of five blades of pale light, five in his arms plus two blades left "
+        "standing by the tents behind, five plus two equals seven blades in total, flat "
+        "purples and cold greys."),
+    "swords-08": (
+        "The Eight of Swords - a blindfolded figure standing loosely bound by cables "
+        "within a ring of eight blades of pale light planted upright around her, eight "
+        "blades in total, a distant lit bridge, flat purples and cold greys."),
+    "swords-09": (
+        "The Nine of Swords - a sleepless figure sitting bolt upright in bed with face "
+        "in hands, nine blades of pale light hanging in a neat three-by-three grid on "
+        "the wall above, nine in total, a single small lamp, flat purples and cold "
+        "greys."),
+    "swords-10": (  # 已定稿（阵列式·候选A）
+        "The Ten of Swords - exactly ten identical blades of pale light planted upright on "
+        "an empty rooftop in two neat rows of five, five blades in each row, ten blades "
+        "total and no other blades anywhere in the image, flat purples and cold greys, "
+        "the first grey light of dawn on the horizon behind the towers."),
+    "swords-11": (
+        "The Page of Swords - an alert young cadet in a wind-blown grey coat standing "
+        "on a rooftop ledge, holding one blade of pale light upright and studying the "
+        "wind, paper moths circling him, distant storm clouds, flat purples and cold "
+        "greys."),
+    "swords-12": (
+        "The Knight of Swords - a fierce rider charging forward on a roaring machine "
+        "through wind and rain, one great blade of pale light raised high, his coat "
+        "flying like wings, speed lines and debris, flat purples and cold greys."),
+    "swords-13": (
+        "The Queen of Swords - a stern clear-eyed queen in a violet coat seated high on "
+        "a throne of girders and antennae, one blade of pale light raised upright in "
+        "judgment, her other hand extended in calm command, white paper moths and "
+        "signal rings around her, flat purples and cold greys."),
+    # ===== 星币（earth）=====
+    "pentacles-01": (
+        "The Ace of Pentacles - a single huge golden pentacle like a rising sun above a "
+        "garden gate on a rooftop, offered from the dark by a slender gantry crane arm, "
+        "one pentacle in total, coin-vines climbing the gateposts, dark gold and warm "
+        "black fields."),
+    "pentacles-02": (
+        "The Two of Pentacles - a street performer in patched gold-trimmed clothes "
+        "juggling two glowing pentacles connected by an infinity loop of light, exactly "
+        "two pentacles, ships and traffic loops in the harbor mist behind, dark gold "
+        "and warm black fields."),
+    "pentacles-03": (
+        "The Three of Pentacles - a mural workshop scene: an architect holding a "
+        "scroll, a mason robot lifting a panel, and an artisan carving, three golden "
+        "pentacle seals glowing on the finished wall, three in total, dark gold and "
+        "warm black fields."),
+    "pentacles-04": (
+        "The Four of Pentacles - a hoarder-baron seated before the city he owns, "
+        "clutching one great golden pentacle to his chest, one pentacle balanced on his "
+        "head like a crown, two pentacles under his boots, four in total, dark gold "
+        "and warm black fields."),
+    "pentacles-05": (  # 已定稿（叙事式）
+        "The Five of Pentacles - two small ragged figures sheltering from the wind in a "
+        "dark alley, above them a tall stained-glass window glowing with five golden "
+        "pentacle lights, dark gold and warm black fields, ash drifting like snow through "
+        "a beam of warm light."),
+    "pentacles-06": (  # 四审：三稿仍 8 币，收紧计数来源（人/天平/手）并封死
+        "The Six of Pentacles - a benefactor in a gold-lined coat at a clinic door "
+        "handing exactly two golden pentacles down to two kneeling figures, and his "
+        "hanging scale holds exactly four pentacles in its pans, two plus four equals "
+        "six pentacles in the whole image and he carries no other coins, no coins "
+        "anywhere else, ash falling like snow, dark gold and warm black fields."),
+    "pentacles-07": (  # 八审：恢复五审A原始提示词（六/七轮加约束导致风格跑偏，用户点名回A）
+        "The Seven of Pentacles - a patient rooftop farmer leaning on a long rake, "
+        "gazing at a vine trained along a straight trellis rail bearing exactly seven "
+        "golden coin-flowers in a single row, seven blossoms and no other coins "
+        "anywhere in the image, the city's window-grid lights behind, dark gold and "
+        "warm black fields."),
+    # 星币8/9 换名（2026-08-22 用户裁定）：原 9 的葡萄园女王图（画有 8 枚）定名为 8；
+    # 9 换珠宝店九宫格新题材；10 原画不理想，整卡重设计为传承树。
+    "pentacles-08": (
+        "The Eight of Pentacles - an independent vineyard queen in dark gold silk "
+        "standing in her rooftop arbor, a drone-falcon perched on her glove, eight "
+        "golden coin-grapes heavy on the vine, eight in total, dark gold and warm "
+        "black fields."),
+    "pentacles-09": (
+        "The Nine of Pentacles - an elegant jeweler-queen in dark gold silk examining "
+        "nine golden pentacles displayed upright on a boutique stand in a "
+        "three-by-three grid, three times three equals nine pentacles in total, a "
+        "small drone-falcon perched nearby, warm lamplight, dark gold and warm black "
+        "fields."),
+    "pentacles-10": (
+        "The Ten of Pentacles - a great legacy tree growing through a rooftop "
+        "courtyard, ten golden pentacles hanging from its branches like fruit in "
+        "clear rows of four, four and two, four plus four plus two equals ten in "
+        "total, three generations of a family - elder, parents, child - silhouetted "
+        "beneath its canopy, dark gold and warm black fields."),
+    "pentacles-11": (
+        "The Page of Pentacles - a studious young treasurer in a patched coat holding "
+        "one glowing golden pentacle up to the light with both hands, coin-vines and "
+        "small tools at his belt, dark gold and warm black fields."),
+    "pentacles-12": (
+        "The Knight of Pentacles - a patient knight in a charcoal coat riding a slow "
+        "heavy cargo mech along a night road, one golden pentacle set glowing in the "
+        "mech's chest plate, harvest sacks strapped on, dark gold and warm black "
+        "fields."),
+    "pentacles-13": (
+        "The Queen of Pentacles - a warm greenhouse queen in a dark gold gown seated "
+        "on a throne entwined with coin-vines and grape leaves, one golden pentacle "
+        "resting on her lap, a hare-drone with antenna ears at her side, dark gold and "
+        "warm black fields."),
+}
+
+def gen_minor_samples(k):
+    """小牌 AI 全量：输出 public/style-samples/minors/（本地，不入库），已有文件跳过。
+    数字牌无原画不设护栏；皇帝大牌锚定画风；3 并发（neon 管线验证过的并发度）。"""
+    out_dir = ROOT / "public" / "style-samples" / "minors"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ref = ensure_king_ref()
+
+    def one(item):
+        app_id, subject = item
+        out = out_dir / f"{app_id}.webp"
+        if out.exists():
+            return f"skip {app_id}"
+        prompt = ANCHOR + KING_MODE.format(subject=subject) + TAIL
+        try:
+            edits_gen(ref, prompt, out, k)
+            return f"ok {app_id}"
+        except Exception as e:  # noqa: BLE001
+            return f"ERROR {app_id}: {e}"
+
+    import concurrent.futures as cf
+    with cf.ThreadPoolExecutor(max_workers=3) as pool:
+        for line in pool.map(one, MINOR_SUBJECTS.items()):
+            print(line, flush=True)
 
 # ---------------- 生图（edits 参考图模式） ----------------
 
@@ -117,10 +461,21 @@ def edits_gen(ref_png, prompt, out_webp, k):
          "-F", "size=1024x1536", "-F", "quality=medium", "-F", f"prompt={prompt}"],
         capture_output=True, text=True, timeout=320)
     d = json.loads(proc.stdout)
-    b64 = d["data"][0].get("b64_json") if d.get("data") else None
-    if not b64:
+    item = d["data"][0] if d.get("data") else None
+    raw = None
+    if item and item.get("b64_json"):
+        raw = base64.b64decode(item["b64_json"])
+    elif item and item.get("url"):
+        # 2026-08-22 起代理有时改回托管 URL：下载图片（先直连再走系统代理）
+        for extra in (["--noproxy", "*"], []):
+            dl = subprocess.run(["curl", "-s", "-m", "120", *extra, item["url"]],
+                                capture_output=True, timeout=130)
+            if dl.stdout[:4] in (b"\x89PNG", b"RIFF") or dl.stdout[:2] == b"\xff\xd8":
+                raw = dl.stdout
+                break
+    if not raw:
         raise RuntimeError(f"生图失败: {str(d)[:200]}")
-    im = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
+    im = Image.open(io.BytesIO(raw)).convert("RGB")
     im = fit_crop(im, CARD_W, CARD_H)
     im.save(out_webp, "WEBP", quality=85)
 
@@ -170,6 +525,45 @@ def gen_back(k):
     ref = ensure_ref(22)  # 世界原画：最具「装置感」
     edits_gen(ref, ANCHOR + BACK_SUBJECT + " " + TAIL, out, k)
     return "ok back"
+
+
+def ensure_king_ref():
+    """皇帝大牌转 PNG 作四王统一画风锚点（不给模型看各王原画，构图由文字驱动）。"""
+    ref = ROOT / "ref_mural_king.png"
+    if not ref.exists():
+        Image.open(DECK / f"major-{KING_ANCHOR_NO:02d}.webp").convert("RGB").save(ref, "PNG")
+    return ref
+
+
+def gen_kings(k):
+    """PL 四王样张：输出 public/style-samples/kings/（本地目录，不入库）。
+    先给用户目验，确认后再复制进 DECK 正式替换小牌模版。
+    锚点=皇帝大牌（画风），构图=文字题材；护栏仍对比各王 PL 原画。"""
+    out_dir = ROOT / "public" / "style-samples" / "kings"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ref = ensure_king_ref()
+    for app_id, (game_no, subject) in KING_SUBJECTS.items():
+        out = out_dir / f"{app_id}.webp"
+        if out.exists():
+            print(f"skip {app_id}", flush=True)
+            continue
+        orig = ORIG / ORIG_FILES[game_no]
+        prompt = ANCHOR + KING_MODE.format(subject=subject) + TAIL
+        try:
+            for attempt in (1, 2):
+                edits_gen(ref, prompt, out, k)
+                s = sim(out, orig)
+                if abs(s) <= SIM_OK:
+                    print(f"ok {app_id} sim={s:+.3f}", flush=True)
+                    break
+                if attempt == 1:
+                    out.unlink()  # 越界：删除重生成一次
+            else:
+                s = sim(out, orig)
+                flag = "KEEP(marginal)" if abs(s) <= 0.35 else "FAIL"
+                print(f"{flag} {app_id} sim={s:+.3f}", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"ERROR {app_id}: {e}", flush=True)
 
 
 # ---------------- 小牌：PIL 扁平壁画 ----------------
@@ -323,6 +717,12 @@ def main():
         return
     if "--register" in sys.argv:
         register()
+        return
+    if "--kings" in sys.argv:
+        gen_kings(key())
+        return
+    if "--minor-samples" in sys.argv:
+        gen_minor_samples(key())
         return
 
     k = key()
