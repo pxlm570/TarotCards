@@ -41,5 +41,10 @@
     "id": "night-mural",
     "name": "致敬夜之城",
     "file": "night-mural.webp"
+  },
+  {
+    "id": "night-mural-star",
+    "name": "夜城星芒",
+    "file": "night-mural-star.webp"
   }
 ]
