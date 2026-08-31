@@ -53,6 +53,13 @@ const routes = [
   { path: '/journal', name: 'journal', component: () => import('../views/JournalView.vue') },
   { path: '/journal/:readingId', name: 'reading-detail', component: () => import('../views/ReadingDetailView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
+  // 「我的」详情页（v1.5 收缩重构）：主页只留条目，详细选择进独立页
+  { path: '/profile/birth', name: 'profile-birth', component: () => import('../views/profile/BirthView.vue') },
+  { path: '/profile/appearance', name: 'profile-appearance', component: () => import('../views/profile/AppearanceView.vue') },
+  { path: '/profile/preference', name: 'profile-preference', component: () => import('../views/profile/PreferenceView.vue') },
+  { path: '/profile/ai', name: 'profile-ai', component: () => import('../views/profile/AiView.vue') },
+  { path: '/profile/data', name: 'profile-data', component: () => import('../views/profile/DataView.vue') },
+  { path: '/profile/about', name: 'profile-about', component: () => import('../views/profile/AboutView.vue') },
   { path: '/reading/question', name: 'question', component: () => import('../views/reading/QuestionView.vue') },
   { path: '/reading/shuffle', name: 'shuffle', component: () => import('../views/reading/ShuffleView.vue') },
   { path: '/reading/pick', name: 'pick', component: () => import('../views/reading/PickView.vue') },

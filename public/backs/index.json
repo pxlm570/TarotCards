@@ -35,12 +35,14 @@
   {
     "id": "neon-glow",
     "name": "绚烂霓虹",
-    "file": "neon-glow.webp"
+    "file": "neon-glow.webp",
+    "v": "f14825f18e4d"
   },
   {
     "id": "night-mural",
     "name": "致敬夜之城",
-    "file": "night-mural.webp"
+    "file": "night-mural.webp",
+    "v": "cf207b847f91"
   },
   {
     "id": "night-mural-star",

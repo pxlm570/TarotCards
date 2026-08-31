@@ -13,6 +13,7 @@
   python scripts/gen-deck-ai.py --register # 只写 manifest + 注册 index.json
 """
 import base64
+import hashlib
 import io
 import json
 import os
@@ -293,6 +294,14 @@ def gen_minors():
     return n
 
 
+def content_v(files):
+    """按文件内容算 12 位版本号：卡面重绘后 v 变化 -> 前端 URL ?v= 变化 -> SW CacheFirst 缓存失效。"""
+    h = hashlib.md5()
+    for f in sorted(files):
+        h.update(Path(f).read_bytes())
+    return h.hexdigest()[:12]
+
+
 def register():
     cards = {}
     for i in range(22):
@@ -306,6 +315,8 @@ def register():
         "back": "back.webp", "cards": cards,
     }
     DECK_DIR.mkdir(parents=True, exist_ok=True)
+    manifest["v"] = content_v(
+        [DECK_DIR / f for f in cards.values()] + [DECK_DIR / "back.webp"])
     (DECK_DIR / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -320,10 +331,15 @@ def register():
     # 皮肤自带 back.webp 不注册就是死资产
     backs_path = ROOT / "public" / "backs" / "index.json"
     backs = json.loads(backs_path.read_text(encoding="utf-8"))
-    if not any(b["id"] == DECK_ID for b in backs):
+    entry = next((b for b in backs if b["id"] == DECK_ID), None)
+    if not entry:
         (ROOT / "public" / "backs" / f"{DECK_ID}.webp").write_bytes((DECK_DIR / "back.webp").read_bytes())
-        backs.append({"id": DECK_ID, "name": DECK_NAME, "file": f"{DECK_ID}.webp"})
-        backs_path.write_text(json.dumps(backs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        entry = {"id": DECK_ID, "name": DECK_NAME, "file": f"{DECK_ID}.webp"}
+        backs.append(entry)
+    else:  # 已注册：同步卡背文件（可能重绘过），并刷新 v 破缓存
+        (ROOT / "public" / "backs" / f"{DECK_ID}.webp").write_bytes((DECK_DIR / "back.webp").read_bytes())
+    entry["v"] = content_v([ROOT / "public" / "backs" / f"{DECK_ID}.webp"])
+    backs_path.write_text(json.dumps(backs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("backs registered:", [b["id"] for b in backs])
 
 

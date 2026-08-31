@@ -9,6 +9,7 @@
 - key 走环境变量/.workbuddy/local-secrets.md；产物 500x839 webp。
 """
 import base64
+import hashlib
 import io
 import json
 import math
@@ -686,6 +687,26 @@ def minor_card(suit, num):
 
 # ---------------- 注册 ----------------
 
+def content_v(files):
+    """按文件内容算 12 位版本号：卡面重绘后 v 变化 -> 前端 URL ?v= 变化 -> SW CacheFirst 缓存失效。"""
+    h = hashlib.md5()
+    for f in sorted(files):
+        h.update(Path(f).read_bytes())
+    return h.hexdigest()[:12]
+
+
+def stamp_version(manifest):
+    """manifest 写入/刷新 v（牌面缓存破解）；重绘后重跑 --register 即可让用户拉到新图。"""
+    files = [DECK / f for f in manifest.get("cards", {}).values()]
+    if manifest.get("back"):
+        files.append(DECK / manifest["back"])
+    manifest["v"] = content_v(files)
+    manifest_path = DECK / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return manifest
+
+
 def register():
     manifest_path = DECK / "manifest.json"
     if manifest_path.exists():
@@ -695,7 +716,8 @@ def register():
         missing = [f for f in existing.get("cards", {}).values() if not (DECK / f).exists()]
         if missing:
             raise SystemExit(f"manifest 引用了不存在的文件：{missing[:3]}")
-        print(f"manifest 已存在（{existing.get('name')}，{len(existing.get('cards', {}))} 张），跳过覆写")
+        stamp_version(existing)
+        print(f"manifest 已存在（{existing.get('name')}，{len(existing.get('cards', {}))} 张），跳过覆写（已刷新版本号 v={existing.get('v')}）")
         return
 
     cards = {}
@@ -713,6 +735,7 @@ def register():
         "author": "AI 二创（gpt-image-2，CP2077 塔罗壁画画风致敬）",
         "back": "back.webp", "cards": cards,
     }
+    stamp_version(manifest)
     DECK.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     idx_path = ROOT / "public" / "decks" / "index.json"
@@ -726,10 +749,15 @@ def register():
     # 皮肤自带 back.webp 不注册就是死资产
     backs_path = ROOT / "public" / "backs" / "index.json"
     backs = json.loads(backs_path.read_text(encoding="utf-8"))
-    if not any(b["id"] == "night-mural" for b in backs):
+    entry = next((b for b in backs if b["id"] == "night-mural"), None)
+    if not entry:
         (ROOT / "public" / "backs" / "night-mural.webp").write_bytes((DECK / "back.webp").read_bytes())
-        backs.append({"id": "night-mural", "name": "致敬夜之城", "file": "night-mural.webp"})
-        backs_path.write_text(json.dumps(backs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        entry = {"id": "night-mural", "name": "致敬夜之城", "file": "night-mural.webp"}
+        backs.append(entry)
+    else:  # 已注册：同步卡背文件（可能重绘过），并刷新 v 破缓存
+        (ROOT / "public" / "backs" / "night-mural.webp").write_bytes((DECK / "back.webp").read_bytes())
+    entry["v"] = content_v([ROOT / "public" / "backs" / "night-mural.webp"])
+    backs_path.write_text(json.dumps(backs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("backs registered:", [b["id"] for b in backs])
 
 def main():

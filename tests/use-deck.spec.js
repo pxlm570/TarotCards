@@ -1,6 +1,7 @@
 // useDeck 单例：牌面(face) 与 牌背(back) 独立加载与切换。
 // 模块级单例状态跨用例残留 → 每个用例前 resetModules + 动态 import 拿全新模块实例。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { cardImageUrl, standaloneBackUrl } from '../src/lib/deck-loader.js'
 
 function jsonResponse(body, status = 200) {
   return { ok: status === 200, status, json: async () => body }
@@ -123,5 +124,26 @@ describe('useDeck：牌面/牌背独立', () => {
     await expect(loader.listDecks()).resolves.toEqual(['rws', 'rws-sepia', 'my-local'])
     const m = await loader.loadDeck('my-local')
     expect(m.id).toBe('my-local')
+  })
+})
+
+describe('cardImageUrl / standaloneBackUrl：版本号破缓存', () => {
+  // 2026-08-31 夜城小牌事件：卡面图走 SW CacheFirst，文件重绘但 URL 不变 -> 旧缓存 30 天不失效。
+  // 修复：manifest.v / back.v -> URL 带 ?v=。有 v 拼 v，无 v 保持原样（向后兼容旧皮肤）。
+  it('manifest 带 v 时牌面 URL 带 ?v=', () => {
+    const url = cardImageUrl({ id: 'night-mural', cards: { 'cups-05': 'cups-05.webp' }, v: 'd42d242b73d8' }, 'cups-05')
+    expect(url).toContain('/decks/night-mural/cups-05.webp?v=d42d242b73d8')
+  })
+
+  it('manifest 无 v 时 URL 不带查询串（向后兼容）', () => {
+    const url = cardImageUrl({ id: 'rws', cards: { 'major-00': 'major-00.webp' } }, 'major-00')
+    expect(url).toBe('/decks/rws/major-00.webp')
+  })
+
+  it('牌背条目带 v 时 URL 带 ?v=，无 v 保持原样', () => {
+    expect(standaloneBackUrl({ file: 'night-mural.webp', v: 'cf207b847f91' })).toContain(
+      '/backs/night-mural.webp?v=cf207b847f91'
+    )
+    expect(standaloneBackUrl({ file: 'star-gold.webp' })).toBe('/backs/star-gold.webp')
   })
 })

@@ -1,5 +1,6 @@
 <script setup>
-// 每日挑战（#6）：从已学章节随机抽 5 题，低调可选入口，完成有记录与奖励，不强制。
+// 每日挑战（#6）：从已学章节随机抽 3 题，低调可选入口，完成有记录与奖励，不强制。
+// 题数定死 3：第一章题池恰好 3 道（新用户只有第一章可抽），写 5 会文案与实际不符。
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import chapters from '../../data/courses/index.json'
@@ -18,6 +19,7 @@ const profile = useProfileStore()
 const { cardUrl } = useDeck()
 
 const CHALLENGE_KEY = 'tarot.challenge.v1' // { count, last }
+const QUESTION_COUNT = 3
 
 // 从已学章节收集所有测验题
 const pool = computed(() => {
@@ -37,12 +39,12 @@ const started = ref(false)
 
 function start() {
   const arr = [...pool.value]
-  // 打乱取前 5
+  // 打乱取前 3
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  questions.value = arr.slice(0, 5)
+  questions.value = arr.slice(0, QUESTION_COUNT)
   started.value = true
 }
 
@@ -107,13 +109,13 @@ function finish() {
     <header class="head">
       <button class="back btn-text" @click="router.back()"><AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" /> 学习</button>
       <h1 class="title">每日挑战</h1>
-      <p class="sub">从已学章节随机抽 5 题 · 做完有记录和奖励 · 不做也不影响</p>
+      <p class="sub">从已学章节随机抽 3 题 · 做完有记录和奖励 · 不做也不影响</p>
     </header>
 
     <div v-if="!started && pool.length === 0" class="empty card">
       <p>先学完一章，挑战题目就会从这里来。</p>
     </div>
-    <button v-else-if="!started" class="btn-solid btn-block" @click="start">开始挑战（5 题）</button>
+    <button v-else-if="!started" class="btn-solid btn-block" @click="start">开始挑战（3 题）</button>
 
     <template v-else-if="started && !finished">
       <div class="bar">

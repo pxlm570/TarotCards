@@ -51,13 +51,18 @@ export async function loadDeck(id, _seen = new Set()) {
   return manifest
 }
 
+// 牌面 URL 带内容版本号（缓存破解）：牌面图走 SW CacheFirst 运行时缓存，重绘后
+// 文件名不变 -> URL 不变 -> 旧缓存 30 天不失效，用户永远看到旧图（2026-08-31 夜城小牌事件）。
+// manifest.v 由生图脚本 register() 按卡面内容哈希写入；重绘即换 v 即换 URL，旧缓存自然失效。
 export function cardImageUrl(manifest, cardId) {
   const file = manifest.cards[cardId]
   if (!file) throw new Error(`皮肤 ${manifest.id} 缺少牌面：${cardId}`)
-  return `${BASE}decks/${manifest.id}/${file}`
+  const v = manifest.v ? `?v=${manifest.v}` : ''
+  return `${BASE}decks/${manifest.id}/${file}${v}`
 }
 
-// 独立牌背图（不依赖某套牌面皮肤）
+// 独立牌背图（不依赖某套牌面皮肤）；back.v 同为内容版本号（backs/index.json 条目可选字段）
 export function standaloneBackUrl(back) {
-  return `${BASE}backs/${back.file}`
+  const v = back.v ? `?v=${back.v}` : ''
+  return `${BASE}backs/${back.file}${v}`
 }

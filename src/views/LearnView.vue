@@ -21,6 +21,12 @@ function openChapter(id) {
   tap()
   router.push(`/learn/${id}`)
 }
+
+// 认识牌面入口：入门学习从逐张点开牌库开始（牌库页每张牌可点看牌义，用户不知道要靠这里提示）
+function goDeck() {
+  tap()
+  router.push('/deck')
+}
 </script>
 
 <template>
@@ -50,10 +56,22 @@ function openChapter(id) {
       </span>
     </button>
 
+    <!-- 认识牌面：用牌库页当入门教材（每张牌可点开看牌义），不另做一套学习卡 -->
+    <button class="review card-press" @click="goDeck">
+      <AppIcon name="eye" :size="22" />
+      <span class="review-main">
+        <b>认识牌面</b>
+        <span class="review-sub">点开任意一张牌，了解它的牌义与启示</span>
+      </span>
+      <span class="review-cta">
+        去牌库 <AppIcon name="arrow" :size="15" />
+      </span>
+    </button>
+
     <!-- 每日挑战：低调可选，不做也不影响 -->
     <button class="challenge-link" @click="router.push('/learn/challenge')">
       <AppIcon name="sparkle" :size="15" />
-      每日挑战 · 5 题（+10 XP）
+      每日挑战 · 3 题（+10 XP）
     </button>
 
     <section class="chapters">

@@ -25,6 +25,16 @@ describe('backs/index.json 牌背注册表', () => {
     }
   })
 
+  it('皮肤自带牌背带版本号 v（卡背重绘后换 URL 破 SW 缓存）', () => {
+    // 2026-08-31 与 decks manifest v 同机制：曾部署过旧图的牌背（night-mural 八芒星->W4）
+    // URL 不变会卡在 CacheFirst 旧缓存 30 天
+    for (const id of deckIds) {
+      const b = backs.find((x) => x.id === id)
+      if (!b || LEGACY_DECKS.has(id)) continue
+      expect(b.v, `${id} 牌背条目缺 v`).toMatch(/^[0-9a-f]{8,16}$/)
+    }
+  })
+
   it('引用的图片文件都存在于 public/backs/', () => {
     for (const b of backs) {
       const p = resolve(ROOT, 'public/backs', b.file)
