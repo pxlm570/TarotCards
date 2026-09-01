@@ -24,7 +24,7 @@ const journal = useJournalStore()
 const learning = useLearningStore()
 const profile = useProfileStore()
 const settings = useSettingsStore()
-const { cardUrl } = useDeck()
+const { cardUrl, backUrl } = useDeck()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -53,6 +53,10 @@ const dailyCardName = computed(() => {
   const id = dailyReading.value?.cards?.[0]?.cardId
   return id ? cardById.get(id)?.name ?? '' : ''
 })
+const dailyFaceUrl = computed(() => {
+  const id = dailyReading.value?.cards?.[0]?.cardId
+  return id ? cardUrl(id) : ''
+})
 const streak = computed(() => calcStreak(Object.keys(journal.dailyDraws), currentDayKey()))
 const maxStreak = computed(() => calcMaxStreak(Object.keys(journal.dailyDraws)))
 const todayDrawn = computed(() => !!journal.dailyDraws[currentDayKey()])
@@ -65,6 +69,23 @@ const goalsAllDone = computed(() => todayDrawn.value && reviewDone.value)
 
 // 历史最佳连胜写回 profile（持久化）
 watch(maxStreak, (v) => profile.updateMaxStreak(v), { immediate: true })
+
+// ---- 首页 hero「星光牌阵」（2026-09-01 用户三方向样张定稿）----
+// 五张牌背扇形弧排 + 星尘穹顶；中央牌即每日一抽入口，已抽翻正显示当日牌面。
+// 纯 CSS + 现有牌背/牌面资产，零新增图片；动效走 data-motion / prefers-reduced-motion 降级。
+const FAN_SLOTS = [
+  { r: -16, ty: 30 },
+  { r: -8, ty: 10 },
+  { r: 0, ty: 0 },
+  { r: 8, ty: 10 },
+  { r: 16, ty: 30 }
+]
+const fanOn = ref(false)
+onMounted(() => {
+  setTimeout(() => {
+    fanOn.value = true
+  }, 80)
+})
 
 // ---- 人格化提醒（M4）：AI 每日一次问候，缓存当天；无 key / 失败回退静态问候 ----
 // v1.5 Task 2（#15）：问候随人格--缓存带 persona 维度，当天切人格重新生成一次
@@ -101,7 +122,7 @@ function greetingText() {
   return aiGreeting.value || greeting.value
 }
 
-// 主 CTA：进选牌阵独立页（Task 21，首页不再挂牌阵列表）
+// 主 CTA：进选牌阵独立页（Task 17 → Task 21 改为独立页）
 function goSpreads() {
   tap()
   router.push('/spreads')
@@ -152,14 +173,39 @@ const ritualIcon = computed(() => {
 <template>
   <div class="home">
     <header class="home-header">
-      <div>
-        <h1 class="title wordmark">星语<em>塔罗</em></h1>
-        <p class="greeting">{{ greetingText() }}</p>
-      </div>
+      <h1 class="title wordmark">星语<em>塔罗</em></h1>
       <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">
         <AppIcon name="help" :size="22" />
       </router-link>
     </header>
+
+    <!-- hero：星光牌阵，中央牌 = 每日一抽入口 -->
+    <section class="hero">
+      <div class="stars" aria-hidden="true" />
+      <div class="fan" :class="{ on: fanOn }">
+        <template v-for="(s, i) in FAN_SLOTS" :key="i">
+          <button
+            v-if="i === 2"
+            type="button"
+            class="fan-card center"
+            :style="{ '--r': s.r + 'deg', '--ty': s.ty + 'px', '--i': i }"
+            aria-label="每日一抽"
+            @click="startDaily"
+          >
+            <img v-if="dailyReading && dailyFaceUrl" :src="dailyFaceUrl" :alt="dailyCardName" />
+            <img v-else-if="backUrl()" :src="backUrl()" alt="每日一抽" />
+            <span v-else class="ph" />
+            <span v-if="streak > 0" class="streak-badge"><b>{{ streak }}</b> 天</span>
+          </button>
+          <div v-else class="fan-card" :style="{ '--r': s.r + 'deg', '--ty': s.ty + 'px', '--i': i }" aria-hidden="true">
+            <img v-if="backUrl()" :src="backUrl()" alt="" />
+            <span v-else class="ph" />
+          </div>
+        </template>
+      </div>
+      <p class="fan-hint">{{ dailyReading ? `今日已抽 · ${dailyCardName}` : '点中央的牌，抽今日一抽' }}</p>
+      <p class="greeting">{{ greetingText() }}</p>
+    </section>
 
     <button v-if="activeReading" class="resume card-press" @click="resumeReading">
       <span class="resume-text">
@@ -172,7 +218,7 @@ const ritualIcon = computed(() => {
       </span>
     </button>
 
-    <!-- 主 CTA：首屏可见「开始占卜」，进选牌阵页（Task 17 → Task 21 改为独立页） -->
+    <!-- 主 CTA：首屏可见「开始占卜」，进选牌阵页 -->
     <div class="cta-block">
       <button class="cta btn-solid" @click="goSpreads">
         <AppIcon name="reading" :size="20" />
@@ -203,24 +249,6 @@ const ritualIcon = computed(() => {
       </div>
     </section>
 
-    <!-- 每日一抽大卡 -->
-    <button class="daily card-press" :class="{ done: dailyReading }" @click="startDaily">
-      <img
-        v-if="dailyReading && cardUrl(dailyReading.cards?.[0]?.cardId)"
-        class="daily-thumb"
-        :src="cardUrl(dailyReading.cards?.[0]?.cardId)"
-        :alt="dailyCardName"
-      />
-      <span v-else class="daily-icon"><AppIcon name="star" :size="26" /></span>
-      <span class="daily-main">
-        <b>{{ dailyReading ? '今日已抽 · ' + dailyCardName : '每日一抽' }}</b>
-        <span class="daily-sub">{{ dailyReading ? '点击回看今天的指引' : '抽一张牌，与今天的自己对话' }}</span>
-      </span>
-      <span class="daily-streak">
-        <span class="streak-n">{{ streak }}</span>
-        <span class="streak-label">天连胜</span>
-      </span>
-    </button>
     <p class="streak-meta">
       <template v-if="dailyReading">今日已打卡</template>
       <template v-else-if="pendingToday">今天还没打卡，别让连胜断了</template>
@@ -245,18 +273,11 @@ const ritualIcon = computed(() => {
 .home-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--sp-4);
+  align-items: center;
 }
 
 .title {
   font-size: 1.625rem;
-  margin-bottom: 6px;
-}
-
-.greeting {
-  color: var(--dim);
-  font-size: var(--fs-body);
 }
 
 .help {
@@ -272,6 +293,145 @@ const ritualIcon = computed(() => {
   font-weight: var(--w-title);
   flex-shrink: 0;
 }
+
+/* ---- hero：星尘穹顶 + 牌阵（2026-09-01 定稿「星光牌阵」）---- */
+.hero {
+  position: relative;
+  margin: 0 -20px;
+  padding: 30px 0 10px;
+  overflow: hidden;
+  background: radial-gradient(130% 100% at 50% 0%, var(--gold-soft) 0%, transparent 58%);
+}
+
+[data-theme="dark"] .hero {
+  background: radial-gradient(130% 100% at 50% 0%, var(--surface) 0%, transparent 62%);
+}
+
+.stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: twinkle 4s ease-in-out infinite alternate;
+  background-image:
+    radial-gradient(1.5px 1.5px at 18% 30%, var(--gold-text), transparent 60%),
+    radial-gradient(1px 1px at 32% 18%, var(--dim), transparent 60%),
+    radial-gradient(1.5px 1.5px at 55% 24%, var(--gold), transparent 60%),
+    radial-gradient(1px 1px at 70% 14%, var(--dim), transparent 60%),
+    radial-gradient(1.5px 1.5px at 82% 34%, var(--gold-text), transparent 60%),
+    radial-gradient(1px 1px at 12% 55%, var(--dim), transparent 60%),
+    radial-gradient(1px 1px at 90% 60%, var(--dim), transparent 60%),
+    radial-gradient(1.5px 1.5px at 44% 10%, var(--gold), transparent 60%);
+}
+
+@keyframes twinkle {
+  from { opacity: 0.55; }
+  to { opacity: 0.95; }
+}
+
+.fan {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 218px;
+}
+
+.fan-card {
+  position: relative;
+  width: 90px;
+  aspect-ratio: 500 / 878;
+  margin-left: -28px;
+  border-radius: var(--radius-img);
+  background: var(--sunk);
+  box-shadow: var(--shadow-card);
+  transform-origin: 50% 130%;
+  transform: rotate(0deg) translateY(22px) scale(0.94);
+  opacity: 0;
+  transition:
+    transform var(--t-slow) var(--ease-out) calc(var(--i) * 90ms),
+    opacity var(--t-mid) ease calc(var(--i) * 90ms);
+}
+
+.fan .fan-card:first-child {
+  margin-left: 0;
+}
+
+.fan.on .fan-card {
+  opacity: 1;
+  transform: rotate(var(--r)) translateY(var(--ty));
+}
+
+.fan-card img,
+.ph {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.fan-card.center {
+  width: 114px;
+  z-index: 2;
+  padding: 0;
+  border: 1px solid var(--gold-deep);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 10px 24px var(--gold-glow), var(--shadow-card);
+}
+
+.fan.on .fan-card.center {
+  animation: halo 3.2s ease-in-out infinite;
+}
+
+@keyframes halo {
+  0%, 100% { box-shadow: 0 10px 24px var(--gold-glow), var(--shadow-card); }
+  50% { box-shadow: 0 10px 28px var(--gold-glow), 0 0 0 6px var(--gold-soft), var(--shadow-card); }
+}
+
+.streak-badge {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  font-size: 0.6875rem;
+  font-weight: var(--w-strong);
+  box-shadow: var(--shadow-card);
+  white-space: nowrap;
+}
+
+.streak-badge b {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.fan-hint {
+  text-align: center;
+  margin-top: 16px;
+  font-size: var(--fs-note);
+  font-weight: var(--w-strong);
+  color: var(--gold-text);
+}
+
+.greeting {
+  text-align: center;
+  margin: 4px 0 var(--sp-3);
+  color: var(--dim);
+  font-size: var(--fs-body);
+}
+
+/* ---- 动效降级：系统偏好 + app 内设置 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .fan-card { transition: none; }
+  .fan.on .fan-card.center, .stars { animation: none; }
+}
+
+[data-motion="reduced"] .fan-card { transition: none; }
+[data-motion="reduced"] .fan.on .fan-card.center { animation: none; }
+[data-motion="reduced"] .stars { animation: none; }
 
 /* 续局：唯一允许抢眼的入口——金框 + 金底 */
 .resume {
@@ -298,74 +458,6 @@ const ritualIcon = computed(() => {
 
 .resume-cta {
   flex-shrink: 0;
-}
-
-/* 每日一抽 */
-.daily {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 16px;
-  margin-bottom: 8px;
-  background: var(--gold-soft);
-  border-color: var(--gold-deep);
-}
-
-.daily-icon {
-  color: var(--gold-text);
-}
-
-.daily-thumb {
-  width: 52px;
-  aspect-ratio: 300 / 527;
-  border-radius: var(--radius-img);
-  object-fit: cover;
-  box-shadow: var(--shadow-card);
-  flex-shrink: 0;
-}
-
-.daily-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.daily-main b {
-  font-size: var(--fs-head);
-  color: var(--gold-text);
-}
-
-.daily-sub {
-  font-size: var(--fs-note);
-  color: var(--dim);
-}
-
-.daily-streak {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--gold-text);
-}
-
-.streak-n {
-  font-size: 1.5rem;
-  font-weight: var(--w-title);
-  line-height: 1;
-}
-
-.streak-label {
-  font-size: 0.6875rem;
-  color: var(--dim);
-}
-
-.streak-meta {
-  font-size: 0.75rem;
-  color: var(--dim);
-  text-align: center;
-  margin-bottom: var(--sp-3);
 }
 
 .cta-block {
@@ -416,6 +508,17 @@ const ritualIcon = computed(() => {
   text-overflow: ellipsis;
 }
 
+.recommend {
+  font-size: 0.625rem;
+  font-weight: var(--w-strong);
+  color: var(--on-gold);
+  background: var(--gold);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+/* 今日小目标 */
 .goals {
   padding: 14px 16px;
   margin-bottom: var(--sp-3);
@@ -456,14 +559,11 @@ const ritualIcon = computed(() => {
   color: var(--dim);
 }
 
-.recommend {
-  font-size: 0.625rem;
-  font-weight: var(--w-strong);
-  color: var(--on-gold);
-  background: var(--gold);
-  border-radius: var(--radius-pill);
-  padding: 2px 8px;
-  flex-shrink: 0;
+.streak-meta {
+  font-size: 0.75rem;
+  color: var(--dim);
+  text-align: center;
+  margin-bottom: var(--sp-3);
 }
 
 .learn-entry {

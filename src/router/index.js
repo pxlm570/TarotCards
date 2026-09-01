@@ -35,13 +35,8 @@ const PHASE_ROUTE = {
 }
 
 const routes = [
-  // 定稿预览期（2026-09-01）：首页路由临时挂 hero 样张舞台，正式首页挪至 /home-original 对比；
-  // 用户定稿后把选中方案落进 HomeView 并还原此表
-  { path: '/', name: 'home', component: () => import('../views/HeroSamplesView.vue') },
-  { path: '/home-original', name: 'home-original', component: HomeView },
+  { path: '/', name: 'home', component: HomeView },
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
-  // 样张舞台旧直链兼容（同 /）
-  { path: '/hero-samples', name: 'hero-samples', component: () => import('../views/HeroSamplesView.vue') },
   // 选牌阵独立页（Task 21）：刻意放在 /reading/* 之外——守卫会把无进行中占卜的 /reading/* 直链弹回首页
   { path: '/spreads', name: 'spreads', component: () => import('../views/SpreadSelectView.vue') },
   // 自定义牌阵编辑器（v1.5 Task 5）：同样放 /reading/* 之外
