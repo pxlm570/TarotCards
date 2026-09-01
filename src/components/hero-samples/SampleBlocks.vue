@@ -2,18 +2,25 @@
 // 首页 hero 样张共用下半区（仅预览）：静态演示数据（连胜 6/最佳 12、复习 0/3），
 // 按钮只保留视觉反馈，不触发真实行动。
 import AppIcon from '../AppIcon.vue'
+import { tap, toast } from '../../lib/feedback.js'
 
 defineProps({
   drawn: { type: Boolean, default: false },
   dailyRow: { type: Boolean, default: false },
   faceUrl: { type: String, default: '' }
 })
+
+// 样张按钮不触发真实行动：轻提示说明这是预览
+function demo(msg) {
+  tap()
+  toast(`样张预览 · ${msg}`)
+}
 </script>
 
 <template>
   <div class="blocks">
     <div class="cta-block">
-      <button type="button" class="cta btn-solid">
+      <button type="button" class="cta btn-solid" @click="demo('「开始占卜」在定稿后的正式首页可用')">
         <AppIcon name="reading" :size="20" />
         开始占卜
       </button>
@@ -31,7 +38,7 @@ defineProps({
       </div>
     </section>
 
-    <button v-if="dailyRow" type="button" class="daily card-press" :class="{ done: drawn }">
+    <button v-if="dailyRow" type="button" class="daily card-press" :class="{ done: drawn }" @click="demo('每日一抽入口，正式首页可抽牌')">
       <img v-if="drawn && faceUrl" class="daily-thumb" :src="faceUrl" alt="星辰" />
       <span v-else class="daily-icon"><AppIcon name="star" :size="26" /></span>
       <span class="daily-main">

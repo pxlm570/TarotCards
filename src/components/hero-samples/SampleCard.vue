@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import AppIcon from '../AppIcon.vue'
 import SampleBlocks from './SampleBlocks.vue'
 import { useDeck } from '../../lib/use-deck.js'
+import { tap, toast } from '../../lib/feedback.js'
 
 defineProps({
   drawn: { type: Boolean, default: false },
@@ -13,6 +14,11 @@ defineProps({
 
 const { backUrl, cardUrl } = useDeck()
 const faceUrl = computed(() => cardUrl('major-17'))
+
+function demoDraw() {
+  tap()
+  toast('样张预览 · 定稿后这里翻开每日一抽')
+}
 </script>
 
 <template>
@@ -24,7 +30,7 @@ const faceUrl = computed(() => cardUrl('major-17'))
     <p class="greet">{{ greeting }}</p>
 
     <section class="hero">
-      <button type="button" class="big-card" :class="{ drawn }" aria-label="每日一抽">
+      <button type="button" class="big-card" :class="{ drawn }" aria-label="每日一抽" @click="demoDraw">
         <span class="card-clip">
           <img v-if="drawn ? faceUrl : backUrl()" :src="drawn ? faceUrl : backUrl()" alt="每日一抽" />
           <span v-else class="ph" />

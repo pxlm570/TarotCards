@@ -5,6 +5,7 @@ import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../AppIcon.vue'
 import SampleBlocks from './SampleBlocks.vue'
 import { useDeck } from '../../lib/use-deck.js'
+import { tap, toast } from '../../lib/feedback.js'
 
 defineProps({
   drawn: { type: Boolean, default: false },
@@ -29,6 +30,11 @@ onMounted(() => {
     on.value = true
   }, 80)
 })
+
+function demoDraw() {
+  tap()
+  toast('样张预览 · 定稿后这里抽每日一抽')
+}
 </script>
 
 <template>
@@ -48,6 +54,7 @@ onMounted(() => {
             class="fan-card center"
             :style="{ '--r': s.r + 'deg', '--ty': s.ty + 'px', '--i': i }"
             aria-label="每日一抽"
+            @click="demoDraw"
           >
             <img v-if="drawn ? faceUrl : backUrl()" :src="drawn ? faceUrl : backUrl()" alt="每日一抽" />
             <span v-else class="ph" />

@@ -51,6 +51,7 @@ function toggleTheme() {
     <component :is="comp" :drawn="drawn" :greeting="greeting" />
 
     <nav class="bar" aria-label="样张切换工具条">
+      <span class="note">样张预览</span>
       <button
         v-for="t in TABS"
         :key="t.id"
@@ -64,7 +65,7 @@ function toggleTheme() {
       <span class="sep" aria-hidden="true" />
       <button type="button" class="chip" :class="{ on: drawn }" @click="toggleDrawn">模拟已抽</button>
       <button type="button" class="chip" @click="toggleTheme">{{ dark ? '浅色预览' : '暗夜预览' }}</button>
-      <router-link class="chip" to="/">原首页</router-link>
+      <router-link class="chip" to="/home-original">正式首页</router-link>
     </nav>
   </div>
 </template>
@@ -97,6 +98,13 @@ function toggleTheme() {
 .bar .chip {
   flex-shrink: 0;
   text-decoration: none;
+}
+
+.note {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--dim);
+  white-space: nowrap;
 }
 
 .sep {
