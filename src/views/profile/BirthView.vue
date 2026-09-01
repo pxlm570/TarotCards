@@ -30,7 +30,7 @@ function saveBirthday() {
 
 <template>
   <div class="page birth">
-    <PageHead title="本命牌" back-to="/profile" back-label="我的" sub="输入生日，找到属于你的两张大阿尔卡纳牌——它们代表你的人格面具与灵魂课题。" />
+    <PageHead title="本命牌" back-to="/profile" back-label="我的" sub="输入生日，找到属于你的大阿尔卡纳本命牌——代表你的人格面具与灵魂课题。" />
 
     <section class="card block">
       <template v-if="birth">
