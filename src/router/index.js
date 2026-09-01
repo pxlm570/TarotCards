@@ -37,6 +37,8 @@ const PHASE_ROUTE = {
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
+  // 首页 hero 三方向样张舞台（2026-09-01 仅供定稿预览，不入任何导航；定稿后随实现一并清理）
+  { path: '/hero-samples', name: 'hero-samples', component: () => import('../views/HeroSamplesView.vue') },
   // 选牌阵独立页（Task 21）：刻意放在 /reading/* 之外——守卫会把无进行中占卜的 /reading/* 直链弹回首页
   { path: '/spreads', name: 'spreads', component: () => import('../views/SpreadSelectView.vue') },
   // 自定义牌阵编辑器（v1.5 Task 5）：同样放 /reading/* 之外
