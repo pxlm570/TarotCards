@@ -111,7 +111,8 @@ function save() {
 
 <template>
   <div class="editor-page">
-    <FlowExit :confirm="false" :before-exit="() => dirty" label="退出编辑" />
+    <!-- 智能返回：编辑器只从选牌阵页进入，返回即回选牌阵；reset=false：编辑牌阵不作废进行中的一局 -->
+    <FlowExit :confirm="false" :reset="false" :before-exit="() => dirty" label="退出编辑" fallback="/spreads" />
 
     <header class="head">
       <h1 class="title">{{ editId ? '编辑牌阵' : '新建牌阵' }}</h1>

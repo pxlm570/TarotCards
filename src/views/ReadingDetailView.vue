@@ -10,11 +10,13 @@ import { useDeck } from '../lib/use-deck.js'
 import SpreadCanvas from '../components/SpreadCanvas.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { tap, toast, success } from '../lib/feedback.js'
+import { useBack } from '../composables/use-back.js'
 
 const route = useRoute()
 const router = useRouter()
 const journal = useJournalStore()
 const { cardUrl } = useDeck()
+const goBack = useBack()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 const reading = computed(() => journal.getById(route.params.readingId))
@@ -71,7 +73,7 @@ function remove() {
 <template>
   <div class="detail">
     <header class="head">
-      <button class="back btn-text" @click="router.back()">
+      <button class="back btn-text" @click="goBack('/journal')">
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         记录
       </button>

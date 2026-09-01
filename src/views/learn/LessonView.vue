@@ -8,9 +8,11 @@ import FlashcardLesson from './FlashcardLesson.vue'
 import QuizLesson from './QuizLesson.vue'
 import PracticeLesson from './PracticeLesson.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useBack } from '../../composables/use-back.js'
 
 const route = useRoute()
 const router = useRouter()
+const goBack = useBack()
 
 const chapterId = route.params.chapterId
 const lessonId = route.params.lessonId
@@ -32,7 +34,7 @@ function openCard(cardId) {
 <template>
   <div class="lesson">
     <header class="head">
-      <button class="back btn-text" @click="router.back()">
+      <button class="back btn-text" @click="goBack(`/learn/${chapterId}`)">
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         返回章节
       </button>
@@ -67,7 +69,7 @@ function openCard(cardId) {
     />
     <div v-else class="missing card">
       <p>找不到这一课。</p>
-      <button class="btn-ghost" @click="router.back()">返回章节</button>
+      <button class="btn-ghost" @click="goBack(`/learn/${chapterId}`)">返回章节</button>
     </div>
   </div>
 </template>

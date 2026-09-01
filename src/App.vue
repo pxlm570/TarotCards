@@ -38,11 +38,14 @@ function onBack(event) {
   if (!leftFrom.startsWith('/reading')) return
   const store = useReadingStore()
   if (store.phase === 'idle') return // 非占卜中，交给浏览器默认
+  const entry = store.entryPath // stepBack 退出本局时 reset 会清掉 entryPath，先取
   const prev = store.stepBack()
   if (prev && PHASE_ROUTE[prev]) {
     router.replace(PHASE_ROUTE[prev])
+  } else if (prev === null) {
+    // 手势退出本局：与 FlowExit 一致，回动线入口页（「从哪进、退回哪」），而非浏览器默认的上一条
+    router.replace(entry || '/')
   }
-  // prev === null → 已退出本局，允许浏览器回退到首页
 }
 
 onMounted(() => window.addEventListener('popstate', onBack))

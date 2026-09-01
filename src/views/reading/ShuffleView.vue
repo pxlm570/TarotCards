@@ -150,7 +150,7 @@ onUnmounted(() => {
 
 <template>
   <div class="shuffle">
-    <FlowExit confirm />
+    <FlowExit confirm :to="store.entryPath || '/'" />
     <div class="mode-switch">
       <button class="mode" :class="{ on: mode === 'interactive' }" @click="switchMode('interactive')">互动拖洗</button>
       <button class="mode" :class="{ on: mode === 'riffle' }" @click="switchMode('riffle')">仪式翻洗</button>

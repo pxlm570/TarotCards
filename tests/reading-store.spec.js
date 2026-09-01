@@ -184,6 +184,33 @@ describe('reading store：状态机', () => {
     expect(restored.revealedKeys).toEqual(['future'])
   })
 
+  it('entryPath：开局记入口页随 flow 持久化，恢复不覆盖，reset 清空（「从哪进、退回哪」）', () => {
+    const store = useReadingStore()
+    store.selectSpread(SPREAD_3)
+    expect(store.entryPath).toBe('')
+    store.setEntryPath('/spreads')
+    expect(store.entryPath).toBe('/spreads')
+    // 立即持久化：question 页刷新后恢复也带着入口
+    expect(JSON.parse(sessionStorage.getItem(FLOW_KEY)).entryPath).toBe('/spreads')
+
+    // 已有值不覆盖（恢复中的局再次挂载提问页不会误改入口）
+    store.setEntryPath('/')
+    expect(store.entryPath).toBe('/spreads')
+    // 空值忽略（直链进入 history.state.back 为 null）
+    store.setEntryPath('')
+    expect(store.entryPath).toBe('/spreads')
+
+    // 新 store 恢复：entryPath 跟着 flow 走
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.entryPath).toBe('/spreads')
+
+    // reset 清空，下一局重新捕获
+    restored.reset()
+    expect(restored.entryPath).toBe('')
+  })
+
   it('sessionStorage 无数据时 tryRestore 返回 false', () => {
     const store = useReadingStore()
     expect(store.tryRestore()).toBe(false)

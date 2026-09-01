@@ -2,7 +2,6 @@
 // 每日挑战（#6）：从已学章节随机抽 3 题，低调可选入口，完成有记录与奖励，不强制。
 // 题数定死 3：第一章题池恰好 3 道（新用户只有第一章可抽），写 5 会文案与实际不符。
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import chapters from '../../data/courses/index.json'
 import { useLearningStore } from '../../stores/learning.js'
 import { useProfileStore } from '../../stores/profile.js'
@@ -11,12 +10,13 @@ import { safeGetItem, safeSetItem } from '../../lib/storage.js'
 import { currentDayKey } from '../../lib/day-key.js'
 import { tap, success, toast } from '../../lib/feedback.js'
 import AppIcon from '../../components/AppIcon.vue'
+import { useBack } from '../../composables/use-back.js'
 
 const CHAPTER_MODULES = import.meta.glob('../../data/courses/chapter-*.json', { eager: true })
-const router = useRouter()
 const learning = useLearningStore()
 const profile = useProfileStore()
 const { cardUrl } = useDeck()
+const goBack = useBack()
 
 const CHALLENGE_KEY = 'tarot.challenge.v1' // { count, last }
 const QUESTION_COUNT = 3
@@ -107,7 +107,7 @@ function finish() {
 <template>
   <div class="challenge">
     <header class="head">
-      <button class="back btn-text" @click="router.back()"><AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" /> 学习</button>
+      <button class="back btn-text" @click="goBack('/learn')"><AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" /> 学习</button>
       <h1 class="title">每日挑战</h1>
       <p class="sub">从已学章节随机抽 3 题 · 做完有记录和奖励 · 不做也不影响</p>
     </header>
@@ -149,7 +149,7 @@ function finish() {
     <div v-else class="done card">
       <p class="done-title">挑战完成</p>
       <p class="done-hint">+10 XP。明天再来玩。</p>
-      <button class="btn-ghost btn-block" @click="router.back()">返回</button>
+      <button class="btn-ghost btn-block" @click="goBack('/learn')">返回</button>
     </div>
   </div>
 </template>

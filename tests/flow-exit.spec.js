@@ -30,6 +30,8 @@ function clickExit(wrapper) {
 describe('FlowExit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // isolate:false 共享 worker：显式归零 history.state，别让别的用例写过的状态串进来
+    Object.defineProperty(window.history, 'state', { value: null, configurable: true })
   })
 
   it('confirm=true（中途）：确认弹「本局作废」，取消则不退出不动 store', async () => {
@@ -90,5 +92,38 @@ describe('FlowExit', () => {
     expect(confirmSpy).not.toHaveBeenCalled()
     expect(router.replace).toHaveBeenCalledWith('/')
     expect(resetSpy).not.toHaveBeenCalled()
+  })
+
+  // ---- 「从哪进、退回哪」（2026-08-31）新增三形态 ----
+
+  function stubHistoryState(value) {
+    Object.defineProperty(window.history, 'state', { value, configurable: true })
+  }
+
+  it('to 参数（占卜动线）：退出 replace 回显式入口页（store.entryPath）', async () => {
+    stubHistoryState(null)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper, router } = mountExit({ confirm: false, to: '/spreads' })
+    await clickExit(wrapper)
+    expect(router.replace).toHaveBeenCalledWith('/spreads')
+  })
+
+  it('无 to：站内进入（有来源页）走 back() 回来源页', async () => {
+    stubHistoryState({ back: '/profile', position: 2 })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper, router } = mountExit({ confirm: false, reset: false })
+    router.back = vi.fn()
+    await clickExit(wrapper)
+    expect(router.back).toHaveBeenCalledTimes(1)
+    expect(router.replace).not.toHaveBeenCalled()
+    stubHistoryState(null)
+  })
+
+  it('无 to：直链进入（无历史）replace 回 fallback 兜底页', async () => {
+    stubHistoryState(null)
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper, router } = mountExit({ confirm: false, reset: false, fallback: '/deck' })
+    await clickExit(wrapper)
+    expect(router.replace).toHaveBeenCalledWith('/deck')
   })
 })

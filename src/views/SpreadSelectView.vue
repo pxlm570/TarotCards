@@ -89,7 +89,7 @@ const guideGroups = computed(() =>
 <template>
   <div class="spread-page">
     <!-- 与动线五页同款纯图标返回；reset=false：逛牌阵不作废首页那局进行中的占卜 -->
-    <FlowExit :confirm="false" :reset="false" label="返回首页" />
+    <FlowExit :confirm="false" :reset="false" label="返回" fallback="/" />
 
     <header class="head">
       <h1 class="title">选择牌阵</h1>

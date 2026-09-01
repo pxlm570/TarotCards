@@ -62,7 +62,8 @@ function openCard(card) {
 
 <template>
   <div class="collection">
-    <FlowExit :confirm="false" :reset="false" label="返回" />
+    <!-- 智能返回：从「我的」/牌库进来的退回原页；直链进入兜底牌库（收藏馆主入口） -->
+    <FlowExit :confirm="false" :reset="false" label="返回" fallback="/deck" />
 
     <header class="head">
       <h1 class="title">收藏馆</h1>

@@ -2,8 +2,12 @@
 // 占卜动线统一退出入口（Task 18 + Task 20-A 轻量化）：
 // 左上角纯图标（无文字、无按钮条），触摸目标 ≥44×44。五页形态一致。
 // confirm=true（中途）退出前确认整局作废；beforeExit 回调返回真（有未保存草稿）时先确认再退。
-// reset=false 只回首页不动 store——给动线外的页面（如 /spreads）复用同款返回，
+// reset=false 只返回不动 store——给动线外的页面（如 /spreads）复用同款返回，
 // 免得从首页带着进行中的一局逛过来再返回时把它静默作废。
+// 退出落点（2026-08-31「从哪进、退回哪」）：
+//  - to：显式目标（占卜动线专用——动线前进是 replace、返回手势会消费入口条目，
+//    history.back() 回不到入口，须传 reading store 持久化的 entryPath）；
+//  - 其余页面走智能返回：有来源页 back()，直链进入 replace(fallback)。
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../stores/reading.js'
 import AppIcon from './AppIcon.vue'
@@ -13,7 +17,9 @@ const props = defineProps({
   confirm: { type: Boolean, default: true },
   beforeExit: { type: Function, default: null },
   reset: { type: Boolean, default: true },
-  label: { type: String, default: '退出占卜' }
+  label: { type: String, default: '退出占卜' },
+  to: { type: String, default: null },
+  fallback: { type: String, default: '/' }
 })
 
 const router = useRouter()
@@ -26,7 +32,13 @@ function exit() {
   if (props.confirm && !window.confirm('退出后本局作废，确定吗？')) return
   tap()
   if (props.reset) store.reset()
-  router.replace('/')
+  if (props.to != null) {
+    router.replace(props.to)
+  } else if (window.history.state?.back) {
+    router.back()
+  } else {
+    router.replace(props.fallback)
+  }
 }
 </script>
 

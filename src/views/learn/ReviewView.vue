@@ -1,15 +1,16 @@
 <script setup>
 // 复习页：默认复习到期闪卡；毕业后可复习全库 78 张。
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import cardsData from '../../data/cards.json'
 import { useLearningStore } from '../../stores/learning.js'
 import FlashcardSession from '../../components/FlashcardSession.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useBack } from '../../composables/use-back.js'
 
 const route = useRoute()
-const router = useRouter()
 const learning = useLearningStore()
+const goBack = useBack()
 
 const allMode = route.query.all === '1'
 const allIds = cardsData.map((c) => c.id)
@@ -22,7 +23,7 @@ const title = computed(() => (allMode || learning.graduated ? '全库复习' : '
 <template>
   <div class="review">
     <header class="head">
-      <button class="back btn-text" @click="router.back()">
+      <button class="back btn-text" @click="goBack('/learn')">
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         学习
       </button>
@@ -34,7 +35,7 @@ const title = computed(() => (allMode || learning.graduated ? '全库复习' : '
     <div v-else class="empty card">
       <AppIcon name="check" :size="22" />
       <p>今天没有到期的闪卡，明天再来巩固吧。</p>
-      <button class="btn-ghost" @click="router.back()">返回</button>
+      <button class="btn-ghost" @click="goBack('/learn')">返回</button>
     </div>
   </div>
 </template>

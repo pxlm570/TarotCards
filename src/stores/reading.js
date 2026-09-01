@@ -45,7 +45,8 @@ function initialState() {
     journalId: null, // M3：本局已写入记录库的 reading id（随 flow 持久化，一局只存一次）
     isDaily: false, // M3：每日一抽局（?daily=1），落库时打卡
     freeMode: false, // v1.5 Task 7：自由摆放局（翻牌后拖位，不依赖任何注册表牌阵）
-    freePositions: [] // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
+    freePositions: [], // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
+    entryPath: '' // 动线入口页（2026-08-31「从哪进、退回哪」）：开局在提问页捕获，退出/手势退出回这里
   }
 }
 
@@ -222,9 +223,16 @@ export const useReadingStore = defineStore('reading', {
       clearFlow()
     },
 
+    // 记录动线入口页（仅新局捕获：恢复中的局已有持久化值，不覆盖）
+    setEntryPath(path) {
+      if (!path || this.entryPath) return
+      this.entryPath = path
+      this.persistNow()
+    },
+
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, freeMode, freePositions } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, freeMode, freePositions: freePositions.map((p) => ({ ...p })) })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, freeMode, freePositions, entryPath } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, freeMode, freePositions: freePositions.map((p) => ({ ...p })), entryPath })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页

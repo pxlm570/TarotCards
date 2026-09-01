@@ -106,7 +106,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 <template>
   <div class="pick">
-    <FlowExit confirm />
+    <FlowExit confirm :to="store.entryPath || '/'" />
     <header class="head">
       <p class="progress">
         已选 <span class="gold">{{ picked }}</span> / {{ target }}

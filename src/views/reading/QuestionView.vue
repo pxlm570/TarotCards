@@ -60,6 +60,9 @@ onMounted(() => {
     router.replace('/')
     return
   }
+  // 「从哪进、退回哪」：开局记入口页（history.state.back = push 进来之前的路由）。
+  // 恢复中的局 entryPath 已随 flow 持久化，setEntryPath 内部不覆盖；直链进入无 back → 留空回首页。
+  store.setEntryPath(window.history.state?.back || '')
   ready.value = true
 })
 
@@ -87,7 +90,7 @@ function confirm() {
 
 <template>
   <div v-if="ready" class="question">
-    <FlowExit confirm />
+    <FlowExit confirm :to="store.entryPath || '/'" />
 
     <div class="breathe-hint">
       <span class="ring"><span class="ring-inner" /></span>

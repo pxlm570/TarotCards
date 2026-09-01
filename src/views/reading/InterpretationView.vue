@@ -176,8 +176,10 @@ function again() {
   if (hasUnsavedDraft() && !window.confirm('你写下的感想/练习理解还没有保存，开始新的占卜将丢失它们。确定吗？')) {
     return
   }
+  // 再来一局回动线入口（从选牌阵进来的回选牌阵重新选；reset 会清 entryPath，先取）
+  const entry = store.entryPath || '/'
   store.reset()
-  router.replace('/')
+  router.replace(entry)
 }
 
 // 未保存判断的唯一出处：again() 与退出入口（FlowExit before-exit）共用，防丢草稿
@@ -193,7 +195,7 @@ function scrollTop() {
 
 <template>
   <div class="interp">
-    <FlowExit :confirm="false" :before-exit="hasUnsavedDraft" />
+    <FlowExit :confirm="false" :before-exit="hasUnsavedDraft" :to="store.entryPath || '/'" />
     <header class="head">
       <h1 class="title">{{ store.spread?.name }} · 解读</h1>
       <p v-if="store.question" class="question">「{{ store.question }}」</p>

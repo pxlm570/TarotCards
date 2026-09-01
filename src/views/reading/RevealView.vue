@@ -81,7 +81,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 <template>
   <div class="reveal">
-    <FlowExit confirm />
+    <FlowExit confirm :to="store.entryPath || '/'" />
     <p class="tip" :class="{ done: allRevealed }">
       <template v-if="free && !allRevealed">点击牌背翻开，翻开后可拖动摆位</template>
       <template v-else-if="free && allRevealed">拖动调整位置，摆好了去看解读</template>

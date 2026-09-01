@@ -1,31 +1,29 @@
 <script setup>
 // 牌详情页（M2 Task 5）：大牌面、关键词、正逆位切换、四领域、元素星象、符号解析。
 import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import cardsData from '../data/cards.json'
 import { useDeck } from '../lib/use-deck.js'
 import AppIcon from '../components/AppIcon.vue'
+import { useBack } from '../composables/use-back.js'
 
 const route = useRoute()
-const router = useRouter()
 const { cardUrl } = useDeck()
+const goBack = useBack()
 
 const card = computed(() => cardsData.find((c) => c.id === route.params.cardId))
 const orientation = ref('upright')
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
-
-function goDeck() {
-  router.push('/deck')
-}
 </script>
 
 <template>
   <div v-if="card" class="detail">
     <header class="head">
-      <button class="back btn-text" @click="goDeck()">
+      <!-- 智能返回：从牌库/收藏馆/课程认牌进来都退回原页；直链兜底牌库 -->
+      <button class="back btn-text" @click="goBack('/deck')">
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
-        牌库
+        返回
       </button>
       <div class="img-wrap">
         <img v-if="cardUrl(card.id)" class="img" :src="cardUrl(card.id)" :class="{ reversed: orientation === 'reversed' }" alt="" />

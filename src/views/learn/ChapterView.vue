@@ -6,10 +6,12 @@ import chapters from '../../data/courses/index.json'
 import { useLearningStore } from '../../stores/learning.js'
 import AppIcon from '../../components/AppIcon.vue'
 import TutorFab from '../../components/TutorFab.vue'
+import { useBack } from '../../composables/use-back.js'
 
 const route = useRoute()
 const router = useRouter()
 const learning = useLearningStore()
+const goBack = useBack()
 
 const chapterId = route.params.chapterId
 const chapterMeta = chapters.find((c) => c.id === chapterId)
@@ -50,7 +52,7 @@ const chapterContent = computed(() => {
 <template>
   <div class="chapter">
     <header class="head">
-      <button class="back btn-text" @click="router.back()">
+      <button class="back btn-text" @click="goBack('/learn')">
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         学习
       </button>
