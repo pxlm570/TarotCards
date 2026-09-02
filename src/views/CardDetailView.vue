@@ -42,7 +42,6 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
           <img v-if="cardUrl(card.id)" class="img" :src="cardUrl(card.id)" :class="{ reversed: orientation === 'reversed' }" alt="" />
           <div v-else class="img skeleton" />
         </button>
-        <span v-if="cardUrl(card.id)" class="img-hint"><AppIcon name="zoom" :size="13" /> 点按查看大图</span>
       </div>
       <h1 class="name">{{ card.name }} <span class="name-en">{{ card.nameEn }}</span></h1>
       <p class="meta">
@@ -112,9 +111,7 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
 
 .img-wrap {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  justify-content: center;
   margin-bottom: 12px;
 }
 
@@ -137,14 +134,6 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
 
 .img.reversed {
   transform: rotate(180deg);
-}
-
-.img-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--fs-note);
-  color: var(--dim);
 }
 
 /* 大图灯箱：压过 TabBar（z-10），暗底看图 */

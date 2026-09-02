@@ -55,11 +55,6 @@ describe('CardDetailView：牌面大图灯箱', () => {
     expect(wrapper.find('.lightbox-img').classes()).toContain('reversed')
   })
 
-  it('大图上有「点按查看大图」提示入口', async () => {
-    const wrapper = await mountAt('/deck/major-00')
-    expect(wrapper.find('.img-hint').text()).toContain('点按查看大图')
-  })
-
   it('无效深链空态可返回牌库（goBack 兜底 /deck）', async () => {
     const wrapper = await mountAt('/deck/not-exist')
     expect(wrapper.find('.missing').exists()).toBe(true)
