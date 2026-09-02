@@ -6,6 +6,8 @@ import cardsData from '../data/cards.json'
 import { useDeck } from '../lib/use-deck.js'
 import AppIcon from '../components/AppIcon.vue'
 import { useBack } from '../composables/use-back.js'
+import { useEscClose } from '../composables/use-esc-close.js'
+import { tap } from '../lib/feedback.js'
 
 const route = useRoute()
 const { cardUrl } = useDeck()
@@ -13,6 +15,16 @@ const goBack = useBack()
 
 const card = computed(() => cardsData.find((c) => c.id === route.params.cardId))
 const orientation = ref('upright')
+
+// 大图灯箱：正逆位旋转状态同步；点遮罩任意处 / 右上角 × / Esc 关闭
+const zoomOpen = ref(false)
+function openZoom() {
+  tap()
+  zoomOpen.value = true
+}
+useEscClose(() => {
+  zoomOpen.value = false
+})
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
 </script>
@@ -26,8 +38,11 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
         返回
       </button>
       <div class="img-wrap">
-        <img v-if="cardUrl(card.id)" class="img" :src="cardUrl(card.id)" :class="{ reversed: orientation === 'reversed' }" alt="" />
-        <div v-else class="img skeleton" />
+        <button class="img-btn" aria-label="查看大图" @click="openZoom">
+          <img v-if="cardUrl(card.id)" class="img" :src="cardUrl(card.id)" :class="{ reversed: orientation === 'reversed' }" alt="" />
+          <div v-else class="img skeleton" />
+        </button>
+        <span v-if="cardUrl(card.id)" class="img-hint"><AppIcon name="zoom" :size="13" /> 点按查看大图</span>
       </div>
       <h1 class="name">{{ card.name }} <span class="name-en">{{ card.nameEn }}</span></h1>
       <p class="meta">
@@ -66,11 +81,19 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
       <h2 class="sec-title">牌面符号</h2>
       <p class="meaning">{{ card.symbols }}</p>
     </section>
+
+    <!-- 大图灯箱：挂在视口层，点任意处关闭 -->
+    <Transition name="zoom-fade">
+      <div v-if="zoomOpen && cardUrl(card.id)" class="lightbox" @click="zoomOpen = false">
+        <img class="lightbox-img" :class="{ reversed: orientation === 'reversed' }" :src="cardUrl(card.id)" :alt="card.name" />
+        <button class="lightbox-close" aria-label="关闭大图"><AppIcon name="x" :size="20" /></button>
+      </div>
+    </Transition>
   </div>
 
   <div v-else class="missing">
     <p>没找到这张牌。</p>
-    <button class="btn-ghost" @click="goDeck()">返回牌库</button>
+    <button class="btn-ghost" @click="goBack('/deck')">返回牌库</button>
   </div>
 </template>
 
@@ -89,11 +112,23 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
 
 .img-wrap {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
+.img-btn {
+  display: block;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .img {
+  display: block;
   width: 150px;
   border-radius: var(--radius-img);
   box-shadow: var(--shadow-card);
@@ -102,6 +137,64 @@ const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study
 
 .img.reversed {
   transform: rotate(180deg);
+}
+
+.img-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-note);
+  color: var(--dim);
+}
+
+/* 大图灯箱：压过 TabBar（z-10），暗底看图 */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(4, 7, 14, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.lightbox-img {
+  max-width: min(92vw, 480px);
+  max-height: 82vh;
+  border-radius: var(--radius-img);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.lightbox-img.reversed {
+  transform: rotate(180deg);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zoom-fade-enter-active,
+.zoom-fade-leave-active {
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+
+.zoom-fade-enter-from,
+.zoom-fade-leave-to {
+  opacity: 0;
 }
 
 .name {
