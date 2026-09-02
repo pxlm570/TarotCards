@@ -54,7 +54,7 @@ const routes = [
   { path: '/journal/:readingId', name: 'reading-detail', component: () => import('../views/ReadingDetailView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
   // 「我的」详情页（v1.5 收缩重构）：主页只留条目，详细选择进独立页
-  { path: '/profile/birth', name: 'profile-birth', component: () => import('../views/profile/BirthView.vue') },
+  // （本命牌 2026-09-02 起内联在主页展示，/profile/birth 页已移除）
   { path: '/profile/appearance', name: 'profile-appearance', component: () => import('../views/profile/AppearanceView.vue') },
   { path: '/profile/preference', name: 'profile-preference', component: () => import('../views/profile/PreferenceView.vue') },
   { path: '/profile/ai', name: 'profile-ai', component: () => import('../views/profile/AiView.vue') },
