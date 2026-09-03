@@ -1,5 +1,7 @@
 // 分享卡片（M5 Task 2）：Canvas 2D 绘制 1080×1350（4:5）。
 // 布局部分抽成纯函数（可测）；绘制依赖浏览器 Canvas（分享时用，jsdom 不测）。
+// 牌面真图（2026-09-03）：调用方传入 cardUrl 解析当前皮肤真牌面，异步加载后
+// 圆角 cover 绘制、逆位旋转 180°；单图缺失/加载失败回退金边占位——分享永不因一张图失败而失败。
 
 export const SHARE_W = 1080
 export const SHARE_H = 1350
@@ -34,7 +36,41 @@ export function buildShareLayout(reading, spread, { includeQuestion } = {}) {
   }
 }
 
-export async function generateShareCard(reading, spread, { includeQuestion = false } = {}) {
+function loadImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null) // 单图失败不拖垮整卡
+    img.src = url
+  })
+}
+
+// 牌面图 500x839 与布局 300/527 比例略有出入，直接拉伸会轻微变形——按目标框居中 cover 裁剪
+function drawCover(ctx, img, x, y, w, h) {
+  const ir = img.width / img.height
+  const r = w / h
+  let sw = img.width
+  let sh = img.height
+  let sx = 0
+  let sy = 0
+  if (ir > r) {
+    sw = img.height * r
+    sx = (img.width - sw) / 2
+  } else {
+    sh = img.width / r
+    sy = (img.height - sh) / 2
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
+}
+
+// 圆角路径（ctx.roundRect 较新，老 WebView 降级直角）
+function pathCard(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r)
+  else ctx.rect(x, y, w, h)
+}
+
+export async function generateShareCard(reading, spread, { includeQuestion = false, cardUrl = null } = {}) {
   const layout = buildShareLayout(reading, spread, { includeQuestion })
   const canvas = document.createElement('canvas')
   canvas.width = SHARE_W
@@ -55,14 +91,32 @@ export async function generateShareCard(reading, spread, { includeQuestion = fal
   ctx.textAlign = 'center'
   ctx.fillText('星语塔罗', SHARE_W / 2, 150)
 
-  // 牌面缩略：金边占位矩形（不加载牌面图——异步装配复杂度高，v1.x 用占位语言；
-  // 载入真图列入 backlog）
-  for (const p of layout.positions) {
-    ctx.fillStyle = '#232850'
-    ctx.fillRect(p.x, p.y, p.w, p.h)
+  // 牌面：真图优先（圆角 clip + cover），无图回退占位底色；统一金色描边
+  const imgs = await Promise.all(
+    layout.positions.map((p) => (cardUrl && cardUrl(p.cardId) ? loadImage(cardUrl(p.cardId)) : Promise.resolve(null)))
+  )
+  layout.positions.forEach((p, i) => {
+    const img = imgs[i]
+    ctx.save()
+    pathCard(ctx, p.x, p.y, p.w, p.h, 12)
+    ctx.clip()
+    if (img) {
+      if (p.reversed) {
+        ctx.translate(p.x + p.w / 2, p.y + p.h / 2)
+        ctx.rotate(Math.PI)
+        drawCover(ctx, img, -p.w / 2, -p.h / 2, p.w, p.h)
+      } else {
+        drawCover(ctx, img, p.x, p.y, p.w, p.h)
+      }
+    } else {
+      ctx.fillStyle = '#232850'
+      ctx.fillRect(p.x, p.y, p.w, p.h)
+    }
+    ctx.restore()
     ctx.strokeStyle = '#E8B93E'
     ctx.lineWidth = 3
-    ctx.strokeRect(p.x, p.y, p.w, p.h)
+    pathCard(ctx, p.x, p.y, p.w, p.h, 12)
+    ctx.stroke()
     if (p.label) {
       ctx.fillStyle = '#9A97B8'
       ctx.font = '500 24px sans-serif'
@@ -72,7 +126,7 @@ export async function generateShareCard(reading, spread, { includeQuestion = fal
       ctx.fillStyle = '#9A97B8'
       ctx.fillText('逆位', p.x + p.w / 2, p.y + p.h + 26)
     }
-  }
+  })
 
   // 问题（可选）
   if (layout.question) {

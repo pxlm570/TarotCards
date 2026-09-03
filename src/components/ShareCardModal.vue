@@ -2,6 +2,7 @@
 // 分享卡片弹层（M5 Task 2）：生成预览 + 下载 / 系统分享。
 import { ref, onUnmounted } from 'vue'
 import { generateShareCard } from '../lib/share-card.js'
+import { useDeck } from '../lib/use-deck.js'
 import { useEscClose } from '../composables/use-esc-close.js'
 import AppIcon from './AppIcon.vue'
 import { toast, success } from '../lib/feedback.js'
@@ -14,6 +15,8 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 useEscClose(() => emit('close')) // Esc 关闭
 
+const { cardUrl } = useDeck() // 真牌面来源（当前皮肤），随生成传入绘制
+
 const includeQuestion = ref(false)
 const previewUrl = ref('')
 const generating = ref(false)
@@ -21,7 +24,10 @@ const generating = ref(false)
 async function generate() {
   generating.value = true
   try {
-    const blob = await generateShareCard(props.reading, props.spread, { includeQuestion: includeQuestion.value })
+    const blob = await generateShareCard(props.reading, props.spread, {
+      includeQuestion: includeQuestion.value,
+      cardUrl
+    })
     if (!blob) throw new Error('empty blob')
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = URL.createObjectURL(blob)
