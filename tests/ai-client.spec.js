@@ -77,4 +77,67 @@ describe('ai-client', () => {
     expect(init.headers['x-api-key']).toBe('sk-x')
     expect(init.headers['anthropic-version']).toBe('2023-06-01')
   })
+
+  // ---- 空闲超时分类（评审 2026-09-03：超时 abort 与用户主动中止必须可区分）----
+
+  // 服从 signal 的「挂起」流：收到第一个 chunk 后不再吐字，abort 时让 read() 以 AbortError 拒绝
+  // （真实 fetch 的行为；mock 流必须自己接 signal，否则 abort 对它无效、测试会挂死）
+  function hangingStreamAfter(chunks) {
+    return (url, init) => {
+      const encoder = new TextEncoder()
+      const body = new ReadableStream({
+        start(c) {
+          for (const ch of chunks) c.enqueue(encoder.encode(ch))
+          const onAbort = () => c.error(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+          if (init.signal.aborted) onAbort()
+          else init.signal.addEventListener('abort', onAbort, { once: true })
+        }
+      })
+      return Promise.resolve({ ok: true, status: 200, body, text: async () => '' })
+    }
+  }
+
+  it('空闲超时（已收到半截文本后挂起）抛 AIError 408，而非 AbortError', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('fetch', vi.fn(hangingStreamAfter(['data: {"choices":[{"delta":{"content":"你"}}]}\n\n'])))
+    const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }] })
+    const first = await gen.next() // 先拿到第一个增量
+    expect(first.value).toBe('你')
+    const pending = gen.next() // 流挂起，推进假时钟触发 30s 空闲超时
+    await vi.advanceTimersByTimeAsync(31000)
+    await expect(pending).rejects.toMatchObject({ status: 408, message: '流式空闲超时' })
+    vi.useRealTimers()
+  })
+
+  it('建连阶段挂起超时同样抛 AIError 408', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (url, init) =>
+          new Promise((_, reject) => {
+            const onAbort = () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+            if (init.signal.aborted) onAbort()
+            else init.signal.addEventListener('abort', onAbort, { once: true })
+          })
+      )
+    )
+    const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }] })
+    const pending = gen.next() // fetch 挂起，推进假时钟触发建连超时
+    await vi.advanceTimersByTimeAsync(31000)
+    await expect(pending).rejects.toMatchObject({ status: 408 })
+    vi.useRealTimers()
+  })
+
+  it('用户主动中止仍保持 AbortError（调用方按「保留半截文本」处理）', async () => {
+    vi.useFakeTimers()
+    const external = new AbortController()
+    vi.stubGlobal('fetch', vi.fn(hangingStreamAfter(['data: {"choices":[{"delta":{"content":"你"}}]}\n\n'])))
+    const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }], signal: external.signal })
+    await gen.next()
+    const pending = gen.next()
+    external.abort() // 假时钟下 abort 监听同步触发，无需推进时间
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    vi.useRealTimers()
+  })
 })

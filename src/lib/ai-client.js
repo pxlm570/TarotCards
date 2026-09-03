@@ -10,6 +10,7 @@ export class AIError extends Error {
 }
 
 export const AI_NOT_CONFIGURED = 'AI_NOT_CONFIGURED'
+export const AI_TIMEOUT_STATUS = 408 // 空闲超时的对外错误码（AIError.status），调用方据此给「重试」
 const TIMEOUT_MS = 30000
 
 function isAnthropic(baseUrl) {
@@ -110,11 +111,18 @@ export async function* streamChat({ messages, signal } = {}) {
 
   const controller = new AbortController()
   // 超时语义 = 空闲超时：建连或流中途超过 TIMEOUT_MS 没有任何新数据即中止
-  // （此前只保护建连，服务器保持连接不吐字时 generator 永久 pending）
-  let timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // （此前只保护建连，服务器保持连接不吐字时 generator 永久 pending）。
+  // 超时 abort 必须与用户主动中止可区分：前者对外抛 AIError(408)（调用方给重试入口），
+  // 后者保持 AbortError（调用方静默保留半截文本）——混同会让超时变成无提示死端。
+  let timedOut = false
+  const abortByTimeout = () => {
+    timedOut = true
+    controller.abort()
+  }
+  let timer = setTimeout(abortByTimeout, TIMEOUT_MS)
   const resetTimer = () => {
     clearTimeout(timer)
-    timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+    timer = setTimeout(abortByTimeout, TIMEOUT_MS)
   }
   let onAbort = null
   if (signal) {
@@ -135,6 +143,9 @@ export async function* streamChat({ messages, signal } = {}) {
       throw new AIError(res.status, await res.text().catch(() => ''))
     }
     for await (const delta of streamBody(res.body, resetTimer)) yield delta
+  } catch (e) {
+    if (timedOut && e?.name === 'AbortError') throw new AIError(AI_TIMEOUT_STATUS, '流式空闲超时')
+    throw e
   } finally {
     clearTimeout(timer)
     if (signal && onAbort) signal.removeEventListener('abort', onAbort)
