@@ -7,6 +7,7 @@ import CardGrid from '../components/CardGrid.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useDeck } from '../lib/use-deck.js'
 import { listDecks, loadDeck, cardImageUrl, listBacks, standaloneBackUrl } from '../lib/deck-loader.js'
+import { orderBacks, orderFaces } from '../lib/deck-order.js'
 import { useProfileStore } from '../stores/profile.js'
 import { tap, toast } from '../lib/feedback.js'
 
@@ -40,7 +41,7 @@ listDecks()
         items.push({ id, name: id, thumb: '' })
       }
     }
-    faces.value = items
+    faces.value = orderFaces(items)
   })
   .catch(() => {})
 
@@ -54,6 +55,9 @@ listBacks()
 function isBackLocked(b) {
   return b.unlock > 0 && profile.maxStreak < b.unlock
 }
+
+// 展示顺序（2026-09-03 用户拍板）：已解锁排前、锁款靠右；随连胜变化即时重排
+const orderedBacks = computed(() => orderBacks(backs.value, isBackLocked))
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -116,7 +120,7 @@ function pickBack(id) {
       <p class="lib-title">牌背 · 点选切换（自由组合）</p>
       <div class="lib-row">
         <button
-          v-for="b in backs"
+          v-for="b in orderedBacks"
           :key="b.id"
           class="lib-item"
           :class="{ on: backId === b.id, locked: isBackLocked(b) }"
