@@ -53,7 +53,8 @@ describe('ReviewView：闪卡会话不随评分重建', () => {
 
     const after = wrapper.findComponent(FlashcardSession)
     expect(after.exists()).toBe(true)
-    expect(after.vm).toBe(session.vm) // 同一实例：未 remount
+    // 同一组件实例（uid 相同）：未 remount。不能比 wrapper 对象引用——findComponent 每次返回新包装
+    expect(after.vm.$.uid).toBe(session.vm.$.uid)
     expect(after.text()).toContain('已复习 1 / 2')
     expect(learning.todayReviewCount).toBe(1)
   })
