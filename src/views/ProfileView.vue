@@ -33,8 +33,10 @@ const birthNames = computed(() =>
 )
 
 // ---- 内联本命牌：输入 / 重设 ----
+// 重设不直接清数据（2026-09-03 用户反馈：误触无从反悔）：先进编辑态，退出/保存才离开
 const BIRTH_RE = /^\d{4}-\d{2}-\d{2}$/
 const birthdayInput = ref('')
+const editing = ref(false)
 
 // 真实日期校验（评审 2026-09-03）：2026-02-31 这类不存在的日期 type=date 也可能产出，
 // Date 回读比对月/日一致才放行
@@ -48,14 +50,21 @@ const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRea
 function saveBirthday() {
   if (!birthdayValid.value) return
   profile.setBirthday(birthdayInput.value)
+  editing.value = false
   success()
   toast('已生成你的本命牌', 'success')
 }
 
-function resetBirthday() {
+function startEdit() {
   tap()
-  profile.setBirthday('')
   birthdayInput.value = ''
+  editing.value = true
+}
+
+function cancelEdit() {
+  tap()
+  birthdayInput.value = ''
+  editing.value = false
 }
 
 function goCard(id) {
@@ -119,10 +128,10 @@ function goEntry(to) {
     <section class="card block birth-block">
       <div class="birth-head">
         <h2 class="group-title">本命牌</h2>
-        <button v-if="birth" class="reset btn-text" @click="resetBirthday">重设</button>
+        <button v-if="birth && !editing" class="reset btn-text" @click="startEdit">重设</button>
       </div>
 
-      <template v-if="birth">
+      <template v-if="birth && !editing">
         <div class="birth-row">
           <div class="birth-imgs">
             <button
@@ -150,6 +159,7 @@ function goEntry(to) {
         <button class="birth-save btn-solid btn-block" :disabled="!birthdayValid" @click="saveBirthday">
           算出我的本命牌
         </button>
+        <button v-if="birth" class="birth-cancel btn-ghost btn-block" @click="cancelEdit">退出重设</button>
       </template>
     </section>
 
@@ -210,15 +220,15 @@ function goEntry(to) {
 
 .birth-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 2px 2px 4px;
+  gap: 10px;
+  padding: 4px 2px 6px;
 }
 
 .birth-imgs {
   display: flex;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .birth-img-btn {
@@ -251,7 +261,9 @@ function goEntry(to) {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
+  text-align: center;
 }
 
 .birth-names {
@@ -271,6 +283,14 @@ function goEntry(to) {
   color: var(--dim);
   line-height: 1.7;
   margin: 0 2px 10px;
+}
+
+.birth-save {
+  margin-bottom: 8px;
+}
+
+.birth-cancel {
+  font-size: var(--fs-note);
 }
 
 .birth-input {
