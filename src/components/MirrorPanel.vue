@@ -1,13 +1,14 @@
 <script setup>
 // Mirror 统计面板（M3 Task 5）+ 周期复盘（M4 Task 6，AI 流式 + 保存为日记）。
-import { ref, computed, onUnmounted } from 'vue'
+// 复盘流式生命周期走 useStream（卸载即中止、超时/失败分类文案）。
+import { ref, computed } from 'vue'
 import cardsData from '../data/cards.json'
 import { topCards, suitDist, orientationDist, domainDist, dailyFreq } from '../lib/mirror.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useJournalStore } from '../stores/journal.js'
 import { buildRecapMessages } from '../lib/ai-prompts.js'
-import { streamChat } from '../lib/ai-client.js'
+import { useStream } from '../composables/use-stream.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -38,40 +39,29 @@ const freqMax = computed(() => Math.max(1, ...freq.value.map((f) => f.count)))
 
 // ---- 周期复盘 ----
 const recapping = ref(false)
-const streamingRecap = ref(false)
-const recapText = ref('')
-const recapError = ref('')
-const recapController = ref(null)
 
-function startRecap() {
-  if (streamingRecap.value || recapText.value) return // 失败态（recapText 为空）可重试
+// 复盘摘要与统计按「开始复盘」时刻的 readings 计算（getter 在 start() 时才求值）
+const recapSummary = computed(() => {
   const top = topCards(props.readings, 5)
     .map((t) => `${cardById.get(t.cardId)?.name}×${t.count}`)
     .join('、')
-  const readingsSummary = `近 ${props.readings.length} 次占卜，常出现的牌：${top}`
+  return `近 ${props.readings.length} 次占卜，常出现的牌：${top}`
+})
+const recapStats = computed(() => {
   const s = suits.value
-  const mirrorStats = `花色：大${s.major} 权杖${s.wands} 圣杯${s.cups} 宝剑${s.swords} 星币${s.pentacles}；正位${orient.value.upright} 逆位${orient.value.reversed}`
-  streamRecap(buildRecapMessages({ readingsSummary, mirrorStats }))
-}
+  return `花色：大${s.major} 权杖${s.wands} 圣杯${s.cups} 宝剑${s.swords} 星币${s.pentacles}；正位${orient.value.upright} 逆位${orient.value.reversed}`
+})
 
-async function streamRecap(messages) {
+// 失败态独立承载（recapError）：错误文案曾被「保存为日记」存进记录库，文本位只留成功内容
+const { text: recapText, error: recapError, streaming: streamingRecap, start: runRecap } = useStream(() =>
+  buildRecapMessages({ readingsSummary: recapSummary.value, mirrorStats: recapStats.value })
+)
+
+function startRecap() {
+  if (streamingRecap.value || recapText.value) return // 失败态（recapText 为空）可重试
   recapping.value = true
-  streamingRecap.value = true
-  recapText.value = ''
-  recapError.value = ''
-  recapController.value = new AbortController()
-  try {
-    for await (const d of streamChat({ messages, signal: recapController.value.signal })) recapText.value += d
-  } catch {
-    // 失败态独立承载：不再复用 recapText（错误文案曾被「保存为日记」存进记录库）
-    recapError.value = '复盘失败，请稍后重试或检查 AI 配置。'
-  } finally {
-    streamingRecap.value = false
-    recapController.value = null
-  }
+  runRecap()
 }
-
-onUnmounted(() => recapController.value?.abort())
 
 function saveRecap() {
   const text = recapText.value

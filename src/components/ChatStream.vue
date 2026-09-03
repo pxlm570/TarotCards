@@ -1,7 +1,8 @@
 <script setup>
 // 流式对话渲染（M4 Task 4）：接收 messages 数组，逐块流式输出，可中止。
-import { ref, onMounted, onUnmounted } from 'vue'
-import { streamChat, AI_NOT_CONFIGURED, AIError } from '../lib/ai-client.js'
+// 生命周期与错误分类统一走 useStream：空闲超时给专属文案走重试、卸载即中止、
+// 用户主动中止保留半截文本（此前本组件把超时误当用户中止吞掉，形成无提示死端）。
+import { useStream } from '../composables/use-stream.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -11,49 +12,11 @@ const props = defineProps({
 
 const emit = defineEmits(['done'])
 
-const text = ref('')
-const streaming = ref(false)
-const error = ref('')
-const controller = ref(null)
-let disposed = false // 卸载后不再写状态/emit
-
-async function start() {
-  if (disposed || streaming.value) return
-  text.value = ''
-  error.value = ''
-  streaming.value = true
-  controller.value = new AbortController()
-  try {
-    for await (const delta of streamChat({ messages: props.messages, signal: controller.value.signal })) {
-      text.value += delta
-    }
-    emit('done')
-  } catch (e) {
-    if (e?.name === 'AbortError') {
-      // 用户主动中止不是错误：保留已生成内容
-    } else if (e.message === AI_NOT_CONFIGURED) error.value = '尚未配置 AI，请到「我的」页填写 key。'
-    else if (e instanceof AIError) error.value = e.status === 401 ? '密钥无效' : e.status === 429 ? '请求过于频繁' : `请求失败（${e.status || '网络'}）`
-    else error.value = '网络错误，请检查 baseUrl 或网络。'
-  } finally {
-    streaming.value = false
-    controller.value = null
-  }
-}
-
-function stop() {
-  controller.value?.abort()
-}
-
-function retry() {
-  start()
-}
-
-onMounted(start)
-// 卸载即中止：组件没了流还在跑=白烧 token + 对已卸载组件 emit
-onUnmounted(() => {
-  disposed = true
-  controller.value?.abort()
+const { text, error, streaming, start, stop } = useStream(() => props.messages, {
+  immediate: true,
+  onDone: () => emit('done')
 })
+const retry = start
 </script>
 
 <template>

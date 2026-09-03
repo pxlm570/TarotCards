@@ -13,10 +13,10 @@ import { PHASE_ROUTE } from '../router/index.js'
 import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
-import { streamChat } from '../lib/ai-client.js'
 import { buildGreetingMessages } from '../lib/ai-prompts.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useRitualToday } from '../composables/use-ritual-today.js'
+import { useStream } from '../composables/use-stream.js'
 
 const router = useRouter()
 const reading = useReadingStore()
@@ -88,9 +88,26 @@ onMounted(() => {
 })
 
 // ---- 人格化提醒（M4）：AI 每日一次问候，缓存当天；无 key / 失败回退静态问候 ----
-// v1.5 Task 2（#15）：问候随人格--缓存带 persona 维度，当天切人格重新生成一次
+// v1.5 Task 2（#15）：问候随人格--缓存带 persona 维度，当天切人格重新生成一次。
+// 流式生命周期走 useStream（卸载即中止），成功才写当日缓存；此前手搓 IIFE 无 signal、
+// 卸载不中止——b2ac4a4 同族漏网第三处。
 const GREETING_KEY = 'tarot.greeting.v1'
 const aiGreeting = ref('')
+
+const greetingStream = useStream(
+  () => {
+    const streakText = streak.value >= 7 ? `你已经连续${streak.value}天打卡了` : streak.value > 0 ? `今天是连胜第${streak.value}天` : '新的一天'
+    return buildGreetingMessages(streakText)
+  },
+  {
+    onDone: (full) => {
+      const t = full.trim()
+      if (!t) return
+      aiGreeting.value = t
+      safeSetItem(GREETING_KEY, JSON.stringify({ day: currentDayKey(), persona: settings.persona, text: t }))
+    }
+  }
+)
 
 onMounted(() => {
   if (!settings.hasAI) return
@@ -103,19 +120,7 @@ onMounted(() => {
   } catch {
     /* ignore */
   }
-  // 生成问候（结合连胜状态；人格由 buildGreetingMessages 内部按 settings 注入）
-  const streakText = streak.value >= 7 ? `你已经连续${streak.value}天打卡了` : streak.value > 0 ? `今天是连胜第${streak.value}天` : '新的一天'
-  const msgs = buildGreetingMessages(streakText)
-  let out = ''
-  ;(async () => {
-    try {
-      for await (const d of streamChat({ messages: msgs })) out += d
-      aiGreeting.value = out.trim()
-      safeSetItem(GREETING_KEY, JSON.stringify({ day: currentDayKey(), persona: settings.persona, text: out.trim() }))
-    } catch {
-      /* 失败回退静态问候 */
-    }
-  })()
+  greetingStream.start()
 })
 
 function greetingText() {

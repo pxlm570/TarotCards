@@ -1,8 +1,9 @@
 <script setup>
 // 问题澄清（M4 Task 5）：输入问题后让 AI 判断是否清晰，模糊则追问一轮。
-import { ref, onMounted } from 'vue'
+// 流式生命周期走 useStream（卸载即中止）；澄清是可选环节——出错直接放行原问题，不卡占卜动线。
+import { ref, watch } from 'vue'
 import { buildClarifyMessages } from '../lib/ai-prompts.js'
-import { streamChat, AI_NOT_CONFIGURED } from '../lib/ai-client.js'
+import { useStream } from '../composables/use-stream.js'
 import { useEscClose } from '../composables/use-esc-close.js'
 import AppIcon from './AppIcon.vue'
 
@@ -12,23 +13,19 @@ const props = defineProps({
 const emit = defineEmits(['done', 'skip'])
 useEscClose(() => emit('skip')) // Esc 关闭（视为跳过澄清）
 
-const text = ref('')
 const answer = ref('')
 const needAnswer = ref(false)
 
-onMounted(async () => {
-  try {
-    let out = ''
-    for await (const d of streamChat({ messages: buildClarifyMessages(props.question) })) out += d
-    const clean = out.trim().replace(/[「」""]/g, '')
+const { text, error } = useStream(() => buildClarifyMessages(props.question), {
+  immediate: true,
+  onDone: (full) => {
+    const clean = full.trim().replace(/[「」""]/g, '')
     if (clean === '清晰') emit('done', props.question)
-    else {
-      text.value = out
-      needAnswer.value = true
-    }
-  } catch {
-    emit('done', props.question) // 出错直接放行
+    else needAnswer.value = true
   }
+})
+watch(error, (v) => {
+  if (v) emit('done', props.question)
 })
 
 function submit() {
