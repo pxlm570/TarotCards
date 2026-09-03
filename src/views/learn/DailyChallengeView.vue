@@ -128,6 +128,7 @@ function finish() {
         <p v-else class="q-text">这张牌是哪一张？</p>
         <div v-if="type === 'image' || type === 'orientation'" class="q-img-wrap">
           <img v-if="cardUrl(current.cardId)" class="q-img" :src="cardUrl(current.cardId)" alt="" />
+          <div v-else class="q-img skeleton" />
         </div>
         <div class="opts">
           <button

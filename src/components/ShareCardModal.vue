@@ -34,6 +34,16 @@ async function generate() {
   }
 }
 
+// 切换选项后旧预览已失效：先回收 blob 再置空（只置空会泄漏 objectURL，
+// onUnmounted 只回收非空值，接不住这里）
+function toggleQuestion() {
+  includeQuestion.value = !includeQuestion.value
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
+
 async function download() {
   if (!previewUrl.value && !(await generate())) return // 生成失败不继续，避免「失败又成功」双提示
   const a = document.createElement('a')
@@ -72,7 +82,7 @@ onUnmounted(() => {
       </div>
       <label class="opt">
         <span>包含我的问题</span>
-        <input type="checkbox" :checked="includeQuestion" @change="includeQuestion = !includeQuestion; previewUrl = ''" />
+        <input type="checkbox" :checked="includeQuestion" @change="toggleQuestion" />
       </label>
       <div class="actions">
         <button class="btn-ghost" @click="share"><AppIcon name="arrow" :size="15" /> 分享</button>

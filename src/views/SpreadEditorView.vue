@@ -79,6 +79,7 @@ function onCanvasDown(e) {
 }
 
 function onPosDown(i, e) {
+  if (dragIndex >= 0) return // 已有指针在拖：忽略第二指，防跨牌位状态串扰（评审 2026-09-03）
   dragIndex = i
   dragMoved = false
   e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -111,7 +112,7 @@ function save() {
       name: name.value,
       positions: positions.value
     })
-    toast(editId.value ? '牌阵已更新' : `已保存「${saved.name}」`, 'ok')
+    toast(editId.value ? '牌阵已更新' : `已保存「${saved.name}」`, 'success')
     tap()
     router.replace('/spreads')
   } catch (err) {

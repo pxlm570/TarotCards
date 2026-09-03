@@ -104,6 +104,8 @@ const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lesso
         <p class="q-text">这张牌是哪张？</p>
         <div class="q-img-wrap">
           <img v-if="cardUrl(current.cardId)" class="q-img" :src="cardUrl(current.cardId)" alt="" />
+          <!-- manifest 未就位的骨架：看图题没图=盲猜，必须占位等图 -->
+          <div v-else class="q-img skeleton" />
         </div>
       </template>
       <!-- 正逆判断 -->
@@ -111,6 +113,7 @@ const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lesso
         <p class="q-text">{{ current.q }}</p>
         <div class="q-img-wrap">
           <img v-if="cardUrl(current.cardId)" class="q-img" :src="cardUrl(current.cardId)" alt="" />
+          <div v-else class="q-img skeleton" />
         </div>
       </template>
       <p v-else class="q-text">{{ current.q }}</p>

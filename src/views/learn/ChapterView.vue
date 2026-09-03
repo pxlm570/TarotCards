@@ -56,12 +56,17 @@ const chapterContent = computed(() => {
         <AppIcon name="arrow" :size="16" style="transform: rotate(180deg)" />
         学习
       </button>
-      <h1 class="title">{{ chapterMeta?.title }}</h1>
+      <h1 class="title">{{ chapterMeta?.title ?? '章节不存在' }}</h1>
       <p class="intro">{{ chapterMeta?.intro }}</p>
       <p class="meta" v-if="unlocked">已完成 {{ doneCount }} / {{ totalCount }}</p>
     </header>
 
-    <div v-if="!unlocked" class="locked card">
+    <!-- 无效章节深链（评审 2026-09-03）：给 404 语义，不再误显示为「未解锁」 -->
+    <div v-if="!chapterMeta" class="locked card">
+      <p>没有这个章节，可能已下架或链接有误。</p>
+      <button class="btn-ghost" @click="goBack('/learn')">返回学习</button>
+    </div>
+    <div v-else-if="!unlocked" class="locked card">
       <AppIcon name="lock" :size="22" />
       <p>完成前一章所有课程后解锁。</p>
     </div>

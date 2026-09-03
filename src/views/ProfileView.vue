@@ -36,8 +36,17 @@ const birthNames = computed(() =>
 const BIRTH_RE = /^\d{4}-\d{2}-\d{2}$/
 const birthdayInput = ref('')
 
+// 真实日期校验（评审 2026-09-03）：2026-02-31 这类不存在的日期 type=date 也可能产出，
+// Date 回读比对月/日一致才放行
+function isRealDate(s) {
+  const [y, m, d] = s.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
+}
+const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRealDate(birthdayInput.value))
+
 function saveBirthday() {
-  if (!BIRTH_RE.test(birthdayInput.value)) return
+  if (!birthdayValid.value) return
   profile.setBirthday(birthdayInput.value)
   success()
   toast('已生成你的本命牌', 'success')
@@ -138,7 +147,7 @@ function goEntry(to) {
       <template v-else>
         <p class="birth-lead">输入生日，找到属于你的大阿尔卡纳本命牌——代表你的人格面具与灵魂课题。</p>
         <input v-model="birthdayInput" class="birth-input" type="date" max="2026-12-31" />
-        <button class="birth-save btn-solid btn-block" :disabled="!BIRTH_RE.test(birthdayInput)" @click="saveBirthday">
+        <button class="birth-save btn-solid btn-block" :disabled="!birthdayValid" @click="saveBirthday">
           算出我的本命牌
         </button>
       </template>

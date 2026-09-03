@@ -19,6 +19,8 @@ const orientation = ref('upright')
 // 大图灯箱：正逆位旋转状态同步；点遮罩任意处 / 右上角 × / Esc 关闭
 const zoomOpen = ref(false)
 function openZoom() {
+  // manifest 未就位时没有可放大的图：直接忽略，避免点了没反应、图到了又突然全屏弹出
+  if (!cardUrl(card.value?.id)) return
   tap()
   zoomOpen.value = true
 }
