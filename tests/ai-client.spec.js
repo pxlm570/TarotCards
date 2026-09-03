@@ -104,6 +104,8 @@ describe('ai-client', () => {
     const first = await gen.next() // 先拿到第一个增量
     expect(first.value).toBe('你')
     const pending = gen.next() // 流挂起，推进假时钟触发 30s 空闲超时
+    pending.catch(() => {}) // 先挂 handler 防 unhandledRejection 竞态：advanceTimersByTimeAsync
+    // 刷微任务时 rejection 若在 expect 接手前落地，CI（Node22/Linux）会记为 unhandled error
     await vi.advanceTimersByTimeAsync(31000)
     await expect(pending).rejects.toMatchObject({ status: 408, message: '流式空闲超时' })
     vi.useRealTimers()
@@ -124,6 +126,7 @@ describe('ai-client', () => {
     )
     const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }] })
     const pending = gen.next() // fetch 挂起，推进假时钟触发建连超时
+    pending.catch(() => {}) // 同上：防 unhandledRejection 竞态
     await vi.advanceTimersByTimeAsync(31000)
     await expect(pending).rejects.toMatchObject({ status: 408 })
     vi.useRealTimers()
@@ -136,6 +139,7 @@ describe('ai-client', () => {
     const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }], signal: external.signal })
     await gen.next()
     const pending = gen.next()
+    pending.catch(() => {}) // 同上：防 unhandledRejection 竞态
     external.abort() // 假时钟下 abort 监听同步触发，无需推进时间
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     vi.useRealTimers()
