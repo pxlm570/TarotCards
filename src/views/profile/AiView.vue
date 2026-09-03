@@ -56,7 +56,8 @@ function saveAI(patch) {
 async function testConnection() {
   testing.value = true
   try {
-    // for-await + break：让 generator 走完 finally 释放 reader/连接（.next() 丢弃 generator 会泄漏）
+    // for-await + break：让 generator 走完 finally 释放 reader/连接（.next() 丢弃 generator 会泄漏）。
+    // 刻意不走 useStream：一次性探测、首块即断、生成器自带清理，接入流式状态机反而绕
     for await (const _d of streamChat({ messages: [{ role: 'user', content: 'ping' }] })) break
     toast('连接正常', 'success')
   } catch (e) {
