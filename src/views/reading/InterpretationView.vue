@@ -91,23 +91,27 @@ function firstSentence(text) {
 }
 
 const items = computed(() =>
-  store.drawn.map((d) => {
-    const card = cardById.get(d.cardId)
-    const position = store.spread.positions.find((p) => p.key === d.positionKey)
-    const meaning = d.reversed ? card.meaning.reversed : card.meaning.upright
-    return {
-      ...d,
-      card,
-      position,
-      keywords: d.reversed ? card.keywords.reversed : card.keywords.upright,
-      meaning,
-      brief: firstSentence(meaning),
-      domainText:
-        store.domain && card.domains?.[store.domain]
-          ? card.domains[store.domain][d.reversed ? 'reversed' : 'upright']
-          : null
-    }
-  })
+  store.drawn
+    .map((d, i) => {
+      const card = cardById.get(d.cardId)
+      // 坏数据/悬空 key 兜底（评审 2026-09-03）：spread 被另一标签页删除时不再 TypeError 白屏
+      if (!card) return null
+      const position = store.spread?.positions?.find((p) => p.key === d.positionKey) ?? { label: `第 ${i + 1} 张` }
+      const meaning = d.reversed ? card.meaning.reversed : card.meaning.upright
+      return {
+        ...d,
+        card,
+        position,
+        keywords: d.reversed ? card.keywords.reversed : card.keywords.upright,
+        meaning,
+        brief: firstSentence(meaning),
+        domainText:
+          store.domain && card.domains?.[store.domain]
+            ? card.domains[store.domain][d.reversed ? 'reversed' : 'upright']
+            : null
+      }
+    })
+    .filter(Boolean)
 )
 
 // 缩略全景同理：单张牌阵放大，否则一张小邮票躺在空卡片里

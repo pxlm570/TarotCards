@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useReadingStore } from '../src/stores/reading.js'
 import { saveReading as journalSave, getById as journalGetById } from '../src/lib/journal-store.js'
-import { FLOW_KEY, DEFAULT_SETTINGS, loadSettings, saveSettings } from '../src/lib/storage.js'
+import { FLOW_KEY, DEFAULT_SETTINGS, loadSettings, saveSettings, saveFlow, clearFlow } from '../src/lib/storage.js'
 import spreads from '../src/data/spreads.json'
 
 const SPREAD_3 = 'time-flow' // 3 张
@@ -454,5 +454,78 @@ describe('reading store：自由摆放（v1.5 Task 7）', () => {
     store.moveFreePosition('p2', 30, 70)
     const saved = saveCustomSpread({ name: '随心摆', positions: store.spread.positions })
     expect(getCustomSpread(saved.id).positions.find((p) => p.key === 'p2').y).toBe(70)
+  })
+
+  // ---- 坏 flow 兜底（评审 2026-09-03）：恢复不得把坏数据变成崩局，须回首页 ----
+  function seedFlow(patch) {
+    saveFlow({
+      phase: 'picking', spreadId: SPREAD_3, question: '', domain: null,
+      pending: [], pickedIndices: [], drawn: [], revealedKeys: [],
+      snapshot: { reversalsEnabled: false, autoDraw: false },
+      journalId: null, isDaily: false, freeMode: false, freePositions: [], entryPath: '',
+      ...patch
+    })
+  }
+
+  it('坏 flow：picking 阶段 pending 长度与牌阵不符 -> tryRestore false 并清掉坏 flow', () => {
+    seedFlow({ pending: [{ id: 'major-00', reversed: false }] }) // 3 张阵只给 1 张
+    setActivePinia(createPinia())
+    expect(useReadingStore().tryRestore()).toBe(false)
+    expect(sessionStorage.getItem(FLOW_KEY)).toBeNull()
+  })
+
+  it('坏 flow：pending 含未知牌 id -> false', () => {
+    seedFlow({
+      pending: [
+        { id: 'major-00', reversed: false },
+        { id: 'not-a-card', reversed: true },
+        { id: 'major-02', reversed: false }
+      ]
+    })
+    setActivePinia(createPinia())
+    expect(useReadingStore().tryRestore()).toBe(false)
+  })
+
+  it('坏 flow：drawn 的 positionKey 不在牌阵里 -> false', () => {
+    seedFlow({
+      phase: 'revealing',
+      pending: [
+        { id: 'major-00', reversed: false },
+        { id: 'major-01', reversed: false },
+        { id: 'major-02', reversed: false }
+      ],
+      drawn: [{ cardId: 'major-00', reversed: false, positionKey: 'nope' }]
+    })
+    setActivePinia(createPinia())
+    expect(useReadingStore().tryRestore()).toBe(false)
+  })
+
+  it('坏 flow：revealing 阶段 drawn 不满 -> false；revealedKeys 指向未落位牌 -> false', () => {
+    const pool = [
+      { id: 'major-00', reversed: false },
+      { id: 'major-01', reversed: false },
+      { id: 'major-02', reversed: false }
+    ]
+    seedFlow({
+      phase: 'revealing',
+      pending: pool,
+      drawn: [{ cardId: 'major-00', reversed: false, positionKey: 'past' }]
+    })
+    setActivePinia(createPinia())
+    expect(useReadingStore().tryRestore()).toBe(false)
+
+    clearFlow()
+    seedFlow({
+      phase: 'revealing',
+      pending: pool,
+      drawn: [
+        { cardId: 'major-00', reversed: false, positionKey: 'past' },
+        { cardId: 'major-01', reversed: false, positionKey: 'present' },
+        { cardId: 'major-02', reversed: false, positionKey: 'future' }
+      ],
+      revealedKeys: ['past', 'ghost'] // ghost 未落位
+    })
+    setActivePinia(createPinia())
+    expect(useReadingStore().tryRestore()).toBe(false)
   })
 })

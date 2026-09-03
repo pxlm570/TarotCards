@@ -242,11 +242,33 @@ export const useReadingStore = defineStore('reading', {
         return false
       }
       // 自由摆放局自包含（位置随 flow 持久化）；注册表局要求牌阵仍存在（含自定义被删 -> 恢复失败回首页）
-      const spreadOk =
+      const spreadObj =
         saved.freeMode && saved.spreadId === 'free'
           ? Array.isArray(saved.freePositions) && saved.freePositions.length > 0
-          : !!findSpread(saved.spreadId)
-      if (!spreadOk) return false
+            ? { positions: saved.freePositions, cardCount: saved.freePositions.length }
+            : null
+          : findSpread(saved.spreadId)
+      if (!spreadObj) return false
+      // 坏 flow 不得恢复成崩局（评审 2026-09-03）：抽牌池/落位/翻开集形状校验，
+      // 坏数据清掉回首页，否则 _placeNext/画布会在渲染期 TypeError
+      if (['picking', 'revealing', 'interpreting'].includes(saved.phase)) {
+        const positions = spreadObj.positions ?? []
+        const count = spreadObj.cardCount ?? positions.length
+        const poolOk = (arr) => Array.isArray(arr) && arr.every((c) => DECK_IDS.includes(c?.id) && typeof c?.reversed === 'boolean')
+        const pendingOk = poolOk(saved.pending) && saved.pending.length === count
+        const drawnOk =
+          Array.isArray(saved.drawn) &&
+          saved.drawn.length <= count &&
+          saved.drawn.every((d) => DECK_IDS.includes(d?.cardId) && positions.some((p) => p.key === d.positionKey))
+        const revealedOk =
+          Array.isArray(saved.revealedKeys) &&
+          saved.revealedKeys.every((k) => saved.drawn?.some((d) => d.positionKey === k))
+        const drawnFull = saved.phase === 'picking' || saved.drawn?.length === count
+        if (!pendingOk || !drawnOk || !revealedOk || !drawnFull) {
+          clearFlow()
+          return false
+        }
+      }
       Object.assign(this, { ...initialState(), ...saved })
       return true
     },

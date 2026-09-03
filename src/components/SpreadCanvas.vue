@@ -20,11 +20,13 @@ const emit = defineEmits(['flip', 'inspect', 'move'])
 
 const { manifest, cardUrl, backUrl, error, retry } = useDeck()
 
+// 悬空 positionKey 兜底（评审 2026-09-03）：牌阵编辑删位后，历史记录的 key 可能对不上，
+// 画布跳过该牌渲染而不是对 undefined 取坐标崩页（文字列表在详情页仍有「第 N 张」兜底）
 const placed = computed(() =>
-  props.cards.map((c) => ({
-    ...c,
-    position: props.spread.positions.find((p) => p.key === c.positionKey)
-  }))
+  props.cards.flatMap((c) => {
+    const position = props.spread.positions?.find((p) => p.key === c.positionKey)
+    return position ? [{ ...c, position }] : []
+  })
 )
 
 function isRevealed(key) {
