@@ -1,6 +1,6 @@
 // 自定义牌阵数据层（v1.5 Task 5）：CRUD + 校验 + 容量上限。
 // 存储键 tarot.custom-spreads.v1（走 storage.js safe 封装）；id 强制 custom- 前缀，
-// 与静态 spreads.json 的 id 永不撞车；位置 key 统一 p1..pN（保存时归一，编辑器无需关心）。
+// 与静态 spreads.json 的 id 永不撞车；位置 key 稳定跟随牌位（编辑删位不重排，见 normalizePositions）。
 import { safeGetItem, safeSetItem } from './storage.js'
 import spreadsData from '../data/spreads.json'
 
@@ -26,10 +26,17 @@ function persist(list) {
   safeSetItem(CUSTOM_SPREADS_KEY, JSON.stringify(list))
 }
 
+// 稳定位置 key（评审 2026-09-03）：key 跟随牌位身份——带合法 key 的行保留原编号
+// （编辑删位后历史记录的 positionKey 不悬空/错位），无 key 的行（新加牌位/旧调用方）
+// 顺位取最大编号 +1，允许稀疏（p1, p3）。key 是不透明标识，消费方一律按数组序取位。
+const KEY_RE = /^p(\d+)$/
+
 function normalizePositions(positions) {
   if (!Array.isArray(positions) || positions.length < 1) fail('至少需要 1 个牌位')
   if (positions.length > 10) fail('最多 10 个牌位')
-  return positions.map((p, i) => {
+  let max = 0
+  const seen = new Set()
+  const rows = positions.map((p, i) => {
     const label = typeof p?.label === 'string' ? p.label.trim().slice(0, 12) : ''
     if (!label) fail(`第 ${i + 1} 个牌位名称不能为空`)
     const meaning = typeof p.meaning === 'string' ? p.meaning.trim().slice(0, 50) : ''
@@ -37,8 +44,20 @@ function normalizePositions(positions) {
       fail(`第 ${i + 1} 个牌位坐标必须是数字`)
     }
     if (p.x < 0 || p.x > 100 || p.y < 0 || p.y > 100) fail(`第 ${i + 1} 个牌位坐标须在 0-100`)
-    return { key: `p${i + 1}`, label, meaning, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }
+    let key = null
+    if (p?.key != null) {
+      const m = KEY_RE.exec(p.key)
+      const n = m ? Number(m[1]) : 0
+      if (!m || n < 1 || n > 99) fail(`第 ${i + 1} 个牌位 key 非法：${p.key}`)
+      if (seen.has(n)) fail(`第 ${i + 1} 个牌位 key 重复：${p.key}`)
+      seen.add(n)
+      if (n > max) max = n
+      key = p.key
+    }
+    return { label, meaning, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, key }
   })
+  let next = max + 1
+  return rows.map(({ key, ...rest }) => ({ ...rest, key: key ?? `p${next++}` }))
 }
 
 export function listCustomSpreads() {

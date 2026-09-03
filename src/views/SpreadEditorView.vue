@@ -15,7 +15,9 @@ const MAX_POS = 10
 const CLAMP = { min: 5, max: 95 }
 
 const name = ref('')
-const positions = ref([]) // {label, meaning, x, y}--key 由数据层保存时归一
+// 行带稳定 key（评审 2026-09-03）：编辑删位后幸存行 key 不变，历史记录的 positionKey 不漂移；
+// 新加的行分配当前最大编号 +1。key 对编辑器不透明，保存时随行交给数据层校验。
+const positions = ref([]) // {key, label, meaning, x, y}
 const selected = ref(-1)
 const editId = ref(null)
 const initialSnapshot = ref('')
@@ -27,7 +29,7 @@ onMounted(() => {
     if (found) {
       editId.value = found.id
       name.value = found.name
-      positions.value = found.positions.map((p) => ({ label: p.label, meaning: p.meaning, x: p.x, y: p.y }))
+      positions.value = found.positions.map((p) => ({ key: p.key, label: p.label, meaning: p.meaning, x: p.x, y: p.y }))
     } else {
       toast('要编辑的牌阵不存在', 'warn')
     }
@@ -55,6 +57,15 @@ function canvasPoint(e) {
   }
 }
 
+function nextKey() {
+  let max = 0
+  for (const p of positions.value) {
+    const m = /^p(\d+)$/.exec(p.key ?? '')
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return `p${max + 1}`
+}
+
 function onCanvasDown(e) {
   if (e.target !== canvasEl.value) return
   if (positions.value.length >= MAX_POS) {
@@ -62,7 +73,7 @@ function onCanvasDown(e) {
     return
   }
   const pt = canvasPoint(e)
-  positions.value.push({ label: `牌位 ${positions.value.length + 1}`, meaning: '', x: pt.x, y: pt.y })
+  positions.value.push({ key: nextKey(), label: `牌位 ${positions.value.length + 1}`, meaning: '', x: pt.x, y: pt.y })
   selected.value = positions.value.length - 1
   tap()
 }

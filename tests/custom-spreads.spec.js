@@ -29,6 +29,76 @@ describe('custom-spreads', () => {
     expect(getCustomSpread('single')).toBe(null) // 静态 id 不在本库
   })
 
+  // ---- 稳定位置 key（评审 2026-09-03）：key 跟随牌位身份，编辑删位不重排，
+  // 历史记录的 positionKey 永不悬空/错位 ----
+  it('稳定 key：编辑删中间位，幸存行 key 不重排', () => {
+    const created = saveCustomSpread({
+      name: '三阵',
+      positions: [
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { key: 'p2', label: '二', x: 50, y: 50 },
+        { key: 'p3', label: '三', x: 90, y: 90 }
+      ]
+    })
+    saveCustomSpread({
+      id: created.id,
+      name: '三阵',
+      positions: [
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { key: 'p3', label: '三', x: 90, y: 90 }
+      ]
+    })
+    const after = getCustomSpread(created.id)
+    expect(after.positions.map((p) => p.key)).toEqual(['p1', 'p3'])
+    expect(after.cardCount).toBe(2)
+  })
+
+  it('稳定 key：新增行顺位取最大编号 +1（p1,p3 存在 -> 新行 p4）', () => {
+    const created = saveCustomSpread({
+      name: '稀疏',
+      positions: [
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { key: 'p3', label: '三', x: 90, y: 90 }
+      ]
+    })
+    const updated = saveCustomSpread({
+      id: created.id,
+      name: '稀疏',
+      positions: [
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { key: 'p3', label: '三', x: 90, y: 90 },
+        { label: '新位', x: 50, y: 50 }
+      ]
+    })
+    expect(updated.positions.map((p) => p.key)).toEqual(['p1', 'p3', 'p4'])
+  })
+
+  it('稳定 key：重复 key 与非法 key 格式均拒绝', () => {
+    expect(() =>
+      saveCustomSpread({
+        name: '重键',
+        positions: [
+          { key: 'p2', label: 'a', x: 10, y: 10 },
+          { key: 'p2', label: 'b', x: 20, y: 20 }
+        ]
+      })
+    ).toThrow()
+    expect(() =>
+      saveCustomSpread({ name: '坏键', positions: [{ key: 'pos1', label: 'a', x: 10, y: 10 }] })
+    ).toThrow()
+  })
+
+  it('向后兼容：不带 key 的行仍顺位补号 p1..pN（自由摆放/旧调用方不受影响）', () => {
+    const s = saveCustomSpread({
+      name: '旧式',
+      positions: [
+        { label: 'a', x: 10, y: 10 },
+        { label: 'b', x: 50, y: 50 }
+      ]
+    })
+    expect(s.positions.map((p) => p.key)).toEqual(['p1', 'p2'])
+  })
+
   it('更新：带 id 保存覆盖原条目且 id 不变，createdAt 不被刷新', () => {
     const saved = saveCustomSpread({ name: '草稿', positions: okPositions })
     const updated = saveCustomSpread({ id: saved.id, name: '定稿', positions: okPositions })
