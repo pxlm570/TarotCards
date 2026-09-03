@@ -47,7 +47,7 @@ function rate(rating) {
     <FlashCard v-if="current" :card="current" :img="cardUrl(current.id)" />
 
     <div v-if="finished" class="done card">
-      <p class="done-title">本组闪卡复习完成</p>
+      <p class="done-title">本组卡牌复习完成</p>
       <p class="done-hint">间隔重复会记得你今天复习过，过些天再来巩固。</p>
     </div>
 

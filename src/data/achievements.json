@@ -6,8 +6,8 @@
   { "id": "ch-05-done", "title": "看见两面", "desc": "完成第 5 章「正逆位入门」" },
   { "id": "ch-06-done", "title": "提问的艺术", "desc": "完成第 6 章「牌阵与提问」" },
   { "id": "ch-07-done", "title": "愚人毕业", "desc": "完成第 7 章「毕业实战」" },
-  { "id": "flash-10", "title": "温故知新", "desc": "累计复习闪卡 10 次" },
-  { "id": "flash-50", "title": "记忆大师", "desc": "累计复习闪卡 50 次" },
+  { "id": "flash-10", "title": "温故知新", "desc": "累计复习卡牌 10 次" },
+  { "id": "flash-50", "title": "记忆大师", "desc": "累计复习卡牌 50 次" },
   { "id": "first-reading", "title": "初次的牌", "desc": "完成第一次占卜（M3 触发）" },
   { "id": "streak-7", "title": "七日之约", "desc": "连续打卡 7 天（M3 触发）" }
 ]

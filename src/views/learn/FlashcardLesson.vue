@@ -14,7 +14,7 @@ const learning = useLearningStore()
 
 function onComplete() {
   learning.completeLesson(props.chapterId, props.lessonId)
-  toast('闪卡复习完成', 'success')
+  toast('卡牌复习完成', 'success')
 }
 </script>
 

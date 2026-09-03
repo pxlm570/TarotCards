@@ -42,14 +42,14 @@ function goDeck() {
     <div v-if="learning.graduated" class="grad card">
       <AppIcon name="star" :size="26" />
       <p class="grad-title">已毕业 · 世界</p>
-      <p class="grad-text">你已走完愚人之旅。全库闪卡复习已解锁，长期维护你的记忆。</p>
+      <p class="grad-text">你已走完愚人之旅。全库卡牌复习已解锁，长期维护你的记忆。</p>
     </div>
 
     <button class="review card-press" @click="router.push('/learn/review')">
       <AppIcon name="deck" :size="22" />
       <span class="review-main">
         <b>今日复习</b>
-        <span class="review-sub">{{ dueCount }} 张闪卡待复习</span>
+        <span class="review-sub">{{ dueCount }} 张卡牌待复习</span>
       </span>
       <span class="review-cta">
         去复习 <AppIcon name="arrow" :size="15" />

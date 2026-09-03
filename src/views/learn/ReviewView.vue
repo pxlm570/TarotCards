@@ -36,7 +36,7 @@ const title = computed(() => (allMode || learning.graduated ? '全库复习' : '
     <FlashcardSession v-if="cardIds.length" :key="cardIds.join(',')" :card-ids="cardIds" />
     <div v-else class="empty card">
       <AppIcon name="check" :size="22" />
-      <p>今天没有到期的闪卡，明天再来巩固吧。</p>
+      <p>今天没有到期的卡牌，明天再来巩固吧。</p>
       <button class="btn-ghost" @click="goBack('/learn')">返回</button>
     </div>
   </div>

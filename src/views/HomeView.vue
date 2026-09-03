@@ -250,7 +250,7 @@ const ritualIcon = computed(() => {
       </div>
       <div class="goal">
         <span class="goal-dot" :class="{ done: reviewDone }"><AppIcon :name="reviewDone ? 'check' : 'deck'" :size="14" /></span>
-        <span class="goal-text">复习 {{ learning.todayReviewCount }}/3 张闪卡</span>
+        <span class="goal-text">复习 {{ learning.todayReviewCount }}/3 张卡牌</span>
       </div>
     </section>
 

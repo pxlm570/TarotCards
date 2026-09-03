@@ -65,6 +65,6 @@ describe('ReviewView：闪卡会话不随评分重建', () => {
     await session.findAll('.rate')[2].trigger('click')
     const s2 = wrapper.findComponent(FlashcardSession)
     await s2.findAll('.rate')[2].trigger('click')
-    expect(wrapper.text()).toContain('本组闪卡复习完成')
+    expect(wrapper.text()).toContain('本组卡牌复习完成')
   })
 })

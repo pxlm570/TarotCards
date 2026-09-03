@@ -94,7 +94,7 @@ const chapterContent = computed(() => {
           </span>
           <span class="item-main">
             <span class="item-title">{{ l.title }}</span>
-            <span class="item-type">{{ { article: '图文', flashcards: '闪卡', quiz: '测验', practice: '实战' }[l.type] }}</span>
+            <span class="item-type">{{ { article: '图文', flashcards: '卡牌', quiz: '测验', practice: '实战' }[l.type] }}</span>
           </span>
           <AppIcon v-if="learning.progress[chapterId]?.[l.id]" class="done-mark" name="check" :size="18" />
         </button>
