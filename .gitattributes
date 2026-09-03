@@ -1,0 +1,3 @@
+# 统一行尾：仓库与检出全 LF。plugin-vue 生产构建把 SFC 源码字节掺进 scope id，
+# Windows autocrlf 检出的 CRLF 会让本地构建哈希与 CI 产物整体漂移，无法对账。
+* text=auto eol=lf
