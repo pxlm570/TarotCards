@@ -6,9 +6,24 @@ import { useLearningStore } from '../src/stores/learning.js'
 import { useProfileStore } from '../src/stores/profile.js'
 import ch01 from '../src/data/courses/chapter-01.json'
 import ch02 from '../src/data/courses/chapter-02.json'
+import ch03 from '../src/data/courses/chapter-03.json'
+import ch04 from '../src/data/courses/chapter-04.json'
+import ch05 from '../src/data/courses/chapter-05.json'
+import ch06 from '../src/data/courses/chapter-06.json'
+import ch07 from '../src/data/courses/chapter-07.json'
 
 const L1 = ch01.lessons.map((l) => l.id)
 const L2 = ch02.lessons.map((l) => l.id)
+// 全部七章（graduated 毕业回归用例用）
+const ALL_CHAPTERS = [
+  ['ch-01', L1],
+  ['ch-02', L2],
+  ['ch-03', ch03.lessons.map((l) => l.id)],
+  ['ch-04', ch04.lessons.map((l) => l.id)],
+  ['ch-05', ch05.lessons.map((l) => l.id)],
+  ['ch-06', ch06.lessons.map((l) => l.id)],
+  ['ch-07', ch07.lessons.map((l) => l.id)]
+]
 
 function completeChapter(store, chapterId, lessonIds) {
   let last = null
@@ -140,5 +155,18 @@ describe('learning store', () => {
     expect(due).toContain('major-01')
     expect(due).not.toContain('major-00')
     vi.useRealTimers()
+  })
+
+  it('毕业后 graduated 为 true 且不抛错（回归：箭头 getter 里 this 是 undefined）', () => {
+    const s = useLearningStore()
+    for (const [ch, ids] of ALL_CHAPTERS) completeChapter(s, ch, ids)
+    expect(s.unlocked).toContain('ch-07')
+    // 未毕业时 getter 因短路恰好返回 false；解锁 ch-07 后原实现求值 this._chapterComplete 必抛
+    expect(s.graduated).toBe(true)
+  })
+
+  it('未毕业时 graduated 为 false', () => {
+    const s = useLearningStore()
+    expect(s.graduated).toBe(false)
   })
 })

@@ -59,7 +59,11 @@ export const useLearningStore = defineStore('learning', {
     todayReviewCount: (s) => s.reviewLog[currentDayKey()] || 0,
     totalDoneCount: (s) => Object.values(s.progress).reduce((n, m) => n + Object.keys(m).length, 0),
     totalLessonCount: () => Object.values(CHAPTER_LESSONS).reduce((n, arr) => n + arr.length, 0),
-    graduated: (s) => s.unlocked.includes('ch-07') && this._chapterComplete('ch-07')
+    // 注意必须用普通函数：箭头函数吃不到 Pinia 注入的 this（模块顶层 this 是
+    // undefined），解锁 ch-07 后求值 this._chapterComplete 会直接 TypeError（有回归测试）
+    graduated() {
+      return this.unlocked.includes('ch-07') && this._chapterComplete('ch-07')
+    }
   },
 
   actions: {
