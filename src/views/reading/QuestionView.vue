@@ -6,6 +6,7 @@ import spreads from '../../data/spreads.json'
 import { useReadingStore } from '../../stores/reading.js'
 import { useSettingsStore } from '../../stores/settings.js'
 import { getCustomSpread } from '../../lib/custom-spreads.js'
+import { currentDayKey } from '../../lib/day-key.js'
 import AppIcon from '../../components/AppIcon.vue'
 import ClarifyDialog from '../../components/ClarifyDialog.vue'
 import FlowExit from '../../components/FlowExit.vue'
@@ -51,6 +52,8 @@ onMounted(() => {
       if (store.phase !== 'questioning' || store.spreadId !== sid || store.isDaily !== isDaily) {
         store.reset()
         store.isDaily = isDaily
+        // 打卡日进局定格（评审 2026-09-03）：跨凌晨 4 点重挂载不再把昨天的局记到今天
+        if (isDaily) store.dailyDayKey = currentDayKey()
         store.selectSpread(sid)
         store.beginBreathing()
         store.toQuestion()

@@ -61,10 +61,10 @@ function ensureSaved() {
   } else if (!journal.getById(id)) {
     journal.addReading(build(id))
   }
-  // 每日一抽：写入当天打卡（凌晨 4 点分界）
+  // 每日一抽：写打卡。日 key 用进局时定格的快照（评审 2026-09-03）——跨凌晨 4 点
+  // 重挂载不能把昨天的局记到今天；存量无快照的旧局回落 currentDayKey
   if (store.isDaily) {
-    const day = currentDayKey()
-    journal.markDaily(day, id)
+    journal.markDaily(store.dailyDayKey || currentDayKey(), id)
   }
 }
 

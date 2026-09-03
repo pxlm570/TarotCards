@@ -44,6 +44,7 @@ function initialState() {
     snapshot: null, // finishShuffle 时的设置快照 { reversalsEnabled, autoDraw }
     journalId: null, // M3：本局已写入记录库的 reading id（随 flow 持久化，一局只存一次）
     isDaily: false, // M3：每日一抽局（?daily=1），落库时打卡
+    dailyDayKey: '', // 每日局打卡日快照（进局时定格，评审 2026-09-03：跨凌晨4点重挂载不再把昨天的局记到今天）
     freeMode: false, // v1.5 Task 7：自由摆放局（翻牌后拖位，不依赖任何注册表牌阵）
     freePositions: [], // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
     entryPath: '' // 动线入口页（2026-08-31「从哪进、退回哪」）：开局在提问页捕获，退出/手势退出回这里
@@ -231,8 +232,8 @@ export const useReadingStore = defineStore('reading', {
     },
 
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, freeMode, freePositions, entryPath } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, freeMode, freePositions: freePositions.map((p) => ({ ...p })), entryPath })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions, entryPath } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions: freePositions.map((p) => ({ ...p })), entryPath })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页

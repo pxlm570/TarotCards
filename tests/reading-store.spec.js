@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useReadingStore } from '../src/stores/reading.js'
 import { saveReading as journalSave, getById as journalGetById } from '../src/lib/journal-store.js'
@@ -528,4 +528,35 @@ describe('reading store：自由摆放（v1.5 Task 7）', () => {
     setActivePinia(createPinia())
     expect(useReadingStore().tryRestore()).toBe(false)
   })
+
+  it('每日局打卡日 key 随局快照：跨凌晨4点恢复不再按 now 重算（评审 2026-09-03）', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-03T23:00:00'))
+    const store = useReadingStore()
+    store.selectSpread(SPREAD_3)
+    store.isDaily = true
+    store.dailyDayKey = '2026-09-03' // QuestionView 置位 isDaily 时定格
+    store.beginBreathing()
+    store.toQuestion()
+    store.submitQuestion('q', null)
+    store.finishShuffle()
+    expect(JSON.parse(sessionStorage.getItem(FLOW_KEY)).dailyDayKey).toBe('2026-09-03')
+
+    // 跨过凌晨 4 点后刷新恢复：打卡日仍指向抽卡那天
+    vi.setSystemTime(new Date('2026-09-04T05:00:00'))
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.dailyDayKey).toBe('2026-09-03')
+    vi.useRealTimers()
+  })
+
+  it('存量无 dailyDayKey 的 flow 恢复为空串（解读页回落 currentDayKey）', () => {
+    saveFlow({ phase: 'questioning', spreadId: SPREAD_3 })
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.dailyDayKey).toBe('')
+  })
+
 })
