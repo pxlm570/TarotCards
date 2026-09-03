@@ -1,21 +1,40 @@
 <script setup>
 // AI 解读详情页：端点配置/人格/测试连接/分享链接（v1.5「我的」页收缩重构，从主页面迁入）。
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { loadSettings } from '../../lib/storage.js'
 import { useSettingsStore } from '../../stores/settings.js'
 import { streamChat } from '../../lib/ai-client.js'
 import { renderSVG } from 'uqr'
 import { useEscClose } from '../../composables/use-esc-close.js'
+import { takePendingImport } from '../../lib/config-import.js'
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { toast } from '../../lib/feedback.js'
 
+const route = useRoute()
 const settingsStore = useSettingsStore()
 const testing = ref(false)
 const aiInput = ref({ ...loadSettings() })
 const shareLink = ref('') // 生成的配置分享链接（二维码弹层）
 const qrSvg = computed(() => (shareLink.value ? renderSVG(shareLink.value) : ''))
 useEscClose(() => (shareLink.value = '')) // Esc 关闭二维码弹层
+
+// 分享配置两段式（评审 2026-09-03）：main.js 只解析暂存并带 ?import=1 跳转到这里，
+// 由用户亲眼确认「应用/放弃」——不再静默写入，防伪造链接静默替换 AI 端点。
+const pendingImport = ref(null)
+onMounted(() => {
+  if (route.query.import === '1') pendingImport.value = takePendingImport()
+})
+function applyImport() {
+  if (!pendingImport.value) return
+  saveAI(pendingImport.value)
+  pendingImport.value = null
+  toast('已导入分享的 AI 配置', 'success')
+}
+function discardImport() {
+  pendingImport.value = null // 暂存在进页时已被 takePendingImport 取走清掉
+}
 
 // 快捷填充：只帮填 baseUrl（不做官方端点绑定，其余常见端点自填 model/key）
 const QUICK_ENDPOINTS = [
@@ -77,6 +96,20 @@ function copyShareLink() {
 <template>
   <div class="page ai-view">
     <PageHead title="AI 解读" back-to="/profile" back-label="我的" sub="baseUrl / 模型 / key 全部自填，任何 OpenAI 兼容端点都行。key 只存在本机浏览器。不配置时应用 100% 可用。" />
+
+    <!-- 分享配置确认条：链接导入的第二段（第一段在 main.js 暂存） -->
+    <section v-if="pendingImport" class="card block import-banner">
+      <p class="import-title">检测到分享的 AI 配置</p>
+      <p class="import-meta">
+        {{ pendingImport.baseUrl || '（未填端点）' }} · {{ pendingImport.model || '（未填模型）' }} ·
+        {{ pendingImport.apiKey ? '含 API key' : '不含 key' }}
+      </p>
+      <p class="import-warn">只应用来源可信的配置；应用后你的提问会发送到该端点。</p>
+      <div class="import-actions">
+        <button class="btn-ghost" @click="discardImport">放弃</button>
+        <button class="btn-solid" @click="applyImport">应用</button>
+      </div>
+    </section>
 
     <section class="card block">
       <div class="quickfill">
@@ -253,6 +286,32 @@ function copyShareLink() {
 }
 
 .dialog-actions > button {
+  flex: 1;
+}
+.import-title {
+  font-size: var(--fs-head);
+  margin-bottom: 6px;
+}
+
+.import-meta {
+  font-size: var(--fs-note);
+  color: var(--ink);
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+
+.import-warn {
+  font-size: var(--fs-note);
+  color: var(--coral);
+  margin-bottom: 10px;
+}
+
+.import-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.import-actions > button {
   flex: 1;
 }
 </style>

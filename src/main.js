@@ -8,7 +8,8 @@ import { createAppRouter } from './router/index.js'
 import { initTheme } from './lib/theme.js'
 import { applyMotionPreference } from './lib/feedback.js'
 import { setupUpdateReload } from './lib/sw-refresh.js'
-import { saveSettings, loadSettings } from './lib/storage.js'
+import { loadSettings } from './lib/storage.js'
+import { parseImportHash, stashPendingImport } from './lib/config-import.js'
 
 // index.html 头部内联脚本已定首帧主题（防白闪）；这里接管运行期切换与系统偏好联动
 initTheme()
@@ -17,20 +18,17 @@ applyMotionPreference()
 // M5 睡前大字档：设置根字号
 if (loadSettings().fontSize === 'large') document.documentElement.setAttribute('data-fontsize', 'large')
 
-// M4 配置分享链接契约：#import=<base64> 必须在挂载 hash 路由之前解析，
-// 否则会被路由当作非法路径。base64 用 Unicode 安全编码（btoa 直接处理中文会炸）。
+// M4 配置分享链接契约：#import=<base64> 必须在挂载 hash 路由之前处理，
+// 否则会被路由当作非法路径。两段式（评审 2026-09-03）：解析暂存后带 ?import=1
+// 跳设置页出「应用/放弃」确认条——不再静默写入，防伪造链接静默替换 AI 端点。
 if (location.hash.startsWith('#import=')) {
-  try {
-    const raw = location.hash.slice('#import='.length)
-    const json = decodeURIComponent(escape(atob(raw)))
-    const cfg = JSON.parse(json)
-    if (cfg && (cfg.baseUrl || cfg.model || cfg.apiKey)) {
-      saveSettings({ baseUrl: cfg.baseUrl || '', model: cfg.model || '', apiKey: cfg.apiKey || '' })
-    }
-  } catch {
-    /* 无效链接：静默忽略 */
+  const cfg = parseImportHash(location.hash)
+  if (cfg) {
+    stashPendingImport(cfg)
+    history.replaceState(null, '', location.pathname + location.search + '#/profile/ai?import=1')
+  } else {
+    history.replaceState(null, '', location.pathname + location.search)
   }
-  history.replaceState(null, '', location.pathname + location.search)
 }
 
 // SW autoUpdate 清旧缓存后，预加载旧 hash chunk 失败：刷新自愈（Vite 内建事件）
