@@ -2,14 +2,19 @@
 // 此前 ritual 提示的 dayKey 是无依赖 computed，应用挂着过夜「今日限定」不换日。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { effectScope } from 'vue'
-import { useDayKey } from '../src/composables/use-day-key.js'
 
 describe('useDayKey：跨凌晨 4 点换日', () => {
   let scope
+  let useDayKey
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-17T03:00:00')) // 4 点界前，属 08-16
+    // 单例模块状态（dayKey ref / consumers 引用计数）在 isolate:false 下随 worker 跨文件共享：
+    // 其它文件的测试若泄漏消费者，静态导入会拿到被污染的单例（home-topbar.spec 未卸载曾致 CI 全红）。
+    // 每例重置模块后动态导入，拿到全新单例，时序上已在假时钟之后，初始值即假时间。
+    vi.resetModules()
+    ;({ useDayKey } = await import('../src/composables/use-day-key.js'))
     scope = effectScope()
   })
 

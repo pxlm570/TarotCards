@@ -1,6 +1,6 @@
 // 首页顶栏状态胶囊（2026-09-03 多邻国风改版，方案一全彩实底）：
 // 火焰连胜（0 走灰态）+ 等级 XP + 帮助；hero 中央牌的连胜徽章随顶栏去重移除。
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
@@ -19,11 +19,16 @@ vi.mock('../src/router/index.js', () => ({
     interpreting: '/reading/interpretation'
   }
 }))
+// 顶栏用例不测仪式行：mock 掉 useRitualToday，避免 HomeView 成为 useDayKey 单例的消费者
+vi.mock('../src/composables/use-ritual-today.js', () => ({
+  useRitualToday: () => ({ ritualToday: null, ritualSpread: null })
+}))
 vi.mock('../src/lib/use-deck.js', () => ({
   useDeck: () => ({ cardUrl: () => '', backUrl: () => '' })
 }))
 vi.mock('../src/lib/feedback.js', () => ({ tap: vi.fn() }))
 
+let wrapper
 async function mountHome() {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -35,7 +40,8 @@ async function mountHome() {
   })
   router.push('/')
   await router.isReady()
-  return mount(HomeView, { global: { plugins: [router] } })
+  wrapper = mount(HomeView, { global: { plugins: [router] } })
+  return wrapper
 }
 
 // day-key 相邻日：currentDayKey 本身含凌晨 4 点换日，直接在其返回值上减一历日
@@ -50,6 +56,13 @@ describe('HomeView：顶栏状态胶囊', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    // 组件 effect scope 是 useDayKey 单例的消费者：不卸载会把 consumers 永久挂 >0，
+    // 污染同 worker 后续文件（isolate:false，CI 上 use-day-key.spec 全红的根因）
+    if (wrapper) wrapper.unmount()
+    wrapper = null
   })
 
   it('连胜 0：火焰走灰态，数字为 0', async () => {
