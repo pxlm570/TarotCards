@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settings.js'
 import { PHASE_ROUTE } from '../router/index.js'
 import { currentDayKey } from '../lib/day-key.js'
 import { calcStreak, calcMaxStreak } from '../lib/streak.js'
+import { levelProgress, levelCardId } from '../lib/xp.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import { buildGreetingMessages } from '../lib/ai-prompts.js'
 import { useDeck } from '../lib/use-deck.js'
@@ -62,6 +63,10 @@ const maxStreak = computed(() => calcMaxStreak(Object.keys(journal.dailyDraws)))
 const todayDrawn = computed(() => !!journal.dailyDraws[currentDayKey()])
 // 今日未打卡但昨日有连胜：提示「别让连胜断了」
 const pendingToday = computed(() => !todayDrawn.value && streak.value > 0)
+
+// ---- 顶栏状态胶囊（2026-09-03 多邻国风改版）：火焰连胜 + 等级 ----
+const level = computed(() => levelProgress(profile.xp).level)
+const levelName = computed(() => cardById.get(levelCardId(level.value))?.name ?? '')
 
 // ---- 今日小目标：抽 1 张 + 复习 3 张闪卡 ----
 const reviewDone = computed(() => learning.todayReviewCount >= 3)
@@ -179,9 +184,19 @@ const ritualIcon = computed(() => {
   <div class="home">
     <header class="home-header">
       <h1 class="title wordmark">星语<em>塔罗</em></h1>
-      <router-link to="/welcome" class="help card-press" aria-label="重看新手引导">
-        <AppIcon name="help" :size="22" />
-      </router-link>
+      <div class="stat-group">
+        <span class="pill fire" :class="{ cold: streak === 0 }" :aria-label="`连续打卡 ${streak} 天`">
+          <AppIcon name="flame" :size="16" />
+          <b>{{ streak }}</b>
+        </span>
+        <span class="pill xp" :aria-label="`等级 Lv.${level} ${levelName}`">
+          <AppIcon name="star" :size="15" />
+          <span class="pill-text">Lv.{{ level }} <b>{{ levelName }}</b></span>
+        </span>
+        <router-link to="/welcome" class="pill help" aria-label="重看新手引导">
+          <AppIcon name="help" :size="19" />
+        </router-link>
+      </div>
     </header>
 
     <!-- hero：星光牌阵，中央牌 = 每日一抽入口 -->
@@ -200,7 +215,6 @@ const ritualIcon = computed(() => {
             <img v-if="dailyReading && dailyFaceUrl" :src="dailyFaceUrl" :alt="dailyCardName" />
             <img v-else-if="backUrl()" :src="backUrl()" alt="每日一抽" />
             <span v-else class="ph" />
-            <span v-if="streak > 0" class="streak-badge"><b>{{ streak }}</b> 天</span>
           </button>
           <div v-else class="fan-card" :style="{ '--r': s.r + 'deg', '--ty': s.ty + 'px', '--i': i }" aria-hidden="true">
             <img v-if="backUrl()" :src="backUrl()" alt="" />
@@ -277,26 +291,83 @@ const ritualIcon = computed(() => {
 
 .home-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .title {
-  font-size: 1.625rem;
+  font-size: 1.125rem;
+  margin-right: auto;
+  white-space: nowrap;
 }
 
-.help {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-sm);
+/* ---- 顶栏状态胶囊（2026-09-03 多邻国风改版，方案一全彩实底）---- */
+.stat-group {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: var(--dim);
-  font-size: var(--fs-head);
-  font-weight: var(--w-title);
+  gap: 7px;
   flex-shrink: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.pill b {
+  font-size: 0.9375rem;
+  line-height: 1;
+  font-weight: var(--w-strong);
+}
+
+.pill-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+/* 火焰＝连胜荣誉位：--fire 比品牌珊瑚红深一档，白字达 AA（token 注释有对比度） */
+.pill.fire {
+  padding: 8px 12px;
+  background: var(--fire);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--fire-deep);
+}
+
+/* 连胜 0：灰态，不冒火 */
+.pill.fire.cold {
+  background: var(--sunk);
+  color: var(--dim);
+  box-shadow: 0 3px 0 var(--line);
+}
+
+.pill.xp {
+  background: var(--gold);
+  color: var(--on-gold);
+  box-shadow: 0 3px 0 var(--gold-deep);
+}
+
+/* 帮助：唯一的交互位，按压下沉 */
+.pill.help {
+  padding: 8px 10px;
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out), box-shadow var(--t-press) var(--ease-out);
+}
+
+.pill.help:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* ---- hero：星尘穹顶 + 牌阵（2026-09-01 定稿「星光牌阵」）---- */
@@ -392,25 +463,6 @@ const ritualIcon = computed(() => {
 @keyframes halo {
   0%, 100% { box-shadow: 0 10px 24px var(--gold-glow), var(--shadow-card); }
   50% { box-shadow: 0 10px 28px var(--gold-glow), 0 0 0 6px var(--gold-soft), var(--shadow-card); }
-}
-
-.streak-badge {
-  position: absolute;
-  top: -10px;
-  right: -8px;
-  background: var(--gold);
-  color: var(--on-gold);
-  border-radius: var(--radius-pill);
-  padding: 3px 9px;
-  font-size: 0.6875rem;
-  font-weight: var(--w-strong);
-  box-shadow: var(--shadow-card);
-  white-space: nowrap;
-}
-
-.streak-badge b {
-  font-size: 0.875rem;
-  line-height: 1;
 }
 
 .fan-hint {
