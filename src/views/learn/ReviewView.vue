@@ -15,8 +15,10 @@ const goBack = useBack()
 const allMode = route.query.all === '1'
 const allIds = cardsData.map((c) => c.id)
 
-// 全库复习：毕业解锁后，或主动带 all=1；否则复习到期卡
-const cardIds = computed(() => (allMode || learning.graduated ? allIds : learning.dueFlashcards().map((c) => c.id)))
+// 全库复习：毕业解锁后，或主动带 all=1；否则复习到期卡。
+// due 列表进页时定格一次快照（评审 2026-09-03）：评分会改 sr 让实时列表收缩，
+// 若作为 computed 传入会话并以其拼 key，每评一张就整场 remount（进度归零、again 卡消失）。
+const cardIds = allMode || learning.graduated ? allIds : learning.dueFlashcards().map((c) => c.id)
 const title = computed(() => (allMode || learning.graduated ? '全库复习' : '今日复习'))
 </script>
 
