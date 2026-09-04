@@ -293,6 +293,8 @@ const ritualIcon = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* 胶囊厚底边紧贴 hero 星尘区会显得憋（用户反馈要呼吸感），拉开一档 */
+  margin-bottom: var(--sp-2);
 }
 
 .title {
