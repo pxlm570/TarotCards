@@ -75,9 +75,20 @@ describe('cards.json', () => {
 })
 
 describe('spreads.json', () => {
-  it('包含 12 个牌阵且 id 唯一', () => {
-    expect(spreads).toHaveLength(12)
-    expect(new Set(spreads.map((s) => s.id)).size).toBe(12)
+  it('包含 16 个牌阵且 id 唯一（方案甲生活化 2026-09-04 新增四阵）', () => {
+    expect(spreads).toHaveLength(16)
+    expect(new Set(spreads.map((s) => s.id)).size).toBe(16)
+  })
+
+  it('每个牌阵带生活场景 scene：枚举合法、四组非空、仪式阵必归 ritual（方案甲 2026-09-04）', () => {
+    const SCENES = ['decide', 'daily', 'insight', 'ritual']
+    for (const s of spreads) expect(SCENES, `${s.id} scene`).toContain(s.scene)
+    for (const scene of SCENES) {
+      expect(spreads.filter((s) => s.scene === scene).length, `场景 ${scene}`).toBeGreaterThan(0)
+    }
+    for (const s of spreads) {
+      if (s.ritual) expect(s.scene, `${s.id} 仪式阵必须归 ritual 组`).toBe('ritual')
+    }
   })
 
   it('四个四季仪式牌阵 ritual 标记与 id 一致（v1.5 Task 4）', () => {

@@ -3,6 +3,7 @@
     "id": "single",
     "name": "单张指引",
     "difficulty": "新手",
+    "scene": "daily",
     "cardCount": 1,
     "positions": [
       {
@@ -20,9 +21,45 @@
     }
   },
   {
+    "id": "us-three",
+    "name": "我们之间",
+    "difficulty": "新手",
+    "scene": "insight",
+    "cardCount": 3,
+    "positions": [
+      {
+        "key": "me",
+        "label": "我的心",
+        "meaning": "我在这段关系里的真实感受",
+        "x": 22,
+        "y": 45
+      },
+      {
+        "key": "ta",
+        "label": "TA 的心",
+        "meaning": "对方的感受与态度",
+        "x": 78,
+        "y": 45
+      },
+      {
+        "key": "between",
+        "label": "我们之间",
+        "meaning": "这段关系当下的空气与可能走向",
+        "x": 50,
+        "y": 78
+      }
+    ],
+    "guide": {
+      "fit": "暧昧不明、吵架之后、异地牵挂——把两个人的感受和这段关系的空气各摆一张牌",
+      "who": "心里有个人、想借牌整理「我 / TA / 我们」三层感受的人",
+      "tip": "TA 的心只是对方此刻的状态，不是判决；先读自己那张，再读对方"
+    }
+  },
+  {
     "id": "time-flow",
     "name": "时间之流",
     "difficulty": "新手",
+    "scene": "insight",
     "cardCount": 3,
     "positions": [
       {
@@ -55,8 +92,9 @@
   },
   {
     "id": "holy-trinity",
-    "name": "圣三角",
+    "name": "状态体检",
     "difficulty": "新手",
+    "scene": "daily",
     "cardCount": 3,
     "positions": [
       {
@@ -88,9 +126,45 @@
     }
   },
   {
+    "id": "week-ahead",
+    "name": "这周怎么过",
+    "difficulty": "新手",
+    "scene": "daily",
+    "cardCount": 3,
+    "positions": [
+      {
+        "key": "theme",
+        "label": "本周主题",
+        "meaning": "这一周的主旋律",
+        "x": 50,
+        "y": 22
+      },
+      {
+        "key": "watch",
+        "label": "要留意的",
+        "meaning": "容易出状况、需要上心的点",
+        "x": 20,
+        "y": 62
+      },
+      {
+        "key": "chance",
+        "label": "机会在哪",
+        "meaning": "可以顺水推舟的地方",
+        "x": 80,
+        "y": 62
+      }
+    ],
+    "guide": {
+      "fit": "周一给自己定个基调：这周的主旋律、要避的坑、能借的力",
+      "who": "想给一周找节奏、又不想抽一大摊牌的人",
+      "tip": "周日晚或周一早上抽最合适；周末翻出来对照，会很有的聊"
+    }
+  },
+  {
     "id": "two-choice",
     "name": "二选一",
-    "difficulty": "进阶",
+    "difficulty": "新手",
+    "scene": "decide",
     "cardCount": 5,
     "positions": [
       {
@@ -136,9 +210,94 @@
     }
   },
   {
+    "id": "three-choice",
+    "name": "三选一",
+    "difficulty": "新手",
+    "scene": "decide",
+    "cardCount": 5,
+    "positions": [
+      {
+        "key": "self",
+        "label": "现状",
+        "meaning": "你当下的立足点",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "key": "a-result",
+        "label": "A 的结果",
+        "meaning": "走向 A 的可能局面",
+        "x": 18,
+        "y": 48
+      },
+      {
+        "key": "b-result",
+        "label": "B 的结果",
+        "meaning": "走向 B 的可能局面",
+        "x": 50,
+        "y": 48
+      },
+      {
+        "key": "c-result",
+        "label": "C 的结果",
+        "meaning": "走向 C 的可能局面",
+        "x": 82,
+        "y": 48
+      },
+      {
+        "key": "note",
+        "label": "共同提醒",
+        "meaning": "三条路都绕不开的一点",
+        "x": 50,
+        "y": 14
+      }
+    ],
+    "guide": {
+      "fit": "三个 offer、三个方案、三条路——把三条路各摆一张牌摆在一起对比",
+      "who": "选项已经收敛到三个、卡在比较上的人",
+      "tip": "抽前把 A、B、C 各代表什么写下来；「共同提醒」往往比单选结果更值得细读"
+    }
+  },
+  {
+    "id": "yes-no",
+    "name": "该不该",
+    "difficulty": "新手",
+    "scene": "decide",
+    "cardCount": 3,
+    "positions": [
+      {
+        "key": "pro",
+        "label": "支持的一面",
+        "meaning": "倾向「去做」的能量与理由",
+        "x": 28,
+        "y": 55
+      },
+      {
+        "key": "con",
+        "label": "顾虑的一面",
+        "meaning": "值得先想清楚的风险",
+        "x": 72,
+        "y": 55
+      },
+      {
+        "key": "key",
+        "label": "关键提醒",
+        "meaning": "两面之外最该知道的一点",
+        "x": 50,
+        "y": 18
+      }
+    ],
+    "guide": {
+      "fit": "该不该跳槽、要不要表白、买不买——要一个倾向，再配一份顾虑清单",
+      "who": "心里已有偏向、想借牌确认或被泼盆冷水的人",
+      "tip": "牌给倾向，决定权在你；同一道题别反复抽，越抽越乱"
+    }
+  },
+  {
     "id": "celtic-cross",
     "name": "凯尔特十字",
     "difficulty": "进阶",
+    "scene": "insight",
     "cardCount": 10,
     "positions": [
       {
@@ -223,6 +382,7 @@
     "id": "new-moon",
     "name": "新月播种",
     "difficulty": "新手",
+    "scene": "ritual",
     "cardCount": 4,
     "ritual": "new-moon",
     "positions": [
@@ -265,6 +425,7 @@
     "id": "full-moon",
     "name": "满月释放",
     "difficulty": "新手",
+    "scene": "ritual",
     "cardCount": 4,
     "ritual": "full-moon",
     "positions": [
@@ -307,6 +468,7 @@
     "id": "birthday",
     "name": "生日牌阵",
     "difficulty": "进阶",
+    "scene": "ritual",
     "cardCount": 5,
     "ritual": "birthday",
     "positions": [
@@ -356,6 +518,7 @@
     "id": "spring-equinox",
     "name": "春分萌芽",
     "difficulty": "新手",
+    "scene": "ritual",
     "cardCount": 4,
     "ritual": "spring-equinox",
     "positions": [
@@ -398,6 +561,7 @@
     "id": "summer-solstice",
     "name": "夏至盛放",
     "difficulty": "新手",
+    "scene": "ritual",
     "cardCount": 4,
     "ritual": "summer-solstice",
     "positions": [
@@ -440,6 +604,7 @@
     "id": "autumn-equinox",
     "name": "秋分归仓",
     "difficulty": "新手",
+    "scene": "ritual",
     "cardCount": 4,
     "ritual": "autumn-equinox",
     "positions": [
@@ -482,6 +647,7 @@
     "id": "winter-solstice",
     "name": "冬至守夜",
     "difficulty": "进阶",
+    "scene": "ritual",
     "cardCount": 5,
     "ritual": "winter-solstice",
     "positions": [

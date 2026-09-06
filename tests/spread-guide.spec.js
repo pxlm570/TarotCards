@@ -52,10 +52,10 @@ describe('SpreadSelectView：牌阵选择指引弹层', () => {
     expect(sheet.text()).toContain('牌阵怎么选')
     expect(sheet.text()).toContain('问得开放')
     expect(sheet.text()).toContain('聚焦当下')
-    // 三个使用情境分组齐全，12 个牌阵的指引全部渲染
+    // 四个生活场景分组齐全（方案甲 2026-09-04），16 个牌阵的指引全部渲染
     const titles = wrapper.findAll('.guide-group-title').map((n) => n.text())
-    expect(titles).toEqual(['日常与状态', '事件与抉择', '周期与仪式'])
-    expect(wrapper.findAll('.guide-item')).toHaveLength(12)
+    expect(titles).toEqual(['做个决定', '日常与状态', '看人看事', '周期与仪式'])
+    expect(wrapper.findAll('.guide-item')).toHaveLength(16)
     // 每个牌阵的指引来自数据层的 guide 字段（抽样两例）
     const single = spreadsData.find((s) => s.id === 'single')
     expect(sheet.text()).toContain(single.guide.fit)

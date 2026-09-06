@@ -17,10 +17,24 @@ const reading = useReadingStore()
 reading.hasActiveReading()
 const { ritualToday, ritualSpread, spreads } = useRitualToday()
 
-// 新手/进阶分组：今日限定已单独置顶一节，这里剔除，避免同一张牌阵出现两次
+// 新手/进阶分组已在方案甲（2026-09-04）退役：主列表按生活场景 scene 分组，内容在 spreads.json
 const restSpreads = computed(() => spreads.filter((s) => s.id !== ritualToday.value))
-const rookieSpreads = computed(() => restSpreads.value.filter((s) => s.difficulty === '新手'))
-const advancedSpreads = computed(() => restSpreads.value.filter((s) => s.difficulty === '进阶'))
+
+const SCENE_ORDER = [
+  { key: 'decide', title: '做个决定' },
+  { key: 'daily', title: '日常与状态' },
+  { key: 'insight', title: '看人看事' },
+  { key: 'ritual', title: '周期与仪式' }
+]
+
+// 主列表分组：今日限定已单独置顶一节，这里剔除避免重复
+const sceneGroups = computed(() =>
+  SCENE_ORDER.map((sc) => ({
+    key: sc.key,
+    title: sc.title,
+    items: restSpreads.value.filter((s) => s.scene === sc.key)
+  })).filter((g) => g.items.length)
+)
 
 const ritualIcon = computed(() => {
   if (ritualToday.value === 'birthday') return 'star'
@@ -70,18 +84,14 @@ function startFree(n) {
   router.push({ path: '/reading/question', query: { spread: 'free' } })
 }
 
-// ---- 牌阵选择指引（v1.5 追加）：按使用情境分组，数据来自 spreads.json 的 guide 字段 ----
+// ---- 牌阵选择指引（v1.5 追加，方案甲起与主列表同源）：分组来自 spreads.json 的 scene 字段 ----
 const guideOpen = ref(false)
 
-const GUIDE_GROUPS = [
-  { title: '日常与状态', ids: ['single', 'time-flow', 'holy-trinity'] },
-  { title: '事件与抉择', ids: ['two-choice', 'celtic-cross'] },
-  { title: '周期与仪式', ids: ['new-moon', 'full-moon', 'birthday', 'spring-equinox', 'summer-solstice', 'autumn-equinox', 'winter-solstice'] }
-]
+// 弹层用全量注册表（含今日限定）：指引是说明书，不应因置顶而缺条目
 const guideGroups = computed(() =>
-  GUIDE_GROUPS.map((g) => ({
-    title: g.title,
-    items: g.ids.map((id) => spreads.find((s) => s.id === id)).filter(Boolean)
+  SCENE_ORDER.map((sc) => ({
+    title: sc.title,
+    items: spreads.filter((s) => s.scene === sc.key)
   }))
 )
 </script>
@@ -119,10 +129,10 @@ const guideGroups = computed(() =>
       </button>
     </section>
 
-    <section class="group">
-      <h2 class="group-title">新手</h2>
+    <section v-for="(g, gi) in sceneGroups" :key="g.key" class="group">
+      <h2 class="group-title">{{ g.title }}</h2>
       <button
-        v-for="(spread, i) in rookieSpreads"
+        v-for="(spread, i) in g.items"
         :key="spread.id"
         class="spread-card card-press stagger-item"
         :style="{ '--i': i }"
@@ -136,27 +146,7 @@ const guideGroups = computed(() =>
           <span class="spread-name">{{ spread.name }}</span>
           <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
         </span>
-        <span v-if="i === 0" class="recommend">推荐</span>
-      </button>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">进阶</h2>
-      <button
-        v-for="(spread, i) in advancedSpreads"
-        :key="spread.id"
-        class="spread-card card-press stagger-item"
-        :style="{ '--i': i }"
-        @click="startReading(spread.id)"
-      >
-        <span class="spread-n">
-          {{ spread.cardCount }}
-          <small>张</small>
-        </span>
-        <span class="spread-info">
-          <span class="spread-name">{{ spread.name }}</span>
-          <span class="spread-desc">{{ spread.positions.map((p) => p.label).join(' · ') }}</span>
-        </span>
+        <span v-if="gi === 0 && i === 0" class="recommend">推荐</span>
       </button>
     </section>
 
@@ -240,7 +230,7 @@ const guideGroups = computed(() =>
 
         <p class="guide-note">「自由摆放」与「我的牌阵」：当你已有明确的问题拆解思路，随心摆就好。</p>
         <div class="guide-cautions">
-          <p>· 是否题往往源于焦虑，试着换成「这件事的支持与阻力各是什么」</p>
+          <p>· 是否题往往源于焦虑：「该不该」阵给的是支持与顾虑两面，别只看一张下结论</p>
           <p>· 时间类问题没有标准答案，改问「事成之前需要先发生什么」</p>
           <p>· 同一问题反复抽不会带来新信息，换个问法再问</p>
         </div>
