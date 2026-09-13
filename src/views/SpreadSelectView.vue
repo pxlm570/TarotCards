@@ -74,13 +74,17 @@ function removeCustom(spread) {
 const freePicking = ref(false)
 
 function startFree(n) {
-  freePicking.value = false
   if (reading.phase !== 'idle' && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {
     return
   }
   tap()
   reading.reset()
   reading.selectFreeSpread(n)
+  // 与常规牌阵同链路推进相位（评审 2026-09-06）：selectFreeSpread 停在 spreadSelected，
+  // 不推进则提问页 free 分支守卫会 replace('/') 弹回首页，动线整体不可达
+  reading.beginBreathing()
+  reading.toQuestion()
+  freePicking.value = false // 放在确认之后：取消确认时选张数面板不能被顺手收起
   router.push({ path: '/reading/question', query: { spread: 'free' } })
 }
 

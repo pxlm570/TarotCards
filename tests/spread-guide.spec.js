@@ -5,6 +5,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import SpreadSelectView from '../src/views/SpreadSelectView.vue'
+import { useReadingStore } from '../src/stores/reading.js'
 import spreadsData from '../src/data/spreads.json'
 
 vi.mock('../src/lib/feedback.js', () => ({ tap: vi.fn(), toast: vi.fn() }))
@@ -32,7 +33,8 @@ function mountPage() {
     ]
   })
   router.push = vi.fn()
-  return mount(SpreadSelectView, { global: { plugins: [pinia, router] } })
+  const wrapper = mount(SpreadSelectView, { global: { plugins: [pinia, router] } })
+  return { wrapper, router }
 }
 
 describe('SpreadSelectView：牌阵选择指引弹层', () => {
@@ -42,7 +44,7 @@ describe('SpreadSelectView：牌阵选择指引弹层', () => {
   })
 
   it('点「怎么选牌阵？」打开弹层：标题、提问四原则、三组牌阵与告诫都在', async () => {
-    const wrapper = mountPage()
+    const { wrapper } = mountPage()
     expect(wrapper.find('.guide-sheet').exists()).toBe(false)
 
     await wrapper.find('button.guide-entry').trigger('click')
@@ -67,11 +69,53 @@ describe('SpreadSelectView：牌阵选择指引弹层', () => {
   })
 
   it('点「明白了」或遮罩关闭弹层', async () => {
-    const wrapper = mountPage()
+    const { wrapper } = mountPage()
     await wrapper.find('button.guide-entry').trigger('click')
     expect(wrapper.find('.guide-sheet').exists()).toBe(true)
 
     await wrapper.find('button.guide-close').trigger('click')
     expect(wrapper.find('.guide-sheet').exists()).toBe(false)
+  })
+})
+
+// 自由摆放入口（评审 2026-09-06）：startFree 只停在 spreadSelected 时，
+// 提问页 free 分支守卫会 replace('/') 弹回——动线整体不可达且 flow 死局。
+describe('SpreadSelectView：自由摆放入口推进相位', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('选张数后推进到 questioning，携带 free 局跳转提问页', async () => {
+    const { wrapper, router } = mountPage()
+    await wrapper.find('button.free-card').trigger('click')
+    expect(wrapper.find('.sheet').exists()).toBe(true)
+
+    // 点「5 张」
+    await wrapper.findAll('.count-chip')[4].trigger('click')
+
+    const reading = useReadingStore()
+    expect(reading.phase).toBe('questioning')
+    expect(reading.spreadId).toBe('free')
+    expect(reading.freeMode).toBe(true)
+    expect(reading.freePositions).toHaveLength(5)
+    expect(router.push).toHaveBeenCalledWith({ path: '/reading/question', query: { spread: 'free' } })
+  })
+
+  it('有一局进行中时先确认，取消则不动', async () => {
+    const { wrapper, router } = mountPage()
+    const reading = useReadingStore()
+    reading.selectSpread('single')
+    reading.beginBreathing()
+    reading.toQuestion()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await wrapper.find('button.free-card').trigger('click')
+    await wrapper.findAll('.count-chip')[4].trigger('click')
+
+    expect(reading.phase).toBe('questioning')
+    expect(reading.spreadId).toBe('single')
+    expect(router.push).not.toHaveBeenCalled()
   })
 })
