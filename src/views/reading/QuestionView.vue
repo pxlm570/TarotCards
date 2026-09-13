@@ -33,7 +33,9 @@ const chips = [
 // 挂载即初始化本局（替代原静心页）：选牌阵 → 直接进入提问阶段
 onMounted(() => {
   const isDaily = route.query.daily === '1'
-  const spreadId = isDaily ? 'single' : route.query.spread
+  // vue-router 对 ?spread=a&spread=b 解析成数组：先归一，否则 startsWith 直接 TypeError 白屏
+  const rawSpread = Array.isArray(route.query.spread) ? route.query.spread[0] : route.query.spread
+  const spreadId = isDaily ? 'single' : rawSpread
   if (isDaily || spreadId) {
     const sid = spreadId || 'single'
     if (sid === 'free') {

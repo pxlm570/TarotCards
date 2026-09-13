@@ -155,7 +155,7 @@ function goEntry(to) {
 
       <template v-else>
         <p class="birth-lead">输入生日，找到属于你的大阿尔卡纳本命牌——代表你的人格面具与灵魂课题。</p>
-        <input v-model="birthdayInput" class="birth-input" type="date" max="2026-12-31" />
+        <input v-model="birthdayInput" class="birth-input" type="date" :max="todayStr" />
         <button class="birth-save btn-solid btn-block" :disabled="!birthdayValid" @click="saveBirthday">
           算出我的本命牌
         </button>

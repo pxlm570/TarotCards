@@ -44,11 +44,34 @@ export function safeGetItem(key) {
   }
 }
 
+// 写失败告警（评审 2026-09-06）：safeSetItem 静默失败曾让「已保存」toast 假成功——
+// 配额满后用户以为存了，刷新即丢。UI 侧经 setStorageWarnHandler 注入（避免 storage→feedback
+// 循环依赖），15s 节流防止批量写（导入/淘汰）时刷屏。
+let storageWarnHandler = null
+let lastWarnAt = -Infinity
+
+export function setStorageWarnHandler(fn) {
+  storageWarnHandler = typeof fn === 'function' ? fn : null
+}
+
+function warnStorageFull() {
+  if (!storageWarnHandler) return
+  const now = Date.now()
+  if (now - lastWarnAt < 15000) return
+  lastWarnAt = now
+  try {
+    storageWarnHandler('存储空间不足，最近的修改可能没有保存，建议先导出备份')
+  } catch {
+    /* 提示失败不影响主流程 */
+  }
+}
+
 export function safeSetItem(key, value) {
   try {
     localStorage.setItem(key, value)
     return true
   } catch {
+    warnStorageFull()
     return false
   }
 }
@@ -108,7 +131,7 @@ export function saveSettings(patch) {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
   } catch {
-    /* 存储不可用时仅内存生效 */
+    warnStorageFull() // 存储不可用时仅内存生效，但用户必须知道没存上
   }
   return next
 }

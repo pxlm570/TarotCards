@@ -42,7 +42,13 @@ export function parseImportHash(hash) {
     const json = decodeURIComponent(escape(atob(raw)))
     const cfg = JSON.parse(json)
     if (cfg && typeof cfg === 'object' && (cfg.baseUrl || cfg.model || cfg.apiKey)) {
-      return { baseUrl: cfg.baseUrl || '', model: cfg.model || '', apiKey: cfg.apiKey || '' }
+      // 只收下实际存在的字段（评审 2026-09-06）：缺失字段曾以 '' 应用，把用户已配好的
+      // model 等静默抹掉。应用端按 patch 合并，缺席字段保持现状。
+      const out = {}
+      for (const k of ['baseUrl', 'model', 'apiKey']) {
+        if (typeof cfg[k] === 'string' && cfg[k]) out[k] = cfg[k]
+      }
+      if (Object.keys(out).length) return out
     }
   } catch {
     /* 无效链接：按无导入处理 */

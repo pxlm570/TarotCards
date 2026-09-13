@@ -2,35 +2,41 @@
   {
     "id": "star-gold",
     "name": "星纹·暖金",
-    "file": "star-gold.webp"
+    "file": "star-gold.webp",
+    "v": "f581d6df5acd"
   },
   {
     "id": "neon",
     "name": "霓虹壁画",
-    "file": "neon.webp"
+    "file": "neon.webp",
+    "v": "a74031bdcca4"
   },
   {
     "id": "sepia",
     "name": "复古·泛黄",
-    "file": "sepia.webp"
+    "file": "sepia.webp",
+    "v": "72599608a11c"
   },
   {
     "id": "streak7",
     "name": "七日之约",
     "file": "streak7.webp",
-    "unlock": 7
+    "unlock": 7,
+    "v": "b1915b432df6"
   },
   {
     "id": "streak30",
     "name": "卅日光华",
     "file": "streak30.webp",
-    "unlock": 30
+    "unlock": 30,
+    "v": "ae6e27729cf0"
   },
   {
     "id": "streak100",
     "name": "百日铭刻",
     "file": "streak100.webp",
-    "unlock": 100
+    "unlock": 100,
+    "v": "61824a3d2924"
   },
   {
     "id": "neon-glow",
@@ -47,6 +53,7 @@
   {
     "id": "night-mural-star",
     "name": "夜城星芒",
-    "file": "night-mural-star.webp"
+    "file": "night-mural-star.webp",
+    "v": "ee44f2f05425"
   }
 ]

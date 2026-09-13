@@ -23,8 +23,12 @@ export const useJournalStore = defineStore('journal', {
       return reading
     },
     saveNote(id, note) {
+      // 返回是否为该记录的首次写感想（此前 note 为空）——解读页据此决定发不发 XP，
+      // 「编辑→再存」反复保存不再可刷分（评审 2026-09-06）
+      const first = !journal.getById(id)?.note
       journal.updateNote(id, note)
       this._reload()
+      return first
     },
     remove(id) {
       journal.deleteReading(id)

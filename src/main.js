@@ -6,10 +6,13 @@ import './styles/components.css'
 import App from './App.vue'
 import { createAppRouter } from './router/index.js'
 import { initTheme } from './lib/theme.js'
-import { applyMotionPreference } from './lib/feedback.js'
+import { applyMotionPreference, toast } from './lib/feedback.js'
 import { setupUpdateReload } from './lib/sw-refresh.js'
-import { loadSettings } from './lib/storage.js'
+import { loadSettings, setStorageWarnHandler } from './lib/storage.js'
 import { parseImportHash, stashPendingImport } from './lib/config-import.js'
+
+// 存储写满的统一告警口（评审 2026-09-06）：此前写失败静默，UI 照常报成功
+setStorageWarnHandler((msg) => toast(msg, 'warn'))
 
 // index.html 头部内联脚本已定首帧主题（防白闪）；这里接管运行期切换与系统偏好联动
 initTheme()

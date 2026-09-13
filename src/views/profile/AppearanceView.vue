@@ -1,14 +1,18 @@
 <script setup>
 // 外观详情页：主题三态 / 减弱动效 / 字号（v1.5「我的」页收缩重构，从主页面迁入）。
 import { ref } from 'vue'
-import { loadSettings, saveSettings } from '../../lib/storage.js'
+import { loadSettings } from '../../lib/storage.js'
 import { setTheme, THEME_VALUES } from '../../lib/theme.js'
 import { applyMotionPreference } from '../../lib/feedback.js'
+import { useSettingsStore } from '../../stores/settings.js'
 import PageHead from '../../components/PageHead.vue'
 
+const settingsStore = useSettingsStore()
 const settings = ref(loadSettings())
 const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '暗夜' }
 
+// theme 是 lib/theme.js 的自管字段（含 DOM 应用），仍走 setTheme；其余字段按
+// settings 单写入口约定走 store（见 stores/settings.js 头注）
 function pickTheme(value) {
   setTheme(value)
   settings.value = loadSettings()
@@ -16,12 +20,12 @@ function pickTheme(value) {
 
 function toggleMotion() {
   const next = !settings.value.reducedMotion
-  settings.value = saveSettings({ reducedMotion: next })
+  settings.value = settingsStore.update({ reducedMotion: next })
   applyMotionPreference() // 立即生效
 }
 
 function pickFontSize(size) {
-  settings.value = saveSettings({ fontSize: size })
+  settings.value = settingsStore.update({ fontSize: size })
   const el = document.documentElement
   if (size === 'large') el.setAttribute('data-fontsize', 'large')
   else el.removeAttribute('data-fontsize')
