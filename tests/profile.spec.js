@@ -51,3 +51,20 @@ describe('profile store', () => {
     expect(s2.maxStreak).toBe(5)
   })
 })
+
+// 存量坏数据兜底（评审 2026-09-06）：xp 坏成字符串曾让 addXp 走拼接（"10"+5="105"）
+describe('profile store：存量坏数据兜底', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it('xp/maxStreak 非数值归一为 0，addXp 走数值加法', () => {
+    localStorage.setItem('tarot.profile.v1', JSON.stringify({ xp: '10', birthday: '', maxStreak: '3' }))
+    setActivePinia(createPinia())
+    const s = useProfileStore()
+    expect(s.xp).toBe(0)
+    expect(s.maxStreak).toBe(0)
+    expect(s.addXp(5)).toBe(5)
+  })
+})

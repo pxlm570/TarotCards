@@ -170,3 +170,24 @@ describe('learning store', () => {
     expect(s.graduated).toBe(false)
   })
 })
+
+// 存量坏数据兜底（评审 2026-09-06）：手改/旧版本的 sr 坏值曾让 dueFlashcards 崩
+describe('learning store：存量坏数据兜底', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it('sr/reviewLog/totalReviews 坏值归一，dueFlashcards 不再 TypeError', () => {
+    localStorage.setItem(
+      'tarot.learning.v1',
+      JSON.stringify({ unlocked: ['ch-01'], progress: {}, sr: null, reviewLog: 7, totalReviews: 'x' })
+    )
+    setActivePinia(createPinia())
+    const s = useLearningStore()
+    expect(s.sr).toEqual({})
+    expect(s.reviewLog).toEqual({})
+    expect(s.totalReviews).toBe(0)
+    expect(s.dueFlashcards()).toEqual([])
+  })
+})

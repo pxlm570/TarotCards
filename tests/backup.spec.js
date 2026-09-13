@@ -92,3 +92,111 @@ describe('backup', () => {
     expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).readings).toHaveLength(500)
   })
 })
+
+// 导入收口（评审 2026-09-06）：备份是唯一绕过 store 校验直达 localStorage 的写入通道
+describe('backup：导入逐键校验与 flow 清理', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('journal 条目缺 cards/ts 被剔除，cards 内缺 cardId 的牌被过滤', () => {
+    const backup = {
+      version: 1,
+      data: {
+        'tarot.journal.v1': {
+          readings: [
+            { id: 'ok', ts: 1, cards: [{ cardId: 'major-00', reversed: false }, { reversed: true }, 'junk'] },
+            { id: 'no-cards', ts: 2 },
+            { id: 'no-ts', cards: [] }
+          ],
+          dailyDraws: {}
+        }
+      }
+    }
+    applyImport(backup, 'overwrite')
+    const j = JSON.parse(localStorage.getItem('tarot.journal.v1'))
+    expect(j.readings).toHaveLength(1)
+    expect(j.readings[0].cards).toHaveLength(1)
+    expect(j.readings[0].cards[0].cardId).toBe('major-00')
+  })
+
+  it('覆盖导入：dailyDraws 悬空引用被清理', () => {
+    const backup = {
+      version: 1,
+      data: {
+        'tarot.journal.v1': {
+          readings: [{ id: 'a', ts: 1, cards: [] }],
+          dailyDraws: { '2026-01-01': 'a', '2026-01-02': 'ghost', '2026-01-03': 42 }
+        }
+      }
+    }
+    applyImport(backup, 'overwrite')
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).dailyDraws).toEqual({ '2026-01-01': 'a' })
+  })
+
+  it('合并导入按 ts 排序后裁剪，淘汰最旧而非最新；dailyDraws 悬空引用同步清理', () => {
+    const existing = Array.from({ length: 499 }, (_, i) => ({ id: `old${i}`, ts: i, cards: [] }))
+    localStorage.setItem('tarot.journal.v1', JSON.stringify({ readings: existing, dailyDraws: {} }))
+    const backup = {
+      version: 1,
+      data: {
+        'tarot.journal.v1': {
+          readings: [
+            { id: 'new1', ts: 900, cards: [] },
+            { id: 'new2', ts: 901, cards: [] }
+          ],
+          dailyDraws: { '2026-05-01': 'new1', '2026-05-02': 'old0' }
+        }
+      }
+    }
+    applyImport(backup, 'merge')
+    const j = JSON.parse(localStorage.getItem('tarot.journal.v1'))
+    expect(j.readings).toHaveLength(500)
+    expect(j.readings.some((r) => r.id === 'old0')).toBe(false)
+    expect(j.readings.some((r) => r.id === 'new2')).toBe(true)
+    expect(j.dailyDraws).toEqual({ '2026-05-01': 'new1' })
+  })
+
+  it('learning 键：sr/reviewLog/totalReviews 坏值归一，unlocked/progress 非法跳过整键', () => {
+    const bad = { version: 1, data: { 'tarot.learning.v1': { unlocked: 'ch-01', progress: {} } } }
+    expect(applyImport(bad, 'overwrite')).toContain('tarot.learning.v1')
+    expect(localStorage.getItem('tarot.learning.v1')).toBeNull()
+
+    const fixable = {
+      version: 1,
+      data: {
+        'tarot.learning.v1': { unlocked: ['ch-01'], progress: {}, sr: null, reviewLog: 7, totalReviews: 'x' }
+      }
+    }
+    applyImport(fixable, 'overwrite')
+    const l = JSON.parse(localStorage.getItem('tarot.learning.v1'))
+    expect(l.sr).toEqual({})
+    expect(l.reviewLog).toEqual({})
+    expect(l.totalReviews).toBe(0)
+  })
+
+  it('profile 键：xp/maxStreak 非数值跳过整键，数值型正常导入', () => {
+    const bad = { version: 1, data: { 'tarot.profile.v1': { xp: '10', birthday: '', maxStreak: 1 } } }
+    expect(applyImport(bad, 'overwrite')).toContain('tarot.profile.v1')
+    expect(localStorage.getItem('tarot.profile.v1')).toBeNull()
+
+    const good = { version: 1, data: { 'tarot.profile.v1': { xp: 42, birthday: '1995-06-15', maxStreak: 3 } } }
+    applyImport(good, 'overwrite')
+    expect(JSON.parse(localStorage.getItem('tarot.profile.v1')).xp).toBe(42)
+  })
+
+  it('全量覆盖导入后清 sessionStorage flow（防已删记录经「继续占卜」复活）', () => {
+    sessionStorage.setItem('tarot.flow.v1', JSON.stringify({ phase: 'interpreting', journalId: 'a' }))
+    const backup = { version: 1, data: { 'tarot.journal.v1': { readings: [], dailyDraws: {} } } }
+    applyImport(backup, 'overwrite')
+    expect(sessionStorage.getItem('tarot.flow.v1')).toBeNull()
+  })
+
+  it('journal 结构非法抛错时现库与 flow 均不动', () => {
+    sessionStorage.setItem('tarot.flow.v1', JSON.stringify({ phase: 'interpreting', journalId: 'a' }))
+    const backup = { version: 1, data: { 'tarot.journal.v1': { readings: [{ id: 'x' }] } } } // 缺 dailyDraws
+    expect(() => applyImport(backup, 'overwrite')).toThrow()
+    expect(sessionStorage.getItem('tarot.flow.v1')).not.toBeNull()
+  })
+})
