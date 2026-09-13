@@ -31,7 +31,10 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
       } else if (e instanceof AIError && e.status === AI_TIMEOUT_STATUS) {
         error.value = 'AI 长时间没有响应，连接已断开，可重试。'
       } else if (e instanceof AIError) {
-        error.value = e.status === 401 ? '密钥无效' : e.status === 429 ? '请求过于频繁' : `请求失败（${e.status || '网络'}）`
+        // 流中 error 事件携带服务端消息（如「余额不足」）优先展示，比「请求失败(0)」有用
+        error.value =
+          e.userMessage ||
+          (e.status === 401 ? '密钥无效' : e.status === 429 ? '请求过于频繁' : `请求失败（${e.status || '网络'}）`)
       } else {
         error.value = '网络错误，请检查 baseUrl 或网络。'
       }

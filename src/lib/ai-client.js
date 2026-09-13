@@ -3,9 +3,11 @@
 import { loadSettings } from './storage.js'
 
 export class AIError extends Error {
-  constructor(status, message) {
+  constructor(status, message, userMessage) {
     super(message)
     this.status = status
+    // 面向用户的文案（可空）：流中 error 事件带服务端 message，调用方优先展示它
+    this.userMessage = userMessage
   }
 }
 
@@ -48,6 +50,17 @@ function buildOpenAIRequest({ baseUrl, model, apiKey, messages, signal }) {
       signal
     }
   }
+}
+
+// 流中 error 事件（评审 2026-09-06）：各 provider 在余额耗尽/内容审查断流时会以 SSE
+// error 事件收尾，此前被当「无增量」忽略——半截文本走 onDone 被当完整回答，无重试入口
+function sseErrorMessage(json) {
+  if (json?.type === 'error') return json.error?.message || json.error?.type || 'AI 中途返回错误'
+  if (json?.error) {
+    if (typeof json.error === 'string') return json.error
+    return json.error.message || 'AI 中途返回错误'
+  }
+  return null
 }
 
 // 从一条 SSE data: JSON 提取增量文本；无增量返回 ''
@@ -96,6 +109,8 @@ async function* streamBody(body, onChunk) {
           continue
         }
         if (isDone(json)) return
+        const errText = sseErrorMessage(json)
+        if (errText) throw new AIError(0, errText, errText)
         const delta = extractDelta(json)
         if (delta) yield delta
       }
