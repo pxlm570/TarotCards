@@ -9,10 +9,12 @@ import QuizLesson from './QuizLesson.vue'
 import PracticeLesson from './PracticeLesson.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { useBack } from '../../composables/use-back.js'
+import { useLearningStore } from '../../stores/learning.js'
 
 const route = useRoute()
 const router = useRouter()
 const goBack = useBack()
+const learning = useLearningStore()
 
 const chapterId = route.params.chapterId
 const lessonId = route.params.lessonId
@@ -23,6 +25,10 @@ const chapterMeta = chapters.find((c) => c.id === chapterId)
 const chapterFile = chapterMeta ? `../../data/courses/chapter-${String(chapterMeta.order).padStart(2, '0')}.json` : null
 const chapterData = chapterFile ? CHAPTER_MODULES[chapterFile]?.default : undefined
 const lesson = chapterData?.lessons?.find((l) => l.id === lessonId)
+
+// 解锁门（评审 2026-09-06）：深链不校验解锁时，完成动作会炸在 completeLesson（三个完成
+// 入口都无捕获），闪卡课更会卡死在最后一张。锁定态复用 ChapterView 的文案。
+const locked = computed(() => !!chapterMeta && !!lesson && !learning.unlocked.includes(chapterId))
 
 const title = computed(() => lesson?.title ?? '未找到课程')
 
@@ -41,36 +47,43 @@ function openCard(cardId) {
       <h1 class="title">{{ title }}</h1>
     </header>
 
-    <ArticleLesson
-      v-if="lesson?.type === 'article'"
-      :blocks="lesson.blocks"
-      :chapter-id="chapterId"
-      :lesson-id="lessonId"
-      @open-card="openCard"
-    />
-    <FlashcardLesson
-      v-else-if="lesson?.type === 'flashcards'"
-      :chapter-id="chapterId"
-      :lesson-id="lessonId"
-      :card-ids="lesson.cardIds"
-    />
-    <QuizLesson
-      v-else-if="lesson?.type === 'quiz'"
-      :chapter-id="chapterId"
-      :lesson-id="lessonId"
-      :questions="lesson.questions"
-    />
-    <PracticeLesson
-      v-else-if="lesson?.type === 'practice'"
-      :chapter-id="chapterId"
-      :lesson-id="lessonId"
-      :spread-id="lesson.spreadId"
-      :task="lesson.task"
-    />
-    <div v-else class="missing card">
+    <div v-if="!chapterMeta || !lesson" class="missing card">
       <p>找不到这一课。</p>
       <button class="btn-ghost" @click="goBack(`/learn/${chapterId}`)">返回章节</button>
     </div>
+    <div v-else-if="locked" class="locked card">
+      <AppIcon name="lock" :size="22" />
+      <p>完成前一章所有课程后解锁。</p>
+      <button class="btn-ghost" @click="goBack(`/learn/${chapterId}`)">返回章节</button>
+    </div>
+    <template v-else>
+      <ArticleLesson
+        v-if="lesson.type === 'article'"
+        :blocks="lesson.blocks"
+        :chapter-id="chapterId"
+        :lesson-id="lessonId"
+        @open-card="openCard"
+      />
+      <FlashcardLesson
+        v-else-if="lesson.type === 'flashcards'"
+        :chapter-id="chapterId"
+        :lesson-id="lessonId"
+        :card-ids="lesson.cardIds"
+      />
+      <QuizLesson
+        v-else-if="lesson.type === 'quiz'"
+        :chapter-id="chapterId"
+        :lesson-id="lessonId"
+        :questions="lesson.questions"
+      />
+      <PracticeLesson
+        v-else-if="lesson.type === 'practice'"
+        :chapter-id="chapterId"
+        :lesson-id="lessonId"
+        :spread-id="lesson.spreadId"
+        :task="lesson.task"
+      />
+    </template>
   </div>
 </template>
 
@@ -95,11 +108,13 @@ function openCard(cardId) {
   font-size: var(--fs-title);
 }
 
-.missing {
+.missing,
+.locked {
   padding: var(--sp-3);
   text-align: center;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
   color: var(--dim);
 }
