@@ -560,3 +560,61 @@ describe('reading store：自由摆放（v1.5 Task 7）', () => {
   })
 
 })
+
+// 动线中冻结牌位（评审 2026-09-06）：注册表 spread getter 是实时合并视图，抽牌中途
+// 编辑自定义牌阵（增/减牌位）曾让 _placeNext 直接 TypeError（positions[i]/pending[i] 越界）
+describe('reading store：finishShuffle 冻结牌位', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia()) // isolate:false 下 store 跨 describe 残留，必须换新 pinia
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('抽牌中途把自定义牌阵改少牌位，本局仍按开局布局走完不崩', () => {
+    const created = saveCustomSpread({
+      name: '测试阵',
+      positions: [
+        { label: '一', meaning: 'm1', x: 20, y: 50 },
+        { label: '二', meaning: 'm2', x: 50, y: 50 },
+        { label: '三', meaning: 'm3', x: 80, y: 50 }
+      ]
+    })
+    const s = useReadingStore()
+    walkToPicking(s, created.id)
+    expect(s.cardCount).toBe(3)
+    s.pickCard(0)
+    s.pickCard(1)
+
+    saveCustomSpread({
+      id: created.id,
+      name: '测试阵',
+      positions: [{ label: '一', meaning: 'm1', x: 50, y: 50 }]
+    })
+
+    expect(() => s.pickCard(2)).not.toThrow()
+    expect(s.cardCount).toBe(3)
+    expect(s.drawn).toHaveLength(3)
+    expect(s.phase).toBe('revealing')
+  })
+
+  it('finishShuffle 后增牌位同样不影响本局（pending 不越界）', () => {
+    const created = saveCustomSpread({
+      name: '测试阵',
+      positions: [{ label: '一', meaning: 'm1', x: 50, y: 50 }]
+    })
+    const s = useReadingStore()
+    walkToPicking(s, created.id)
+    saveCustomSpread({
+      id: created.id,
+      name: '测试阵',
+      positions: [
+        { label: '一', meaning: 'm1', x: 30, y: 50 },
+        { label: '二', meaning: 'm2', x: 70, y: 50 },
+        { label: '三', meaning: 'm3', x: 50, y: 80 }
+      ]
+    })
+    expect(() => s.pickAll()).not.toThrow()
+    expect(s.cardCount).toBe(1)
+    expect(s.phase).toBe('revealing')
+  })
+})

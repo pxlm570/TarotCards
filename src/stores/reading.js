@@ -47,6 +47,7 @@ function initialState() {
     dailyDayKey: '', // 每日局打卡日快照（进局时定格，评审 2026-09-03：跨凌晨4点重挂载不再把昨天的局记到今天）
     freeMode: false, // v1.5 Task 7：自由摆放局（翻牌后拖位，不依赖任何注册表牌阵）
     freePositions: [], // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
+    layout: null, // finishShuffle 时冻结的牌位快照（评审 2026-09-06）：动线中途编辑自定义牌阵不再影响本局
     entryPath: '' // 动线入口页（2026-08-31「从哪进、退回哪」）：开局在提问页捕获，退出/手势退出回这里
   }
 }
@@ -77,7 +78,10 @@ export const useReadingStore = defineStore('reading', {
       if (this.freeMode && s.spreadId === 'free') {
         return { id: 'free', name: '自由摆放', cardCount: s.freePositions.length, positions: s.freePositions }
       }
-      return findSpread(s.spreadId)
+      const base = findSpread(s.spreadId)
+      // 冻结牌位优先：抽牌/画布/解读按开局布局走，动线中途编辑自定义牌阵不串位不崩
+      if (base && s.layout) return { ...base, cardCount: s.layout.length, positions: s.layout }
+      return base
     },
     cardCount() {
       return this.spread ? this.spread.cardCount : 0
@@ -154,6 +158,9 @@ export const useReadingStore = defineStore('reading', {
       this._assert('shuffling', 'finishShuffle')
       const settings = loadSettings()
       this.snapshot = { reversalsEnabled: settings.reversalsEnabled, autoDraw: settings.autoDraw }
+      if (!this.freeMode) {
+        this.layout = (this.spread?.positions ?? []).map((p) => ({ ...p }))
+      }
       this.pending = drawCards(DECK_IDS, this.cardCount, {
         allowReversed: this.snapshot.reversalsEnabled
       })
@@ -243,13 +250,17 @@ export const useReadingStore = defineStore('reading', {
         return false
       }
       // 自由摆放局自包含（位置随 flow 持久化）；注册表局要求牌阵仍存在（含自定义被删 -> 恢复失败回首页）
-      const spreadObj =
+      let spreadObj =
         saved.freeMode && saved.spreadId === 'free'
           ? Array.isArray(saved.freePositions) && saved.freePositions.length > 0
             ? { positions: saved.freePositions, cardCount: saved.freePositions.length }
             : null
           : findSpread(saved.spreadId)
       if (!spreadObj) return false
+      // 恢复走冻结牌位（与 finishShuffle 同口径）；坏 layout 按无快照处理回落实时注册表
+      if (!saved.freeMode && Array.isArray(saved.layout) && saved.layout.length) {
+        spreadObj = { ...spreadObj, cardCount: saved.layout.length, positions: saved.layout }
+      }
       // 坏 flow 不得恢复成崩局（评审 2026-09-03）：抽牌池/落位/翻开集形状校验，
       // 坏数据清掉回首页，否则 _placeNext/画布会在渲染期 TypeError
       if (['picking', 'revealing', 'interpreting'].includes(saved.phase)) {
