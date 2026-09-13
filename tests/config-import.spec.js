@@ -16,7 +16,16 @@ describe('config-import：#import= 两段式', () => {
 
   it('合法链接解析出归一化配置（缺省字段补空串）', () => {
     const cfg = parseImportHash(`#import=${b64({ baseUrl: 'https://api.x.com', model: 'm1' })}`)
-    expect(cfg).toEqual({ baseUrl: 'https://api.x.com', model: 'm1', apiKey: '' })
+    // 只收下实际存在的字段（评审 2026-09-06）：缺席字段不再以 '' 应用，防抹掉现有配置
+    expect(cfg).toEqual({ baseUrl: 'https://api.x.com', model: 'm1' })
+  })
+
+  it('缺失字段不产生空串键（apiKey-only / model 缺席各自保留缺席语义）', () => {
+    expect(parseImportHash(`#import=${b64({ apiKey: 'k' })}`)).toEqual({ apiKey: 'k' })
+    expect(parseImportHash(`#import=${b64({ baseUrl: 'https://a.b', model: '', apiKey: 'k' })}`)).toEqual({
+      baseUrl: 'https://a.b',
+      apiKey: 'k'
+    })
   })
 
   it('非 #import= 前缀 / 坏 base64 / 无任何配置字段 -> null', () => {

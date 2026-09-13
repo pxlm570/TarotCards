@@ -93,3 +93,29 @@ describe('journal-store', () => {
     expect(getDailyDraw('2026-07-25')).toBeUndefined() // 不再「已打卡→点进去是空记录」
   })
 })
+
+// saveNote 首次标记（评审 2026-09-06）：解读页据此决定发不发 XP，反复「编辑→再存」不可刷分
+describe('journal store：saveNote 首次标记', () => {
+  beforeEach(async () => {
+    localStorage.clear()
+    const { setActivePinia, createPinia } = await import('pinia')
+    setActivePinia(createPinia())
+  })
+
+  it('此前无 note 的首次保存返回 true，再次保存返回 false', async () => {
+    const { useJournalStore } = await import('../src/stores/journal.js')
+    const s = useJournalStore()
+    const r = s.addReading(sample())
+    expect(s.saveNote(r.id, '第一遍感想')).toBe(true)
+    expect(s.saveNote(r.id, '改一下')).toBe(false)
+  })
+
+  it('覆盖清空感想后再写，仍算首次（可再得 XP 的口径与「首次」语义一致）', async () => {
+    const { useJournalStore } = await import('../src/stores/journal.js')
+    const s = useJournalStore()
+    const r = s.addReading(sample())
+    s.saveNote(r.id, '有内容')
+    s.saveNote(r.id, '')
+    expect(s.saveNote(r.id, '重新写')).toBe(true)
+  })
+})

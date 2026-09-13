@@ -169,8 +169,9 @@ function startPractice() {
 
 function saveNote() {
   // M3 落日记库：补写当前记录的感想
-  if (store.journalId) journal.saveNote(store.journalId, note.value)
-  if (!noteSaved.value) profile.addXp(5) // 首次写日记感想
+  // 首次写感想才发 XP（评审 2026-09-06）：noteSaved 标志被再次编辑重置后曾每轮 +5
+  const firstNote = store.journalId ? journal.saveNote(store.journalId, note.value) : false
+  if (firstNote && note.value.trim()) profile.addXp(5)
   noteSaved.value = true
   success()
   toast('已记下', 'success')

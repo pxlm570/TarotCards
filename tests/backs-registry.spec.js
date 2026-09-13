@@ -3,6 +3,8 @@
 // 若不注册进来就是死资产。守卫两条：结构完整、已上线皮肤（除遗留白名单）的牌背必须可选。
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import backs from '../public/backs/index.json'
@@ -25,13 +27,14 @@ describe('backs/index.json 牌背注册表', () => {
     }
   })
 
-  it('皮肤自带牌背带版本号 v（卡背重绘后换 URL 破 SW 缓存）', () => {
-    // 2026-08-31 与 decks manifest v 同机制：曾部署过旧图的牌背（night-mural 八芒星->W4）
-    // URL 不变会卡在 CacheFirst 旧缓存 30 天
-    for (const id of deckIds) {
-      const b = backs.find((x) => x.id === id)
-      if (!b || LEGACY_DECKS.has(id)) continue
-      expect(b.v, `${id} 牌背条目缺 v`).toMatch(/^[0-9a-f]{8,16}$/)
+  it('所有条目带内容哈希 v 且与文件实际 md5 一致（重绘即换 URL 破 SW 缓存）', () => {
+    // 2026-08-31 同款根因防线（评审 2026-09-06 扩到全部条目）：曾部署过的牌背原地重绘
+    // 而 URL 不变，会卡在 CacheFirst 旧缓存 30 天。v=md5(文件)[:12]，与生图脚本 content_v 同式。
+    for (const b of backs) {
+      expect(b.v, `${b.id} 牌背条目缺 v`).toMatch(/^[0-9a-f]{12}$/)
+      const p = resolve(ROOT, 'public/backs', b.file)
+      const actual = createHash('md5').update(readFileSync(p)).digest('hex').slice(0, 12)
+      expect(b.v, `${b.id} 的 v 与文件内容不符`).toBe(actual)
     }
   })
 

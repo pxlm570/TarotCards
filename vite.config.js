@@ -29,7 +29,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,jpg,png,json}'],
         // 本地样张目录（含 CP2077 原版对照图）绝不进 SW 预缓存：gitignore 挡不住
         // Vite 拷贝 publicDir，本地构建时 dist 里会有它，预缓存会把版权图随 SW 分发
-        globIgnores: ['**/style-samples/**', 'style-samples/**'],
+        globIgnores: ['**/style-samples/**', 'style-samples/**', '**/manifest-icons/**'],
         navigateFallbackDenylist: [/style-samples/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
