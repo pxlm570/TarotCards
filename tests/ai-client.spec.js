@@ -24,7 +24,11 @@ describe('ai-client', () => {
     localStorage.clear()
     setupAI()
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    // isolate:false 下假时钟泄漏会毒化同 worker 后续文件的定时器（e5f81e4 同族）
+    vi.useRealTimers()
+  })
 
   it('未配置时抛 AI_NOT_CONFIGURED', async () => {
     localStorage.clear()

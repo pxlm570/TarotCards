@@ -37,7 +37,8 @@ function mountHost(props = {}) {
   return { wrapper, stream: exposed }
 }
 
-async function flush(times = 6) {
+// 16 个微任务：async generator 协议每 yield 约 2-3 跳，6 次曾贴着下限（高负载全量跑时间歇不够）
+async function flush(times = 16) {
   for (let i = 0; i < times; i++) await Promise.resolve()
 }
 
