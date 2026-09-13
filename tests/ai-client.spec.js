@@ -144,4 +144,29 @@ describe('ai-client', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     vi.useRealTimers()
   })
+
+  // ---- 流中 error 事件（评审 2026-09-06）：此前被当「无增量」忽略，半截文本走 onDone 被当完整回答 ----
+
+  it('OpenAI 风格流中 error 事件抛 AIError 并携带服务端消息', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"你"}}]}\n\n',
+        'data: {"error":{"message":"余额不足","type":"insufficient_quota"}}\n\n'
+      ])
+    ))
+    const gen = streamChat({ messages: [{ role: 'user', content: 'hi' }] })
+    const first = await gen.next()
+    expect(first.value).toBe('你')
+    await expect(gen.next()).rejects.toMatchObject({ message: '余额不足' })
+  })
+
+  it('Anthropic 风格 type=error 事件同样抛 AIError', async () => {
+    saveSettings({ baseUrl: 'https://x.com/anthropic', model: 'm', apiKey: 'k' })
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      sseResponse(['event: error\ndata: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}\n\n'])
+    ))
+    const gen = streamChat({ messages: [] })
+    await expect(gen.next()).rejects.toBeInstanceOf(AIError)
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({ message: 'Overloaded' })
+  })
 })
