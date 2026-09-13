@@ -2,7 +2,7 @@
 // 数据详情页：导出/导入/清空（v1.5「我的」页收缩重构，从主页面迁入）。
 import { ref } from 'vue'
 import { collectBackup, parseImport, applyImport } from '../../lib/backup.js'
-import { safeKeys, safeRemoveItem } from '../../lib/storage.js'
+import { safeKeys, safeRemoveItem, clearFlow } from '../../lib/storage.js'
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { toast } from '../../lib/feedback.js'
@@ -18,7 +18,9 @@ function doExport() {
   a.href = url
   a.download = `星语塔罗-backup-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`
   a.click()
-  URL.revokeObjectURL(url)
+  // 延迟回收（评审 2026-09-06）：同步 revoke 在旧 WebKit 上会在下载取数前中止 blob URL，
+  // 且 toast 已报成功——ShareCardModal 同族问题修过，此处同口径
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
   toast('已导出备份')
 }
 
@@ -43,10 +45,15 @@ function doImport(mode) {
   if (!pendingImport.value) return
   const label = mode === 'merge' ? '合并' : '全量覆盖'
   if (!window.confirm(`确定${label}导入吗？${mode === 'overwrite' ? '现有数据将被替换。' : '新记录将并入，重复记录跳过。'}`)) return
-  applyImport(pendingImport.value, mode)
-  pendingImport.value = null
-  toast('导入成功', 'success')
-  setTimeout(() => location.reload(), 600)
+  try {
+    const skipped = applyImport(pendingImport.value, mode)
+    pendingImport.value = null
+    toast(skipped.length ? `导入成功（无效键已跳过：${skipped.map((k) => k.replace(/^tarot\./, '').replace(/\.v1$/, '')).join('、')}）` : '导入成功', 'success')
+    setTimeout(() => location.reload(), 600)
+  } catch (e) {
+    // 坏 journal 等结构错误此前会无声抛在事件处理器里，重试也无反馈
+    toast(e?.message || '导入失败，文件数据无效', 'warn')
+  }
 }
 
 // 清空所有本地数据（危险，二次确认）
@@ -56,6 +63,8 @@ function clearAll() {
   for (const k of safeKeys()) {
     if (k.startsWith('tarot.')) safeRemoveItem(k) // 裸 localStorage 在 iOS「阻止所有 Cookie」下会抛 SecurityError
   }
+  // flow 在 sessionStorage，不清会被「继续占卜」横幅复活成引用已删记录的假局
+  clearFlow()
   toast('已清空')
   setTimeout(() => location.reload(), 600)
 }

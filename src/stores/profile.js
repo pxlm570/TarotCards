@@ -9,7 +9,13 @@ function parseSaved() {
   if (!raw) return null
   try {
     const p = JSON.parse(raw)
-    if (p && typeof p === 'object') return p
+    if (p && typeof p === 'object') {
+      // 逐字段兜底（评审 2026-09-06）：xp 坏成字符串会让 addXp 走拼接（"10"+5="105"）
+      if (typeof p.xp !== 'number') p.xp = 0
+      if (typeof p.maxStreak !== 'number') p.maxStreak = 0
+      if (typeof p.birthday !== 'string') p.birthday = ''
+      return p
+    }
     return null
   } catch {
     return null

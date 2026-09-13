@@ -45,7 +45,13 @@ function parseSaved() {
   if (!raw) return null
   try {
     const p = JSON.parse(raw)
-    if (p && typeof p === 'object' && Array.isArray(p.unlocked) && p.progress) return p
+    if (p && typeof p === 'object' && Array.isArray(p.unlocked) && p.progress) {
+      // 逐字段兜底（评审 2026-09-06）：sr 坏值会让 dueFlashcards 的 Object.entries 直接崩
+      if (!p.sr || typeof p.sr !== 'object') p.sr = {}
+      if (!p.reviewLog || typeof p.reviewLog !== 'object') p.reviewLog = {}
+      if (typeof p.totalReviews !== 'number') p.totalReviews = 0
+      return p
+    }
     return null
   } catch {
     return null
