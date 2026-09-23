@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import cardsData from '../data/cards.json'
 import spreadsData from '../data/spreads.json'
 import { listCustomSpreads } from '../lib/custom-spreads.js'
+import { resolveReadingSpread } from '../lib/reading-record.js'
 import { useJournalStore } from '../stores/journal.js'
 import { useDeck } from '../lib/use-deck.js'
 import SpreadCanvas from '../components/SpreadCanvas.vue'
@@ -23,8 +24,8 @@ const reading = computed(() => journal.getById(route.params.readingId))
 // 合并注册表：自定义牌阵的记录也要能还原全景；free/recap 无注册表项，给可读名称
 const spread = computed(() => {
   const sid = reading.value?.spreadId
-  if (!sid || sid === 'free' || sid === 'recap') return null
-  return spreadsData.find((s) => s.id === sid) ?? listCustomSpreads().find((s) => s.id === sid) ?? null
+  if (!sid || sid === 'recap') return null
+  return resolveReadingSpread(reading.value, [...spreadsData, ...listCustomSpreads()])
 })
 const titleName = computed(() => {
   const sid = reading.value?.spreadId

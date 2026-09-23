@@ -3,7 +3,6 @@
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
-import { setPracticePending } from '../../lib/practice.js'
 import { tap, toast } from '../../lib/feedback.js'
 import AppIcon from '../../components/AppIcon.vue'
 
@@ -25,9 +24,9 @@ function go() {
     if (!window.confirm('有一局占卜正在进行，开始实战练习将放弃这一局，确定吗？')) return
     reading.reset()
   }
-  setPracticePending(props.chapterId, props.lessonId)
+  reading.startPractice(props.chapterId, props.lessonId, props.spreadId)
   tap()
-  router.push({ path: '/reading/question', query: { spread: props.spreadId } })
+  router.push('/reading/question')
 }
 </script>
 

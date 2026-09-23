@@ -1,6 +1,8 @@
 // FlowExit 分支覆盖（v1.5 Task 3 / v1.0 验收遗留 #14）：动线五页统一退出入口，
 // 守着三条资产安全分支--beforeExit 草稿确认、confirm 整局作废确认、reset=false 不误伤进行中的一局。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+// 确保 FlowExit 使用本文件的 feedback mock，不沿用前一测试文件的组件缓存。
+vi.hoisted(() => vi.resetModules())
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'

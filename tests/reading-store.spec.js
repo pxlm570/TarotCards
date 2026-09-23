@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+// isolate:false：其他组件测试可能已缓存了依赖 mock 的 reading 模块。
+vi.hoisted(() => vi.resetModules())
 import { setActivePinia, createPinia } from 'pinia'
 import { useReadingStore } from '../src/stores/reading.js'
 import { saveReading as journalSave, getById as journalGetById } from '../src/lib/journal-store.js'
@@ -568,6 +570,22 @@ describe('reading store：finishShuffle 冻结牌位', () => {
     setActivePinia(createPinia()) // isolate:false 下 store 跨 describe 残留，必须换新 pinia
     localStorage.clear()
     sessionStorage.clear()
+  })
+
+  it('刷新后仍恢复开局牌位，而不是编辑后的注册表', () => {
+    const created = saveCustomSpread({ name: '恢复阵', positions: [
+      { label: '一', x: 25, y: 50 }, { label: '二', x: 75, y: 50 }
+    ] })
+    const original = useReadingStore()
+    walkToPicking(original, created.id)
+    original.pickCard(0)
+    saveCustomSpread({ id: created.id, name: '恢复阵', positions: [{ label: '新位置', x: 50, y: 50 }] })
+    setActivePinia(createPinia())
+    const restored = useReadingStore()
+    expect(restored.tryRestore()).toBe(true)
+    expect(restored.spread.positions.map((p) => p.label)).toEqual(['一', '二'])
+    restored.pickCard(1)
+    expect(restored.phase).toBe('revealing')
   })
 
   it('抽牌中途把自定义牌阵改少牌位，本局仍按开局布局走完不崩', () => {

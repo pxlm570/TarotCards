@@ -1,13 +1,17 @@
 // useStream 单测：流式生命周期统一收口（挂载即流/卸载即中止/错误分类/重试）。
 // ai-client 整模块 mock 掉，用可编程的假 streamChat 驱动各分支。
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 
-const { streamChatMock } = vi.hoisted(() => ({
+const { streamChatMock } = vi.hoisted(() => {
+  // isolate:false：清掉其他组件已加载的真实 useStream，确保本文件使用下方 mock。
+  vi.resetModules()
+  return ({
   // 每个用例给 behavior 赋值：async function* ({ signal }) { ... }
   streamChatMock: { behavior: null }
-}))
+  })
+})
 
 vi.mock('../src/lib/ai-client.js', () => ({
   streamChat: (opts) => streamChatMock.behavior(opts),
@@ -25,6 +29,10 @@ const { useStream } = await import('../src/composables/use-stream.js')
 const { AIError } = await import('../src/lib/ai-client.js')
 
 // 挂一个宿主组件，把 useStream 返回值捞出来
+const wrappers = []
+afterEach(() => {
+  wrappers.splice(0).forEach((wrapper) => wrapper.unmount())
+})
 function mountHost(props = {}) {
   let exposed
   const Host = defineComponent({
@@ -34,6 +42,7 @@ function mountHost(props = {}) {
     }
   })
   const wrapper = mount(Host)
+  wrappers.push(wrapper)
   return { wrapper, stream: exposed }
 }
 
@@ -53,10 +62,42 @@ function okStream(chunks) {
 }
 
 describe('useStream', () => {
+  it('主动中止保留取消状态且不算完成，重新生成后可正常完成', async () => {
+    streamChatMock.behavior = async function* ({ signal }) {
+      yield '半截'
+      await new Promise((_, reject) => signal.addEventListener('abort', () => reject(new DOMException('停止', 'AbortError')), { once: true }))
+    }
+    const onDone = vi.fn()
+    const { stream } = mountHost({ onDone })
+    await flush()
+    stream.stop()
+    await flush()
+    expect(stream.cancelled.value).toBe(true)
+    expect(onDone).not.toHaveBeenCalled()
+    streamChatMock.behavior = okStream(['完整'])
+    await stream.start()
+    expect(stream.cancelled.value).toBe(false)
+    expect(onDone).toHaveBeenCalledWith('完整')
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
     streamChatMock.behavior = null
+  })
+
+  it('宿主卸载后，即使上游晚到也不写文本或触发完成回调', async () => {
+    let release
+    streamChatMock.behavior = async function* () {
+      await new Promise((resolve) => { release = resolve })
+      yield '迟到内容'
+    }
+    const onDone = vi.fn()
+    const { wrapper, stream } = mountHost({ onDone })
+    wrapper.unmount()
+    release()
+    await flush()
+    expect(stream.text.value).toBe('')
+    expect(onDone).not.toHaveBeenCalled()
   })
 
   it('immediate 挂载即流：delta 拼进 text，onDone 收到全文', async () => {

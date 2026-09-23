@@ -1,286 +1,80 @@
 <script setup>
-// 学习 Tab：章节列表（金勾/进行中/锁定）、总进度环、今日复习入口、毕业卡。
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import chapters from '../data/courses/index.json'
+import { chapters, nextLesson, CHAPTER_CARDS, LESSON_LABELS } from '../lib/learning-path.js'
 import { useLearningStore } from '../stores/learning.js'
-import ProgressRing from '../components/ProgressRing.vue'
+import LessonIllustration from '../components/LessonIllustration.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
-
 const router = useRouter()
 const learning = useLearningStore()
-
-const totalPct = computed(() =>
-  learning.totalLessonCount ? Math.round((learning.totalDoneCount / learning.totalLessonCount) * 100) : 0
-)
+const next = computed(() => nextLesson(learning.progress, learning.unlocked))
+const totalPct = computed(() => Math.round(learning.totalDoneCount / learning.totalLessonCount * 100))
 const dueCount = computed(() => learning.dueFlashcards().length)
-
-function openChapter(id) {
-  if (!learning.unlocked.includes(id)) return
-  tap()
-  router.push(`/learn/${id}`)
-}
-
-// 认识牌面入口：入门学习从逐张点开牌库开始（牌库页每张牌可点看牌义，用户不知道要靠这里提示）
-function goDeck() {
-  tap()
-  router.push('/deck')
-}
+const currentArt = computed(() => [{ cardId: CHAPTER_CARDS[(next.value?.chapter.order ?? 1) - 1] }])
+function openChapter(id) { if (learning.unlocked.includes(id)) { tap(); router.push(`/learn/${id}`) } }
 </script>
-
 <template>
   <div class="learn">
-    <header class="head">
-      <h1 class="title">学习</h1>
-      <div class="ring-block">
-        <ProgressRing :value="totalPct / 100" :size="64" :stroke="7" />
-        <div class="ring-num">{{ totalPct }}%</div>
-      </div>
-    </header>
-
-    <div v-if="learning.graduated" class="grad card">
-      <AppIcon name="star" :size="26" />
-      <p class="grad-title">已毕业 · 世界</p>
-      <p class="grad-text">你已走完愚人之旅。全库卡牌复习已解锁，长期维护你的记忆。</p>
-    </div>
-
-    <button class="review card-press" @click="router.push('/learn/review')">
-      <AppIcon name="deck" :size="22" />
-      <span class="review-main">
-        <b>今日复习</b>
-        <span class="review-sub">{{ dueCount }} 张卡牌待复习</span>
-      </span>
-      <span class="review-cta">
-        去复习 <AppIcon name="arrow" :size="15" />
-      </span>
-    </button>
-
-    <!-- 认识牌面：用牌库页当入门教材（每张牌可点开看牌义），不另做一套学习卡 -->
-    <button class="review card-press" @click="goDeck">
-      <AppIcon name="eye" :size="22" />
-      <span class="review-main">
-        <b>认识牌面</b>
-        <span class="review-sub">点开任意一张牌，了解它的牌义与启示</span>
-      </span>
-      <span class="review-cta">
-        去牌库 <AppIcon name="arrow" :size="15" />
-      </span>
-    </button>
-
-    <!-- 每日挑战：低调可选，不做也不影响 -->
-    <button class="challenge-link" @click="router.push('/learn/challenge')">
-      <AppIcon name="sparkle" :size="15" />
-      每日挑战 · 3 题（+10 XP）
-    </button>
-
-    <section class="chapters">
-      <h2 class="section-title">章节</h2>
-      <button
-        v-for="(c, i) in chapters"
-        :key="c.id"
-        class="chapter card-press stagger-item"
-        :class="{ locked: !learning.unlocked.includes(c.id) }"
-        :style="{ '--i': i }"
-        @click="openChapter(c.id)"
-      >
-        <span class="ch-n">{{ c.order }}</span>
-        <span class="ch-main">
-          <span class="ch-title">{{ c.title }}</span>
-          <span class="ch-intro">{{ c.intro }}</span>
-        </span>
-        <span class="ch-state">
-          <template v-if="!learning.unlocked.includes(c.id)">
-            <AppIcon name="lock" :size="16" />
-          </template>
-          <template v-else-if="learning.isChapterComplete(c.id)">
-            <AppIcon name="check" :size="18" class="ok" />
-          </template>
-          <template v-else>
-            <span class="in-progress">{{ learning.chapterDoneCount(c.id) }} 课</span>
-          </template>
-        </span>
-      </button>
+    <header class="head"><div><p class="eyebrow">每天一点，看懂牌里的故事</p><h1>学习之旅</h1></div><span class="badge">{{ learning.totalDoneCount }} / {{ learning.totalLessonCount }} 课</span></header>
+    <section v-if="next" class="continue-card card">
+      <div class="continue-copy"><span class="badge">{{ learning.totalDoneCount ? '接着上次，继续出发' : '你的第一站' }}</span><p class="chapter-kicker">第 {{ next.chapter.order }} 章 · {{ next.chapter.title }}</p><h2>{{ next.lesson.title }}</h2><p class="hint">{{ LESSON_LABELS[next.lesson.type] }} · 按自己的节奏来</p></div>
+      <LessonIllustration :cards="currentArt" compact />
+      <button class="btn-solid btn-block continue-btn" @click="router.push(next.path)">{{ learning.totalDoneCount ? '继续学习' : '开始第一课' }}<AppIcon name="arrow" :size="18" /></button>
     </section>
+    <section v-else class="graduated card"><AppIcon name="star" :size="34" /><h2>{{ learning.graduated ? '愚人之旅，走到世界' : '这一站已完成' }}</h2><p>回看熟悉的牌，也会发现新的线索。</p><button class="btn-solid" @click="router.push('/learn/review?all=1')">复习全副牌</button></section>
+    <div class="journey-meta"><h2>七站成长小径</h2><span>{{ totalPct }}% 已完成</span></div>
+    <div class="overall-track" role="progressbar" aria-label="全部课程进度" :aria-valuenow="totalPct" aria-valuemin="0" aria-valuemax="100"><span :style="{ width: totalPct + '%' }" /></div>
+    <section class="path" aria-label="章节路径">
+      <div v-for="(chapter, i) in chapters" :key="chapter.id" class="path-stop" :class="{ locked: !learning.unlocked.includes(chapter.id), current: next?.chapter.id === chapter.id }">
+        <div class="path-node"><AppIcon v-if="learning.isChapterComplete(chapter.id)" name="check" :size="22" /><AppIcon v-else-if="!learning.unlocked.includes(chapter.id)" name="lock" :size="20" /><span v-else>{{ chapter.order }}</span></div>
+        <button class="chapter card-press" :disabled="!learning.unlocked.includes(chapter.id)" @click="openChapter(chapter.id)">
+          <div class="chapter-copy"><span class="chapter-number">第 {{ chapter.order }} 站<span v-if="next?.chapter.id === chapter.id"> · 正在探索</span></span><h3>{{ chapter.title }}</h3><p>{{ chapter.intro }}</p><span class="lesson-count">{{ learning.unlocked.includes(chapter.id) ? `${learning.chapterDoneCount(chapter.id)} / ${chapter.lessons.length} 课` : '完成前一章后解锁' }}</span></div>
+          <LessonIllustration :cards="[{ cardId: CHAPTER_CARDS[i] }]" compact />
+        </button>
+      </div>
+    </section>
+    <section class="practice-hub"><h2>换种方式练一练</h2><button class="review card-press" @click="router.push('/learn/review')"><AppIcon name="deck" :size="24" /><span><b>今日复习</b><small>{{ dueCount ? `${dueCount} 张卡牌等你回想` : '先认识新牌，再回来温习' }}</small></span><AppIcon name="arrow" :size="16" /></button><button class="review card-press" @click="router.push('/learn/challenge')"><AppIcon name="sparkle" :size="24" /><span><b>每日三题</b><small>用小挑战唤醒记忆 · 每日首次 +10 XP</small></span><AppIcon name="arrow" :size="16" /></button><button class="browse btn-text" @click="router.push('/deck')">自由探索七十八张牌 <AppIcon name="arrow" :size="16" /></button></section>
   </div>
 </template>
-
 <style scoped>
-.learn {
-  padding: var(--sp-3) 20px var(--sp-4);
-}
-
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--sp-3);
-}
-
-.title {
-  font-size: var(--fs-title);
-}
-
-.ring-block {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ring-num {
-  position: absolute;
-  font-size: 0.8125rem;
-  font-weight: var(--w-title);
-  color: var(--gold-text);
-}
-
-.grad {
-  padding: var(--sp-2);
-  margin-bottom: var(--sp-3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  color: var(--gold-text);
-}
-
-.grad-title {
-  font-size: var(--fs-head);
-  font-weight: var(--w-title);
-}
-
-.grad-text {
-  font-size: var(--fs-note);
-  color: var(--dim);
-  line-height: 1.7;
-}
-
-.review {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 15px 16px;
-  margin-bottom: var(--sp-3);
-  color: var(--gold-text);
-}
-
-.review-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.review-main b {
-  color: var(--ink);
-  font-size: var(--fs-head);
-}
-
-.review-sub {
-  font-size: var(--fs-note);
-  color: var(--dim);
-}
-
-.review-cta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--fs-note);
-  font-weight: var(--w-strong);
-}
-
-.challenge-link {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px;
-  margin-bottom: var(--sp-3);
-  background: none;
-  border: 2px dashed var(--line);
-  border-radius: var(--radius-card);
-  color: var(--dim);
-  font-size: var(--fs-note);
-  font-weight: var(--w-strong);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.section-title {
-  font-size: var(--fs-head);
-  margin-bottom: 12px;
-}
-
-.chapter {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-}
-
-.chapter.locked {
-  opacity: 0.55;
-}
-
-.ch-n {
-  min-width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gold-soft);
-  color: var(--gold-text);
-  font-weight: var(--w-title);
-  font-size: 0.9375rem;
-}
-
-.chapter.locked .ch-n {
-  background: var(--sunk);
-  color: var(--dim);
-}
-
-.ch-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ch-title {
-  font-size: var(--fs-body);
-  font-weight: var(--w-strong);
-}
-
-.ch-intro {
-  font-size: var(--fs-note);
-  color: var(--dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ch-state {
-  color: var(--dim);
-  flex-shrink: 0;
-}
-
-.ch-state .ok {
-  color: var(--gold-text);
-}
-
-.in-progress {
-  font-size: var(--fs-note);
-  color: var(--gold-text);
-  font-weight: var(--w-strong);
-}
+.learn { padding: var(--sp-3) 20px var(--sp-4); }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+.head h1 { font-size: var(--fs-title); margin-top: 5px; }
+.eyebrow, .hint, .chapter-kicker { font-size: var(--fs-note); color: var(--dim); }
+.head .badge { flex-shrink: 0; }
+.continue-card { padding: 20px; display: grid; grid-template-columns: 1fr 72px; gap: 16px; align-items: center; }
+.continue-copy { min-width: 0; }
+.continue-copy .badge { white-space: normal; }
+.chapter-kicker { margin: 12px 0 4px; }
+.continue-card h2 { font-size: 21px; margin-bottom: 8px; }
+.continue-btn { grid-column: 1 / -1; }
+.journey-meta { display: flex; justify-content: space-between; align-items: center; margin: 30px 0 12px; }
+.journey-meta h2, .practice-hub h2 { font-size: var(--fs-head); }
+.journey-meta span { color: var(--dim); font-size: var(--fs-note); }
+.overall-track { height: 8px; border-radius: var(--radius-pill); background: var(--sunk); overflow: hidden; }
+.overall-track span { display: block; height: 100%; background: var(--gold); border-radius: inherit; }
+.path { position: relative; margin: 24px 0; }
+.path::before { content: ''; position: absolute; top: 30px; bottom: 70px; width: 3px; left: 22px; background: var(--line); }
+.path-stop { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; position: relative; }
+.path-node { display: grid; place-items: center; width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--line); border-bottom-width: 5px; background: var(--surface); font-size: 18px; font-weight: var(--w-title); }
+.current .path-node { background: var(--gold); border-color: var(--gold-deep); color: var(--on-gold); }
+.chapter { min-width: 0; flex: 1; padding: 16px; display: grid; grid-template-columns: 1fr 48px; align-items: center; gap: 12px; }
+.chapter-copy { min-width: 0; }
+.current .chapter { border-color: var(--gold-deep); }
+.chapter-number { color: var(--dim); font-size: 11px; }
+.chapter h3 { font-size: var(--fs-body); margin: 5px 0; }
+.chapter p { color: var(--dim); font-size: 12px; line-height: 1.65; }
+.lesson-count { display: block; margin-top: 10px; font-size: 12px; color: var(--gold-text); font-weight: var(--w-strong); }
+.locked .chapter { background: var(--sunk); cursor: default; }
+.locked .lesson-count, .locked .path-node { color: var(--dim); }
+.locked :deep(img) { filter: grayscale(1); opacity: .65; }
+.practice-hub { padding-top: 8px; }
+.review { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; margin-top: 14px; }
+.review span { flex: 1; }
+.review small { display: block; color: var(--dim); font-size: 12px; margin-top: 4px; }
+.browse { display: flex; gap: 10px; justify-content: center; width: 100%; margin-top: 12px; }
+.graduated { padding: 24px; display: grid; justify-items: center; gap: 16px; text-align: center; }
+.graduated > svg { color: var(--gold-text); }
+@media (max-width: 360px) { .learn { padding-inline: 12px; }.chapter { padding: 12px; grid-template-columns: 1fr 38px; }.path-stop { gap: 8px; } }
 </style>

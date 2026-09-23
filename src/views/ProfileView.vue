@@ -45,7 +45,12 @@ function isRealDate(s) {
   const dt = new Date(y, m - 1, d)
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
 }
-const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRealDate(birthdayInput.value))
+function localToday() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+const todayStr = localToday()
+const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRealDate(birthdayInput.value) && birthdayInput.value <= localToday())
 
 function saveBirthday() {
   if (!birthdayValid.value) return

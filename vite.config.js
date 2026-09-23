@@ -34,7 +34,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: /\/decks\/.*\.webp$/,
+            urlPattern: /\/decks\/.*\.webp(?:\?.*)?$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'deck-images',
@@ -45,7 +45,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /\/backs\/.*\.webp$/,
+            urlPattern: /\/backs\/.*\.webp(?:\?.*)?$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'back-images',

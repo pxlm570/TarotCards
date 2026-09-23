@@ -39,13 +39,14 @@ function startDeep() {
   done.value = false
 }
 
-function onDone() {
+function onDone(full) {
+  if (full?.trim()) conversation.value = [...conversation.value, { role: 'assistant', content: full }]
   done.value = true
 }
 
 function ask() {
   const q = followUp.value.trim()
-  if (!q) return
+  if (!q || !done.value) return
   conversation.value = [...conversation.value, { role: 'user', content: q }]
   followUp.value = ''
   turn.value++

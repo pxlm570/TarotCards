@@ -21,6 +21,8 @@ const index = ref(0)
 const multiSel = ref([]) // 多选已勾下标
 const wrongMsg = ref('') // 答错的解析提示
 const done = ref(false)
+const accepted = ref(false)
+const selectedIndex = ref(null)
 
 const current = computed(() => props.questions[index.value])
 const type = computed(() => current.value?.type ?? 'single')
@@ -36,6 +38,7 @@ function isCorrect() {
 
 // 单选类：点击即判
 function pick(oi) {
+  if (accepted.value) return
   const q = current.value
   if (q.type === 'multi') {
     multiSel.value = multiSel.value.includes(oi)
@@ -44,20 +47,25 @@ function pick(oi) {
     return
   }
   tap()
+  selectedIndex.value = oi
   if (oi === q.answer) {
-    advance()
+    accepted.value = true
+    wrongMsg.value = ''
+    success()
   } else {
     wrongMsg.value = q.explain
   }
 }
 
 function confirmMulti() {
+  if (accepted.value) return
   if (multiSel.value.length === 0) return
-  if (isCorrect()) advance()
+  if (isCorrect()) { accepted.value = true; wrongMsg.value = ''; success() }
   else wrongMsg.value = current.value.explain
 }
 
 function advance() {
+  if (!accepted.value) return
   success()
   if (index.value + 1 >= props.questions.length) {
     finish()
@@ -65,6 +73,8 @@ function advance() {
     index.value++
     multiSel.value = []
     wrongMsg.value = ''
+    accepted.value = false
+    selectedIndex.value = null
   }
 }
 
@@ -89,8 +99,8 @@ const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lesso
 <template>
   <div class="quiz">
     <div class="bar">
-      <span class="bar-num">第 {{ index + 1 }} / {{ questions.length }} 题</span>
-      <div class="track"><div class="fill" :style="{ width: (index / questions.length) * 100 + '%' }" /></div>
+      <span class="bar-num">{{ done ? '挑战完成' : `第 ${index + 1} / ${questions.length} 题` }}</span>
+      <div class="track"><div class="fill" :style="{ width: (done ? 100 : index / questions.length * 100) + '%' }" /></div>
     </div>
 
     <div v-if="done" class="done card">
@@ -123,16 +133,19 @@ const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lesso
           v-for="(opt, oi) in current.options"
           :key="oi"
           class="opt"
-          :class="{ sel: type === 'multi' && multiSel.includes(oi), right: wrongMsg && oi === current.answer && type !== 'multi' }"
+          :class="{ sel: type === 'multi' ? multiSel.includes(oi) : selectedIndex === oi }"
+          :disabled="accepted"
+          :aria-pressed="type === 'multi' ? multiSel.includes(oi) : selectedIndex === oi"
           @click="pick(oi)"
         >
           {{ opt }}
         </button>
       </div>
 
-      <p v-if="wrongMsg" class="explain">提示：{{ wrongMsg }}</p>
+      <p v-if="wrongMsg" class="explain" role="status">再想一想：{{ wrongMsg }}</p>
+      <div v-if="accepted" class="correct-feedback" role="status"><b>答对了！</b><p>{{ current.explain }}</p><button class="btn-solid btn-block" @click="advance">{{ index + 1 === questions.length ? '完成测验' : '继续下一题' }}</button></div>
 
-      <div v-if="type === 'multi'" class="multi-actions">
+      <div v-if="type === 'multi' && !accepted" class="multi-actions">
         <button class="btn-solid btn-block" :disabled="multiSel.length === 0" @click="confirmMulti">确认</button>
       </div>
 
@@ -142,6 +155,9 @@ const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lesso
 </template>
 
 <style scoped>
+.correct-feedback { padding: 16px; background: var(--gold-soft); border-radius: var(--radius-btn); display: grid; gap: 12px; }
+.correct-feedback b { color: var(--gold-text); }
+.opt:disabled { cursor: default; }
 .quiz {
   display: flex;
   flex-direction: column;

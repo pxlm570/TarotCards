@@ -68,6 +68,7 @@ describe('journal-store', () => {
   })
 
   it('dailyDraws 按 dayKey 读写', () => {
+    saveReading(sample()) // 打卡必须引用一条真实记录，悬空引用会在读取时清理
     setDailyDraw('2026-07-25', 'uuid-1')
     expect(getDailyDraw('2026-07-25')).toBe('uuid-1')
     expect(getDailyDraw('2026-07-26')).toBeUndefined()

@@ -8,6 +8,7 @@ import { useProfileStore } from '../../stores/profile.js'
 import { useDeck } from '../../lib/use-deck.js'
 import { safeGetItem, safeSetItem } from '../../lib/storage.js'
 import { currentDayKey } from '../../lib/day-key.js'
+import { sanitizeChallenge } from '../../lib/persisted-data.js'
 import { tap, success, toast } from '../../lib/feedback.js'
 import AppIcon from '../../components/AppIcon.vue'
 import { useBack } from '../../composables/use-back.js'
@@ -90,7 +91,7 @@ function finish() {
   finished.value = true
   let rec = { count: 0, last: '' }
   try {
-    rec = { ...rec, ...(JSON.parse(safeGetItem(CHALLENGE_KEY)) || {}) }
+    rec = sanitizeChallenge(JSON.parse(safeGetItem(CHALLENGE_KEY))) ?? rec
   } catch {
     /* 损坏按空记录处理，不让奖励静默丢失 */
   }

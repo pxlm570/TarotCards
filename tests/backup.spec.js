@@ -16,6 +16,16 @@ function seed() {
 describe('backup', () => {
   beforeEach(() => localStorage.clear())
 
+  it('导入仅允许应用备份键，不覆盖同源的其他数据', () => {
+    localStorage.setItem('unrelated', 'keep')
+    const payload = { version: 1, data: { unrelated: 'changed', 'tarot.profile.v1': { xp: 12 } } }
+    for (const mode of ['merge', 'overwrite']) {
+      expect(applyImport(payload, mode)).toContain('unrelated')
+      expect(localStorage.getItem('unrelated')).toBe('keep')
+      expect(JSON.parse(localStorage.getItem('tarot.profile.v1')).xp).toBe(12)
+    }
+  })
+
   it('collectBackup 汇总全部 tarot.*.v1 键', () => {
     seed()
     const b = collectBackup()

@@ -3,7 +3,10 @@
 // 各键逐一经 sanitizer 归一——结构非法的键跳过（返回跳过清单交 UI 提示），坏值回默认，
 // journal 条目级过滤（缺 cards/ts 崩 Mirror/时间线），dailyDraws 悬空引用随淘汰同步清理。
 import { safeGetItem, safeSetItem, clearFlow } from './storage.js'
-import { JOURNAL_MAX } from './journal-store.js'
+import { JOURNAL_MAX, loadJournal } from './journal-store.js'
+import { sanitizeLearning } from './learning-data.js'
+import { sanitizeCustomSpreads } from './custom-spreads.js'
+import { sanitizeJournal, sanitizeProfile, sanitizeAchievements, sanitizeChallenge } from './persisted-data.js'
 
 export const BACKUP_VERSION = 1
 const KEYS = [
@@ -37,7 +40,7 @@ export function collectBackup() {
 
 export function parseImport(text) {
   const obj = JSON.parse(text)
-  if (!obj || obj.version !== BACKUP_VERSION || !obj.data || typeof obj.data !== 'object') {
+  if (!obj || obj.version !== BACKUP_VERSION || !obj.data || typeof obj.data !== 'object' || Array.isArray(obj.data)) {
     throw new Error('文件格式不正确或版本不受支持')
   }
   return obj
@@ -53,43 +56,18 @@ function pruneDailyDraws(draws, keepIds) {
 // journal 归一化：非法结构拒绝导入（防止坏文件把现库静默清零），并守住 500 条容量上限
 function normalizeJournal(raw) {
   if (raw == null) return null
-  if (!Array.isArray(raw.readings) || !raw.dailyDraws || typeof raw.dailyDraws !== 'object') {
-    throw new Error('记录库数据结构不完整，已跳过 tarot.journal.v1')
-  }
-  const readings = raw.readings
-    .filter((r) => r && typeof r.id === 'string' && typeof r.ts === 'number' && Array.isArray(r.cards))
-    .map((r) => ({ ...r, cards: r.cards.filter((c) => c && typeof c.cardId === 'string') }))
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, JOURNAL_MAX)
-  const ids = new Set(readings.map((r) => r.id))
-  return { readings, dailyDraws: pruneDailyDraws(raw.dailyDraws, ids) }
+  const result = sanitizeJournal(raw, JOURNAL_MAX)
+  if (!result) throw new Error('记录库数据结构不完整，未导入数据')
+  return result
 }
 
-function sanitizeLearning(raw) {
-  if (!raw || typeof raw !== 'object') return null
-  if (!Array.isArray(raw.unlocked) || raw.unlocked.some((c) => typeof c !== 'string')) return null
-  if (!raw.progress || typeof raw.progress !== 'object') return null
-  return {
-    ...raw,
-    sr: raw.sr && typeof raw.sr === 'object' ? raw.sr : {},
-    reviewLog: raw.reviewLog && typeof raw.reviewLog === 'object' ? raw.reviewLog : {},
-    totalReviews: typeof raw.totalReviews === 'number' ? raw.totalReviews : 0
-  }
-}
-
-function sanitizeProfile(raw) {
-  if (!raw || typeof raw !== 'object') return null
-  if ('xp' in raw && typeof raw.xp !== 'number') return null
-  if ('maxStreak' in raw && typeof raw.maxStreak !== 'number') return null
-  if ('birthday' in raw && typeof raw.birthday !== 'string') return null
-  return raw
-}
-
-// 其余键不在此列：settings 载入时逐字段校验、achievements/custom-spreads 各自归一化，
-// challenge 仅为小计数对象，坏值的影响面各自可控
+// settings 在读取时逐字段校验；其他数据导入与本地读取采用同一契约。
 const SANITIZERS = {
   'tarot.learning.v1': sanitizeLearning,
-  'tarot.profile.v1': sanitizeProfile
+  'tarot.custom-spreads.v1': sanitizeCustomSpreads,
+  'tarot.profile.v1': sanitizeProfile,
+  'tarot.achievements.v1': sanitizeAchievements,
+  'tarot.challenge.v1': sanitizeChallenge
 }
 
 function sanitizeKey(key, raw, skipped) {
@@ -105,15 +83,23 @@ function sanitizeKey(key, raw, skipped) {
 
 /** 导入。返回被跳过的键名数组（空数组 = 全部有效），供 UI 提示「部分数据无效」。 */
 export function applyImport(backup, mode = 'merge') {
-  const data = backup.data || {}
-  const skipped = []
+  const raw = backup.data || {}
+  const skipped = Object.keys(raw).filter((key) => !KEYS.includes(key))
+  const data = Object.fromEntries(Object.entries(raw).filter(([key]) => KEYS.includes(key)))
   const journal = 'tarot.journal.v1' in data ? normalizeJournal(data['tarot.journal.v1']) : null
+  // 全部准备好再写入，结构异常不会发生在写入了一部分键之后。
+  for (const key of Object.keys(data)) {
+    if (key === 'tarot.journal.v1') continue
+    const value = sanitizeKey(key, data[key], skipped)
+    if (value === undefined) delete data[key]
+    else data[key] = value
+  }
   if (mode === 'overwrite') {
     for (const k of Object.keys(data)) {
       if (k === 'tarot.journal.v1') {
         if (journal) safeSetItem(k, JSON.stringify(journal))
       } else {
-        const v = sanitizeKey(k, data[k], skipped)
+        const v = data[k]
         if (v !== undefined) safeSetItem(k, JSON.stringify(v))
       }
     }
@@ -124,7 +110,7 @@ export function applyImport(backup, mode = 'merge') {
   // merge：readings 按 id 去重合并，其余键覆盖
   for (const k of Object.keys(data)) {
     if (k === 'tarot.journal.v1' && journal) {
-      const existing = safeParse(safeGetItem(k)) || { readings: [], dailyDraws: {} }
+      const existing = loadJournal()
       const ids = new Set((existing.readings || []).map((r) => r.id))
       // 按 ts 排序后再裁剪：淘汰「最旧」而非数组尾部（库满时合并入的新记录曾被误淘汰）
       const merged = [...(existing.readings || []), ...journal.readings.filter((r) => !ids.has(r.id))]
@@ -134,7 +120,7 @@ export function applyImport(backup, mode = 'merge') {
       const dailyDraws = pruneDailyDraws({ ...(existing.dailyDraws || {}), ...journal.dailyDraws }, keepIds)
       safeSetItem(k, JSON.stringify({ readings: merged, dailyDraws }))
     } else if (k !== 'tarot.journal.v1') {
-      const v = sanitizeKey(k, data[k], skipped)
+      const v = data[k]
       if (v !== undefined) safeSetItem(k, JSON.stringify(v))
     }
   }

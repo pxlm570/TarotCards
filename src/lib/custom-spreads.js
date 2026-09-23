@@ -16,7 +16,7 @@ function fail(msg) {
 function loadAll() {
   try {
     const parsed = JSON.parse(safeGetItem(CUSTOM_SPREADS_KEY) || '[]')
-    return Array.isArray(parsed) ? parsed : []
+    return sanitizeCustomSpreads(parsed) ?? []
   } catch {
     return [] // 损坏数据按空库处理
   }
@@ -62,6 +62,25 @@ function normalizePositions(positions) {
 
 export function listCustomSpreads() {
   return loadAll()
+}
+
+export function sanitizeCustomSpreads(raw) {
+  if (!Array.isArray(raw)) return null
+  const seen = new Set()
+  const result = []
+  for (const item of raw) {
+    if (!item || typeof item.id !== 'string' || !item.id.startsWith('custom-') || seen.has(item.id)) continue
+    if (typeof item.name !== 'string' || !item.name.trim()) continue
+    try {
+      const positions = normalizePositions(item.positions)
+      result.push({ id: item.id, name: item.name.trim().slice(0, 12), positions, cardCount: positions.length,
+        createdAt: Number.isFinite(item.createdAt) ? item.createdAt : 0,
+        updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : 0 })
+      seen.add(item.id)
+      if (result.length === MAX_CUSTOM_SPREADS) break
+    } catch { /* 单条坏数据不影响其他创作 */ }
+  }
+  return result
 }
 
 export function getCustomSpread(id) {

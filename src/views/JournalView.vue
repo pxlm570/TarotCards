@@ -10,9 +10,11 @@ import spreadsData from '../data/spreads.json'
 import TimelineItem from '../components/TimelineItem.vue'
 import MirrorPanel from '../components/MirrorPanel.vue'
 import AppIcon from '../components/AppIcon.vue'
+import { useDayKey } from '../composables/use-day-key.js'
 
 const router = useRouter()
 const journal = useJournalStore()
+const dayKey = useDayKey()
 
 const tab = ref('timeline') // timeline | mirror
 
@@ -54,7 +56,7 @@ const filtered = computed(() => {
 
 // 按日分组（凌晨 4 点分界，与连胜一致）
 const groups = computed(() => {
-  const today = currentDayKey()
+  const today = dayKey.value
   const yest = currentDayKey(new Date(Date.now() - 24 * 3600 * 1000))
   const buckets = new Map()
   for (const r of filtered.value) {

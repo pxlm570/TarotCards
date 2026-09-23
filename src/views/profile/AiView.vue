@@ -49,8 +49,10 @@ function quickFill(endpoint) {
 }
 
 function saveAI(patch) {
-  settingsStore.update(patch)
-  Object.assign(aiInput.value, patch)
+  const previousKey = aiInput.value.apiKey
+  const next = settingsStore.update(patch)
+  Object.assign(aiInput.value, next)
+  if (previousKey && !next.apiKey) toast('端点已更换，请填写该服务的 API key', 'info')
 }
 
 async function testConnection() {
@@ -106,6 +108,7 @@ function copyShareLink() {
         {{ pendingImport.apiKey ? '含 API key' : '不含 key' }}
       </p>
       <p class="import-warn">只应用来源可信的配置；应用后你的提问会发送到该端点。</p>
+      <p v-if="!pendingImport.apiKey" class="import-warn">若更换端点，原 API key 会清除，请填写新服务的密钥。</p>
       <div class="import-actions">
         <button class="btn-ghost" @click="discardImport">放弃</button>
         <button class="btn-solid" @click="applyImport">应用</button>

@@ -58,14 +58,14 @@ const { text: recapText, error: recapError, streaming: streamingRecap, start: ru
 )
 
 function startRecap() {
-  if (streamingRecap.value || recapText.value) return // 失败态（recapText 为空）可重试
+  if (streamingRecap.value || (recapText.value && !recapError.value)) return
   recapping.value = true
   runRecap()
 }
 
 function saveRecap() {
   const text = recapText.value
-  if (!text) return
+  if (!text || recapError.value || streamingRecap.value) return
   const id = (() => { try { return crypto.randomUUID() } catch { return 'r' + Date.now().toString(36) } })()
   journal.addReading({ id, ts: Date.now(), spreadId: 'recap', question: '周期复盘', domain: null, cards: [], note: text, isDaily: false })
   recapText.value = ''

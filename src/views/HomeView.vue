@@ -18,6 +18,7 @@ import { buildGreetingMessages } from '../lib/ai-prompts.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useRitualToday } from '../composables/use-ritual-today.js'
 import { useStream } from '../composables/use-stream.js'
+import { useDayKey } from '../composables/use-day-key.js'
 
 const router = useRouter()
 const reading = useReadingStore()
@@ -26,6 +27,7 @@ const learning = useLearningStore()
 const profile = useProfileStore()
 const settings = useSettingsStore()
 const { cardUrl, backUrl } = useDeck()
+const today = useDayKey()
 
 const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
@@ -49,7 +51,7 @@ const greeting = computed(() => {
 })
 
 // ---- 每日一抽与连胜 ----
-const dailyReading = computed(() => journal.dailyReading(currentDayKey()))
+const dailyReading = computed(() => journal.dailyReading(today.value))
 const dailyCardName = computed(() => {
   const id = dailyReading.value?.cards?.[0]?.cardId
   return id ? cardById.get(id)?.name ?? '' : ''
@@ -58,9 +60,9 @@ const dailyFaceUrl = computed(() => {
   const id = dailyReading.value?.cards?.[0]?.cardId
   return id ? cardUrl(id) : ''
 })
-const streak = computed(() => calcStreak(Object.keys(journal.dailyDraws), currentDayKey()))
+const streak = computed(() => calcStreak(Object.keys(journal.dailyDraws), today.value))
 const maxStreak = computed(() => calcMaxStreak(Object.keys(journal.dailyDraws)))
-const todayDrawn = computed(() => !!journal.dailyDraws[currentDayKey()])
+const todayDrawn = computed(() => !!journal.dailyDraws[today.value])
 // 今日未打卡但昨日有连胜：提示「别让连胜断了」
 const pendingToday = computed(() => !todayDrawn.value && streak.value > 0)
 

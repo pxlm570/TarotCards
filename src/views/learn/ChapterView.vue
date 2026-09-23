@@ -7,32 +7,37 @@ import { useLearningStore } from '../../stores/learning.js'
 import AppIcon from '../../components/AppIcon.vue'
 import TutorFab from '../../components/TutorFab.vue'
 import { useBack } from '../../composables/use-back.js'
+import LessonIllustration from '../../components/LessonIllustration.vue'
+import activities from '../../data/lesson-activities.json'
+import { chapters as courseData, CHAPTER_CARDS, LESSON_LABELS } from '../../lib/learning-path.js'
 
 const route = useRoute()
 const router = useRouter()
 const learning = useLearningStore()
 const goBack = useBack()
 
-const chapterId = route.params.chapterId
-const chapterMeta = chapters.find((c) => c.id === chapterId)
-const CHAPTER_MODULES = import.meta.glob('../../data/courses/chapter-*.json', { eager: true })
+const chapterId = computed(() => route.params.chapterId)
+const chapterMeta = computed(() => chapters.find((c) => c.id === chapterId.value))
 // 文件名是 chapter-<两位序号>.json（如 chapter-01.json），序号来自 index 的 order
-const chapterFile = chapterMeta ? `../../data/courses/chapter-${String(chapterMeta.order).padStart(2, '0')}.json` : null
-const chapterData = chapterFile ? CHAPTER_MODULES[chapterFile]?.default : undefined
+const chapterData = computed(() => courseData.find((c) => c.id === chapterId.value))
 
-const unlocked = computed(() => learning.unlocked.includes(chapterId))
-const chapterDone = computed(() => learning.isChapterComplete(chapterId))
+const unlocked = computed(() => learning.unlocked.includes(chapterId.value))
+const chapterDone = computed(() => chapterMeta.value && learning.isChapterComplete(chapterId.value))
 
-const lessons = computed(() => chapterData?.lessons ?? [])
-const doneCount = computed(() => learning.chapterDoneCount(chapterId))
+const lessons = computed(() => chapterData.value?.lessons ?? [])
+const doneCount = computed(() => learning.chapterDoneCount(chapterId.value))
 const totalCount = computed(() => lessons.value.length)
 
 // 第 5 章完成 → 引导开启逆位
-const showReversalGuide = computed(() => chapterId === 'ch-05' && chapterDone.value)
+const showReversalGuide = computed(() => chapterId.value === 'ch-05' && chapterDone.value)
+const upcoming = computed(() => lessons.value.find((l) => !learning.progress[chapterId.value]?.[l.id]))
+function illustration(lesson) {
+  return [{ cardId: activities[lesson.id]?.cards[0]?.cardId ?? lesson.cardIds?.[0] ?? CHAPTER_CARDS[(chapterMeta.value?.order ?? 1) - 1] }]
+}
 
 function openLesson(id) {
   if (!unlocked.value) return
-  router.push(`/learn/${chapterId}/${id}`)
+  router.push(`/learn/${chapterId.value}/${id}`)
 }
 
 // 供学习助教：把本章图文正文拼成一段摘要
@@ -72,10 +77,11 @@ const chapterContent = computed(() => {
     </div>
 
     <template v-else>
+      <button v-if="upcoming" class="btn-solid btn-block chapter-continue" @click="openLesson(upcoming.id)">继续 · {{ upcoming.title }}<AppIcon name="arrow" :size="16" /></button>
       <div v-if="showReversalGuide" class="guide card">
         <p class="guide-title">你已经掌握了正逆位</p>
         <p class="guide-text">去设置里开启逆位，让解读更完整。</p>
-        <button class="btn-solid btn-block" @click="router.push('/profile')">去开启逆位</button>
+        <button class="btn-solid btn-block" @click="router.push('/profile/preference')">去开启逆位</button>
       </div>
 
       <div class="lesson-list">
@@ -86,6 +92,7 @@ const chapterContent = computed(() => {
           :style="{ '--i': i }"
           @click="openLesson(l.id)"
         >
+          <LessonIllustration class="lesson-thumb" :cards="illustration(l)" compact />
           <span class="item-icon">
             <AppIcon
               :name="l.type === 'article' ? 'learn' : l.type === 'flashcards' ? 'deck' : l.type === 'quiz' ? 'sparkle' : 'pen'"
@@ -94,7 +101,7 @@ const chapterContent = computed(() => {
           </span>
           <span class="item-main">
             <span class="item-title">{{ l.title }}</span>
-            <span class="item-type">{{ { article: '图文', flashcards: '卡牌', quiz: '测验', practice: '实战' }[l.type] }}</span>
+            <span class="item-type">{{ LESSON_LABELS[l.type] }}</span>
           </span>
           <AppIcon v-if="learning.progress[chapterId]?.[l.id]" class="done-mark" name="check" :size="18" />
         </button>
@@ -106,6 +113,8 @@ const chapterContent = computed(() => {
 </template>
 
 <style scoped>
+.chapter-continue { margin-bottom: 20px; }
+.lesson-thumb { width: 42px; flex-shrink: 0; }
 .chapter {
   padding: var(--sp-3) 20px calc(40px + env(safe-area-inset-bottom, 0px));
 }

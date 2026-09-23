@@ -67,6 +67,21 @@ describe('useDeck：牌面/牌背独立', () => {
     expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws-sepia')
   })
 
+  it('快速切换皮肤后，较早请求晚到不能覆盖当前选择', async () => {
+    let resolveRws
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/rws/manifest.json')
+      ? new Promise((resolve) => { resolveRws = resolve }) : priorFetch(url)))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(resolveRws).toBeTypeOf('function'))
+    d.switchFace('rws-sepia')
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(SEPIA))
+    resolveRws(jsonResponse(RWS))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(d.faceId.value).toBe('rws-sepia')
+    expect(d.manifest.value).toEqual(SEPIA)
+  })
+
   it('switchBack 换牌背不影响牌面', async () => {
     const d = deck.useDeck()
     await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))

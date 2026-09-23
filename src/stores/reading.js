@@ -12,6 +12,7 @@ import { drawCards } from '../lib/tarot-engine.js'
 import { listCustomSpreads } from '../lib/custom-spreads.js'
 import { deleteReading } from '../lib/journal-store.js'
 import { loadSettings, loadFlow, saveFlow, clearFlow, DOMAIN_VALUES } from '../lib/storage.js'
+import { chapters } from '../lib/learning-path.js'
 
 const DECK_IDS = cardsData.map((c) => c.id)
 
@@ -48,6 +49,7 @@ function initialState() {
     freeMode: false, // v1.5 Task 7：自由摆放局（翻牌后拖位，不依赖任何注册表牌阵）
     freePositions: [], // 自由摆放的活位置 [{key,label,meaning,x,y}]，随拖动更新并持久化
     layout: null, // finishShuffle 时冻结的牌位快照（评审 2026-09-06）：动线中途编辑自定义牌阵不再影响本局
+    practiceTask: null, // 仅属于本局；作废、重开时与 flow 一起清理
     entryPath: '' // 动线入口页（2026-08-31「从哪进、退回哪」）：开局在提问页捕获，退出/手势退出回这里
   }
 }
@@ -90,6 +92,26 @@ export const useReadingStore = defineStore('reading', {
   },
 
   actions: {
+    startPractice(chapterId, lessonId, spreadId) {
+      const lesson = chapters.find((c) => c.id === chapterId)?.lessons.find((l) => l.id === lessonId)
+      if (lesson?.type !== 'practice' || lesson.spreadId !== spreadId) throw new Error('实战任务与牌阵不匹配')
+      this.reset()
+      this.selectSpread(spreadId)
+      this.beginBreathing()
+      this.toQuestion()
+      this.practiceTask = { chapterId, lessonId, spreadId }
+      this.persistNow()
+    },
+
+    consumePractice() {
+      if (this.phase !== 'interpreting' || !this.practiceTask) return null
+      const task = this.practiceTask
+      const lesson = chapters.find((c) => c.id === task.chapterId)?.lessons.find((l) => l.id === task.lessonId)
+      this.practiceTask = null
+      this.persistNow()
+      return lesson?.type === 'practice' && lesson.spreadId === task.spreadId && task.spreadId === this.spreadId ? task : null
+    },
+
     _assert(expected, action) {
       if (this.phase !== expected) {
         throw new Error(`[reading] ${action} 需处于 ${expected} 阶段，当前 ${this.phase}`)
@@ -239,8 +261,8 @@ export const useReadingStore = defineStore('reading', {
     },
 
     persistNow() {
-      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions, entryPath } = this
-      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions: freePositions.map((p) => ({ ...p })), entryPath })
+      const { phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys, snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions, layout, entryPath } = this
+      saveFlow({ phase, spreadId, question, domain, pending, pickedIndices, drawn, revealedKeys: [...revealedKeys], snapshot, journalId, isDaily, dailyDayKey, freeMode, freePositions: freePositions.map((p) => ({ ...p })), layout: layout?.map((p) => ({ ...p })) ?? null, practiceTask: this.practiceTask ? { ...this.practiceTask } : null, entryPath })
     },
 
     // 误刷新恢复：路由守卫在进入 /reading/* 前调用；恢复失败则重定向首页

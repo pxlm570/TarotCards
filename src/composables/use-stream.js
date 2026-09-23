@@ -9,6 +9,7 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
   const text = ref('')
   const error = ref('')
   const streaming = ref(false)
+  const cancelled = ref(false)
   let controller = null
   let disposed = false // 卸载后不再写状态/回调
 
@@ -16,14 +17,17 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
     if (disposed || streaming.value) return
     text.value = ''
     error.value = ''
+    cancelled.value = false
     streaming.value = true
     controller = new AbortController()
     try {
       for await (const delta of streamChat({ messages: getMessages(), signal: controller.signal })) {
+        if (disposed || controller.signal.aborted) return
         text.value += delta
       }
-      onDone?.(text.value)
+      if (!disposed && !controller.signal.aborted) onDone?.(text.value)
     } catch (e) {
+      if (disposed) return
       if (e?.name === 'AbortError') {
         // 用户主动中止不是错误：保留已生成内容
       } else if (e.message === AI_NOT_CONFIGURED) {
@@ -45,6 +49,7 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
   }
 
   function stop() {
+    if (streaming.value) cancelled.value = true
     controller?.abort()
   }
 
@@ -54,5 +59,5 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
     controller?.abort()
   })
 
-  return { text, error, streaming, start, stop }
+  return { text, error, streaming, cancelled, start, stop }
 }

@@ -3,10 +3,11 @@
 // 应用挂着过夜「今日限定」不换日、重进页面才恢复。
 // 共享单例 + 引用计数：首个消费者武装换日定时器（到点刷新后续约次日），
 // 最后一个卸载时清理定时器与监听；visibilitychange 回前台立即重算（设备休眠可能错过到点）。
-import { ref, onScopeDispose } from 'vue'
+import { ref, readonly, onScopeDispose } from 'vue'
 import { currentDayKey } from '../lib/day-key.js'
 
 const dayKey = ref(currentDayKey())
+export const observedDayKey = readonly(dayKey)
 let consumers = 0
 let timer = null
 

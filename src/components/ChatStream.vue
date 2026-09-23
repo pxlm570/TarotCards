@@ -12,9 +12,9 @@ const props = defineProps({
 
 const emit = defineEmits(['done'])
 
-const { text, error, streaming, start, stop } = useStream(() => props.messages, {
+const { text, error, streaming, cancelled, start, stop } = useStream(() => props.messages, {
   immediate: true,
-  onDone: () => emit('done')
+  onDone: (full) => emit('done', full)
 })
 const retry = start
 </script>
@@ -22,16 +22,17 @@ const retry = start
 <template>
   <div class="chat">
     <div class="body">
-      <p v-if="!text && !error && !streaming" class="idle">{{ placeholder }}</p>
+      <p v-if="!text && !error && !streaming && !cancelled" class="idle">{{ placeholder }}</p>
       <p v-if="text" class="text">{{ text }}</p>
       <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="cancelled && !streaming" role="status">已中止，当前内容尚未完成。</p>
       <p v-if="streaming" class="caret" />
     </div>
     <div v-if="streaming" class="actions">
       <button class="stop btn-ghost" @click="stop"><AppIcon name="check" :size="14" /> 中止</button>
     </div>
-    <div v-else-if="error" class="actions">
-      <button class="stop btn-ghost" @click="retry"><AppIcon name="arrow" :size="14" style="transform: rotate(90deg)" /> 重试</button>
+    <div v-else-if="error || cancelled" class="actions">
+      <button class="stop btn-ghost" @click="retry"><AppIcon name="arrow" :size="14" style="transform: rotate(90deg)" /> {{ cancelled ? '重新生成' : '重试' }}</button>
     </div>
   </div>
 </template>

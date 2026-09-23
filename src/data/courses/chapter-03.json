@@ -10,9 +10,9 @@
       "title": "四花色与四元素",
       "blocks": [
         { "type": "heading", "text": "四种能量" },
-        { "type": "paragraph", "text": "小阿尔克那的四个花色各对应一种古典元素与一种人生主题：权杖是火与行动，圣杯是水与情感，宝剑是风与思绪，星币是土与物质。" },
-        { "type": "list", "items": ["权杖：火 · 行动 · 热情 · 事业", "圣杯：水 · 情感 · 关系 · 内心", "宝剑：风 · 思考 · 冲突 · 决定", "星币：土 · 物质 · 健康 · 日常"] },
-        { "type": "paragraph", "text": "占卜时数一数牌面里哪种花色最多，就能快速看出这件事的能量集中在哪个领域——这常是解读的第一步。" }
+        { "type": "paragraph", "cards": ["wands-01","cups-01","swords-01","pentacles-01"], "text": "小阿尔克那的四个花色各对应一种古典元素与一种人生主题：权杖是火与行动，圣杯是水与情感，宝剑是风与思绪，星币是土与物质。" },
+        { "type": "list", "cards": ["wands-01","cups-01","swords-01","pentacles-01"], "items": ["权杖：火 · 行动 · 热情 · 事业", "圣杯：水 · 情感 · 关系 · 内心", "宝剑：风 · 思考 · 冲突 · 决定", "星币：土 · 物质 · 健康 · 日常"] },
+        { "type": "paragraph", "cards": ["wands-01","cups-01","swords-01","pentacles-01"], "text": "占卜时数一数牌面里哪种花色最多，就能快速看出这件事的能量集中在哪个领域——这常是解读的第一步。" }
       ]
     },
     {
@@ -21,10 +21,10 @@
       "title": "权杖——火与行动",
       "blocks": [
         { "type": "heading", "text": "去做的能量" },
-        { "type": "paragraph", "text": "权杖对应火元素与行动。它关乎热情、动力、事业与勇气，问你「敢不敢迈出这一步」。" },
+        { "type": "paragraph", "cards": ["wands-01"], "text": "权杖对应火元素与行动。它关乎热情、动力、事业与勇气，问你「敢不敢迈出这一步」。" },
         { "type": "card-ref", "cardId": "wands-01" },
-        { "type": "paragraph", "text": "一号权杖是点火与开端的火花，三号权杖眺望远方的计划，六号权杖是胜利与认可，十号权杖是背负过重的责任。" },
-        { "type": "paragraph", "text": "权杖多，代表这件事在推进、在发生，可能带来忙碌，也带来机会。逆位时常常提示热情消退、拖延或方向分散。" }
+        { "type": "paragraph", "cards": ["wands-01","wands-03","wands-06","wands-10"], "text": "一号权杖是点火与开端的火花，三号权杖眺望远方的计划，六号权杖是胜利与认可，十号权杖是背负过重的责任。" },
+        { "type": "paragraph", "cards": ["wands-01",{"cardId":"wands-01","reversed":true}], "text": "权杖多，代表这件事在推进、在发生，可能带来忙碌，也带来机会。逆位时常常提示热情消退、拖延或方向分散。" }
       ]
     },
     {
@@ -33,10 +33,10 @@
       "title": "圣杯——水与情感",
       "blocks": [
         { "type": "heading", "text": "感受的能量" },
-        { "type": "paragraph", "text": "圣杯对应水元素与情感。它关乎关系、感受、直觉与内心的渴望。" },
+        { "type": "paragraph", "cards": ["cups-01"], "text": "圣杯对应水元素与情感。它关乎关系、感受、直觉与内心的渴望。" },
         { "type": "card-ref", "cardId": "cups-01" },
-        { "type": "paragraph", "text": "一号圣杯是情感的新生，二号圣杯是关系的联结，三号圣杯是庆祝与友谊，十号圣杯是家庭与情感的圆满。" },
-        { "type": "paragraph", "text": "圣杯多，代表这件事牵动着你的心，可能涉及一段关系或一份深刻的在意。逆位时常常提示情感上的失落、回避或付出失衡。" }
+        { "type": "paragraph", "cards": ["cups-01","cups-02","cups-03","cups-10"], "text": "一号圣杯是情感的新生，二号圣杯是关系的联结，三号圣杯是庆祝与友谊，十号圣杯是家庭与情感的圆满。" },
+        { "type": "paragraph", "cards": ["cups-01",{"cardId":"cups-01","reversed":true}], "text": "圣杯多，代表这件事牵动着你的心，可能涉及一段关系或一份深刻的在意。逆位时常常提示情感上的失落、回避或付出失衡。" }
       ]
     },
     {
@@ -45,10 +45,10 @@
       "title": "宝剑——风与思绪",
       "blocks": [
         { "type": "heading", "text": "思考的能量" },
-        { "type": "paragraph", "text": "宝剑对应风元素与思绪。它关乎理性、语言、冲突与决定，也常带着不安与纠结。" },
+        { "type": "paragraph", "cards": ["swords-01"], "text": "宝剑对应风元素与思绪。它关乎理性、语言、冲突与决定，也常带着不安与纠结。" },
         { "type": "card-ref", "cardId": "swords-01" },
-        { "type": "paragraph", "text": "一号宝剑是清晰的念头，三号宝剑是心碎的痛苦，六号宝剑是驶离困境的过渡，九号宝剑是深夜的焦虑。" },
-        { "type": "paragraph", "text": "宝剑多，代表这件事涉及很多想法与权衡，需要想清楚、做决定。逆位时常常提示思绪混乱、钻牛角尖或逃避面对。" }
+        { "type": "paragraph", "cards": ["swords-01","swords-03","swords-06","swords-09"], "text": "一号宝剑是清晰的念头，三号宝剑是心碎的痛苦，六号宝剑是驶离困境的过渡，九号宝剑是深夜的焦虑。" },
+        { "type": "paragraph", "cards": ["swords-01",{"cardId":"swords-01","reversed":true}], "text": "宝剑多，代表这件事涉及很多想法与权衡，需要想清楚、做决定。逆位时常常提示思绪混乱、钻牛角尖或逃避面对。" }
       ]
     },
     {
@@ -57,10 +57,10 @@
       "title": "星币——土与物质",
       "blocks": [
         { "type": "heading", "text": "落实的能量" },
-        { "type": "paragraph", "text": "星币对应土元素与物质。它关乎金钱、工作、健康与生活中的实际付出。" },
+        { "type": "paragraph", "cards": ["pentacles-01"], "text": "星币对应土元素与物质。它关乎金钱、工作、健康与生活中的实际付出。" },
         { "type": "card-ref", "cardId": "pentacles-01" },
-        { "type": "paragraph", "text": "一号星币是实在的开端，三号星币是协作与手艺，六号星币是给予与收获的平衡，十号星币是长久的丰足。" },
-        { "type": "paragraph", "text": "星币多，代表这件事很实际、需要耐心与投入，回报来自一步一个脚印。逆位时常常提示财务上的不稳、懈怠或对物质的执着。" }
+        { "type": "paragraph", "cards": ["pentacles-01","pentacles-03","pentacles-06","pentacles-10"], "text": "一号星币是实在的开端，三号星币是协作与手艺，六号星币是给予与收获的平衡，十号星币是长久的丰足。" },
+        { "type": "paragraph", "cards": ["pentacles-01",{"cardId":"pentacles-01","reversed":true}], "text": "星币多，代表这件事很实际、需要耐心与投入，回报来自一步一个脚印。逆位时常常提示财务上的不稳、懈怠或对物质的执着。" }
       ]
     },
     {

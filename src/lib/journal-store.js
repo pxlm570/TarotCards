@@ -1,6 +1,7 @@
 // 占卜记录存储层（M3 Task 1）。key: tarot.journal.v1 = { readings[], dailyDraws{} }。
 // 读写一律走 safe 封装（localStorage 被禁/写满时静默降级）。
 import { safeGetItem, safeSetItem } from './storage.js'
+import { sanitizeJournal } from './persisted-data.js'
 
 const KEY = 'tarot.journal.v1'
 export const JOURNAL_MAX = 500 // 容量保护：超出淘汰最旧，提示去导出
@@ -16,10 +17,7 @@ function safeParse(json) {
 
 export function loadJournal() {
   const raw = safeParse(safeGetItem(KEY))
-  if (raw && Array.isArray(raw.readings) && raw.dailyDraws && typeof raw.dailyDraws === 'object') {
-    return raw
-  }
-  return { readings: [], dailyDraws: {} }
+  return sanitizeJournal(raw, JOURNAL_MAX) ?? { readings: [], dailyDraws: {} }
 }
 
 function persist(data) {

@@ -1,6 +1,7 @@
 // 个人资料 store（M3 Task 4/6）：XP、本命牌生日、历史最佳连胜。持久化 tarot.profile.v1。
 import { defineStore } from 'pinia'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { sanitizeProfile } from '../lib/persisted-data.js'
 
 const KEY = 'tarot.profile.v1'
 
@@ -14,7 +15,7 @@ function parseSaved() {
       if (typeof p.xp !== 'number') p.xp = 0
       if (typeof p.maxStreak !== 'number') p.maxStreak = 0
       if (typeof p.birthday !== 'string') p.birthday = ''
-      return p
+      return sanitizeProfile(p)
     }
     return null
   } catch {

@@ -3,6 +3,7 @@
 import { defineStore } from 'pinia'
 import achievementsData from '../data/achievements.json'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { sanitizeAchievements } from '../lib/persisted-data.js'
 
 const KEY = 'tarot.achievements.v1'
 
@@ -11,8 +12,7 @@ function parseSaved() {
   if (!raw) return null
   try {
     const p = JSON.parse(raw)
-    if (p && Array.isArray(p.unlocked)) return p
-    return null
+    return sanitizeAchievements(p)
   } catch {
     return null
   }

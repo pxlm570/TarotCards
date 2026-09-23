@@ -47,6 +47,16 @@ describe('ProfileView：内联本命牌', () => {
     expect(wrapper.find('.birth-cancel').exists()).toBe(false)
   })
 
+  it('生日上限是本地今天，未来日期不能保存', async () => {
+    const wrapper = await mountView()
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    expect(wrapper.get('.birth-input').attributes('max')).toBe(today)
+    await wrapper.get('.birth-input').setValue('9999-12-31')
+    expect(wrapper.get('.birth-save').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
   it('重设进编辑态不清数据，退出回到原展示', async () => {
     const wrapper = await mountView()
     const store = useProfileStore()

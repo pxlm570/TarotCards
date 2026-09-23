@@ -75,6 +75,7 @@ function clearAll() {
     <PageHead title="数据" back-to="/profile" back-label="我的" sub="记录、进度与设置都存在本机浏览器。换设备可导出备份再导入。" />
 
     <section class="card block">
+      <p class="backup-note">备份包含占卜记录、学习进度与设置；已配置 AI 时也包含 API key，请妥善保管。</p>
       <button class="btn-ghost btn-block" @click="doExport">导出备份</button>
       <button class="btn-ghost btn-block" style="margin-top: 8px" @click="fileRef.click()">导入备份</button>
       <input ref="fileRef" type="file" accept="application/json,.json" style="display: none" @change="onFileChange" />
@@ -98,6 +99,8 @@ function clearAll() {
 .block {
   padding: var(--sp-2);
 }
+
+.backup-note { color: var(--dim); font-size: var(--fs-note); margin-bottom: 12px; }
 
 .import-actions {
   display: flex;

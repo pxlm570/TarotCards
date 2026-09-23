@@ -127,7 +127,13 @@ export function loadSettings() {
 }
 
 export function saveSettings(patch) {
-  const next = { ...loadSettings(), ...patch }
+  const previous = loadSettings()
+  const next = { ...previous, ...patch }
+  // 凭证随端点归属；只有同一次提交明确提供的新 key 才能跨端点使用。
+  const endpoint = (value) => String(value ?? '').trim().replace(/\/+$/, '')
+  if ('baseUrl' in patch && endpoint(patch.baseUrl) !== endpoint(previous.baseUrl) && !Object.hasOwn(patch, 'apiKey')) {
+    next.apiKey = ''
+  }
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
   } catch {
@@ -155,6 +161,7 @@ export function saveFlow(state) {
 export function clearFlow() {
   try {
     sessionStorage.removeItem(FLOW_KEY)
+    sessionStorage.removeItem('tarot.practice-pending.v1') // 清理旧版本未绑定会话的任务
   } catch {
     /* ignore */
   }

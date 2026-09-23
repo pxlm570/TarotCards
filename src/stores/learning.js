@@ -13,6 +13,8 @@ import ch07 from '../data/courses/chapter-07.json'
 import { currentDayKey } from '../lib/day-key.js'
 import { newCard, review, dueCards } from '../lib/spaced-repetition.js'
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../lib/storage.js'
+import { sanitizeLearning } from '../lib/learning-data.js'
+import { observedDayKey } from '../composables/use-day-key.js'
 import { useAchievementsStore } from './achievements.js'
 import { useProfileStore } from './profile.js'
 
@@ -44,15 +46,7 @@ function parseSaved() {
   const raw = safeGetItem(KEY)
   if (!raw) return null
   try {
-    const p = JSON.parse(raw)
-    if (p && typeof p === 'object' && Array.isArray(p.unlocked) && p.progress) {
-      // 逐字段兜底（评审 2026-09-06）：sr 坏值会让 dueFlashcards 的 Object.entries 直接崩
-      if (!p.sr || typeof p.sr !== 'object') p.sr = {}
-      if (!p.reviewLog || typeof p.reviewLog !== 'object') p.reviewLog = {}
-      if (typeof p.totalReviews !== 'number') p.totalReviews = 0
-      return p
-    }
-    return null
+    return sanitizeLearning(JSON.parse(raw))
   } catch {
     return null
   }
@@ -62,7 +56,7 @@ export const useLearningStore = defineStore('learning', {
   state: () => ({ ...initialState(), ...(parseSaved() ?? {}) }),
 
   getters: {
-    todayReviewCount: (s) => s.reviewLog[currentDayKey()] || 0,
+    todayReviewCount: (s) => s.reviewLog[observedDayKey.value] || 0,
     totalDoneCount: (s) => Object.values(s.progress).reduce((n, m) => n + Object.keys(m).length, 0),
     totalLessonCount: () => Object.values(CHAPTER_LESSONS).reduce((n, arr) => n + arr.length, 0),
     // 注意必须用普通函数：箭头函数吃不到 Pinia 注入的 this（模块顶层 this 是

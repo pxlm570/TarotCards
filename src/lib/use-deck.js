@@ -9,26 +9,31 @@ const faceId = ref(loadSettings().deckId || 'rws')
 const manifest = ref(null)
 const error = ref(null)
 let loading = null
+let faceRequest = 0
 
 const backId = ref(loadSettings().backId || 'star-gold')
 const backItem = ref(null)
 let backsLoading = null
 
 function loadFace() {
+  const request = ++faceRequest
+  const requestedId = faceId.value
   error.value = null
   loading = listDecks()
     .then((ids) => {
+      if (request !== faceRequest) return null
       // 旧配置可能指向已移除的皮肤（如 rws-star）→ 回退默认并写回，避免卡在加载失败
-      if (!ids.includes(faceId.value)) {
+      if (!ids.includes(requestedId)) {
         faceId.value = 'rws'
         saveSettings({ deckId: 'rws' })
       }
       return loadDeck(faceId.value)
     })
     .then((m) => {
-      manifest.value = m
+      if (request === faceRequest && m) manifest.value = m
     })
     .catch((err) => {
+      if (request !== faceRequest) return
       console.error('[deck] 牌面加载失败', err)
       error.value = err
       loading = null // 允许重试

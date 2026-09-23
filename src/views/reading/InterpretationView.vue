@@ -9,8 +9,8 @@ import { useLearningStore } from '../../stores/learning.js'
 import { useJournalStore } from '../../stores/journal.js'
 import { useProfileStore } from '../../stores/profile.js'
 import { recentCardCount } from '../../lib/mirror.js'
-import { consumePracticePending } from '../../lib/practice.js'
 import { currentDayKey } from '../../lib/day-key.js'
+import { createReadingRecord } from '../../lib/reading-record.js'
 import { useDeck } from '../../lib/use-deck.js'
 import SpreadCanvas from '../../components/SpreadCanvas.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -40,16 +40,7 @@ function newId() {
 
 // 翻牌完成即自动落一条记录（一局只存一次，靠 store.journalId 幂等）
 function ensureSaved() {
-  const build = (id) => ({
-    id,
-    ts: Date.now(),
-    spreadId: store.spreadId,
-    question: store.question,
-    domain: store.domain,
-    cards: store.drawn.map((d) => ({ cardId: d.cardId, positionKey: d.positionKey, reversed: d.reversed })),
-    note: note.value,
-    isDaily: store.isDaily
-  })
+  const build = (id) => createReadingRecord(store, id, note.value)
   let id = store.journalId
   if (!id) {
     id = newId()
@@ -71,7 +62,7 @@ function ensureSaved() {
 // 实战课（M2）回来自动打勾 + 本局落库（M3）
 onMounted(() => {
   ensureSaved()
-  const p = consumePracticePending()
+  const p = store.consumePractice()
   if (p) {
     try {
       learning.completeLesson(p.chapterId, p.lessonId)

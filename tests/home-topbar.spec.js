@@ -8,6 +8,7 @@ import HomeView from '../src/views/HomeView.vue'
 import { useJournalStore } from '../src/stores/journal.js'
 import { useProfileStore } from '../src/stores/profile.js'
 import { currentDayKey } from '../src/lib/day-key.js'
+import { useLearningStore } from '../src/stores/learning.js'
 
 // HomeView 与 router/index.js 互相引用（PHASE_ROUTE）：测试 mock 断开循环
 vi.mock('../src/router/index.js', () => ({
@@ -63,6 +64,22 @@ describe('HomeView：顶栏状态胶囊', () => {
     // 污染同 worker 后续文件（isolate:false，CI 上 use-day-key.spec 全红的根因）
     if (wrapper) wrapper.unmount()
     wrapper = null
+    vi.useRealTimers()
+  })
+
+  it('停留首页跨凌晨四点，今日一抽和复习目标同时换日', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 8, 22, 3, 59))
+    const journal = useJournalStore()
+    journal.addReading({ id: 'yesterday', ts: Date.now(), cards: [{ cardId: 'major-00' }] })
+    journal.markDaily(currentDayKey(), 'yesterday')
+    useLearningStore().reviewLog = { [currentDayKey()]: 3 }
+    const view = await mountHome()
+    expect(view.text()).toContain('今日已抽')
+    expect(view.text()).toContain('复习 3/3')
+    await vi.advanceTimersByTimeAsync(61000)
+    expect(view.text()).toContain('抽今日一抽')
+    expect(view.text()).toContain('复习 0/3')
   })
 
   it('连胜 0：火焰走灰态，数字为 0', async () => {
