@@ -73,6 +73,34 @@ export function maskApiKey(key) {
   return `${key.slice(0, 4)}…${key.slice(-2)}`
 }
 
+// 站长 GUI 配置表单（2026-09-25 用户要求表单化）的补丁校验：字段白名单 +
+// 类型检查。空串必须显式拒绝——Number('') === 0 会把档位参数悄悄写成 0。
+const PATCH_STRING_FIELDS = AI_CONFIG_STRINGS
+const PATCH_NUMBER_FIELDS = [...AI_CONFIG_NUMBERS, 'monthly_budget_cny']
+
+export function buildConfigPatch(input) {
+  const patch = {}
+  if (!input || typeof input !== 'object') return { ok: true, patch }
+  for (const key of PATCH_STRING_FIELDS) {
+    if (!Object.hasOwn(input, key)) continue
+    const v = typeof input[key] === 'string' ? input[key].trim() : input[key]
+    if (typeof v !== 'string' || !v) return { ok: false, error: `${key} 不能为空` }
+    patch[key] = v
+  }
+  for (const key of PATCH_NUMBER_FIELDS) {
+    if (!Object.hasOwn(input, key)) continue
+    if (typeof input[key] === 'string' && !input[key].trim()) {
+      return { ok: false, error: `${key} 不能为空` }
+    }
+    const n = Number(input[key])
+    if (!Number.isFinite(n) || n < 0 || (key === 'monthly_budget_cny' && n <= 0)) {
+      return { ok: false, error: `${key} 需要是正数` }
+    }
+    patch[key] = n
+  }
+  return { ok: true, patch }
+}
+
 // 服务端读取带 60s 进程内缓存：配置变更最迟一分钟生效，免去每次请求一趟 DB。
 // Vercel 函数实例本就短命，这里不做跨实例失效。
 let cache = { at: 0, doc: null }

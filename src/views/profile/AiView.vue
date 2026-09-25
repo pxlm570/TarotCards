@@ -11,7 +11,7 @@ import { takePendingImport, discardPendingImport } from '../../lib/config-import
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { toast } from '../../lib/feedback.js'
-import { customAIAllowed, defaultAIEnabled } from '../../lib/supabase.js'
+import { customAIAllowed, defaultAIEnabled, supabase } from '../../lib/supabase.js'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()
@@ -27,6 +27,7 @@ useEscClose(() => (shareLink.value = '')) // Esc 关闭二维码弹层
 // 由用户亲眼确认「应用/放弃」——不再静默写入，防伪造链接静默替换 AI 端点。
 const pendingImport = ref(null)
 onMounted(() => {
+  loadAdminConfig()
   // 统一 LLM 部署（customEnabled=false）：自定义入口已下线，残留的 custom 模式
   // 与 #import 分享链一并作废，避免把用户导向一个不再生效的表单。
   if (!customEnabled) {
@@ -36,6 +37,120 @@ onMounted(() => {
   }
   if (route.query.import === '1') pendingImport.value = takePendingImport()
 })
+
+// —— 站长配置（统一 LLM + 邀请码生成，2026-09-25 用户要求 GUI 化）——
+// 门禁完全在服务端：/api/ai/config 对普通成员回 403、未配 ADMIN_EMAIL 回 503，
+// 前端只「拿得到就渲染」，普通用户既看不到表单也拿不到任何配置数据。
+const ADMIN_NUMBER_FIELDS = [
+  'monthly_budget_cny',
+  'max_tokens_standard',
+  'max_tokens_deep',
+  'price_standard_in',
+  'price_standard_out',
+  'price_deep_in',
+  'price_deep_out'
+]
+const adminConfig = ref(null)
+const adminForm = ref({ api_key: '' })
+const adminMissing = ref([])
+const adminSaving = ref(false)
+const inviteDays = ref(14)
+const newInviteCode = ref('')
+const inviteBusy = ref(false)
+const adminUpdatedAt = computed(() =>
+  adminConfig.value?.updated_at ? new Date(adminConfig.value.updated_at).toLocaleString('zh-CN') : ''
+)
+
+async function adminToken() {
+  if (!supabase) return ''
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token || ''
+}
+
+async function loadAdminConfig() {
+  try {
+    const token = await adminToken()
+    if (!token) return
+    const res = await fetch('/api/ai/config', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store'
+    })
+    if (!res.ok) return
+    const body = await res.json()
+    adminConfig.value = body.config
+    adminMissing.value = body.missing || []
+    adminForm.value = { ...body.config, api_key: '' }
+  } catch {
+    // 本地静态开发无 /api 后端：静默隐藏
+  }
+}
+
+async function saveAdminConfig() {
+  adminSaving.value = true
+  try {
+    const patch = {}
+    for (const [key, value] of Object.entries(adminForm.value)) {
+      if (key === 'api_key') {
+        // 留空 = 保持现值（表单里只显示脱敏残影，不回填）
+        if (typeof value === 'string' && value.trim()) patch.api_key = value.trim()
+        continue
+      }
+      if (value === '' || value == null) continue
+      patch[key] = ADMIN_NUMBER_FIELDS.includes(key) ? Number(value) : String(value).trim()
+    }
+    const token = await adminToken()
+    const res = await fetch('/api/ai/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ patch })
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast(body.error || '保存失败', 'warn')
+      return
+    }
+    adminConfig.value = body.config
+    adminMissing.value = body.missing || []
+    adminForm.value = { ...body.config, api_key: '' }
+    toast('已保存，最迟 60 秒生效', 'success')
+  } catch {
+    toast('保存失败，请检查网络', 'warn')
+  } finally {
+    adminSaving.value = false
+  }
+}
+
+async function genInviteCode() {
+  inviteBusy.value = true
+  try {
+    const token = await adminToken()
+    const res = await fetch('/api/invite/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ days: Number(inviteDays.value) || 14 })
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast(body.error || '生成失败', 'warn')
+      return
+    }
+    newInviteCode.value = body.code
+    toast(`邀请码已生成，${body.days} 天内有效，只显示这一次`, 'success')
+  } catch {
+    toast('生成失败，请检查网络', 'warn')
+  } finally {
+    inviteBusy.value = false
+  }
+}
+
+async function copyInviteCode() {
+  try {
+    await navigator.clipboard.writeText(newInviteCode.value)
+    toast('已复制', 'success')
+  } catch {
+    toast('复制失败，请手动长按复制', 'warn')
+  }
+}
 function applyImport() {
   if (!pendingImport.value) return
   saveAI(pendingImport.value)
@@ -186,6 +301,60 @@ function copyShareLink() {
       </template>
     </section>
 
+    <!-- 站长配置：仅 ADMIN_EMAIL 账号可见（服务端门禁，普通用户既看不到表单也拿不到数据） -->
+    <section v-if="adminConfig" class="card block admin-card">
+      <p class="field-label">站长配置 · 统一 LLM 与邀请码（仅此账号可见）</p>
+      <label class="field">
+        <span class="field-label">模型服务地址（OpenAI 兼容根地址，填到 /v1 为止）</span>
+        <input v-model="adminForm.base_url" class="field-input" type="url" />
+      </label>
+      <label class="field">
+        <span class="field-label">API Key（留空 = 保持不变 · 当前 {{ adminConfig.api_key }}）</span>
+        <input v-model="adminForm.api_key" class="field-input" type="password" autocomplete="off" placeholder="sk-…" />
+      </label>
+      <label class="field">
+        <span class="field-label">普通档模型名</span>
+        <input v-model="adminForm.model_standard" class="field-input" type="text" />
+      </label>
+      <label class="field">
+        <span class="field-label">深度档模型名</span>
+        <input v-model="adminForm.model_deep" class="field-input" type="text" />
+      </label>
+      <label class="field">
+        <span class="field-label">共享月预算（元）</span>
+        <input v-model="adminForm.monthly_budget_cny" class="field-input" type="number" min="1" step="1" />
+      </label>
+      <details class="admin-advanced">
+        <summary>高级参数（单档 tokens 上限与单价 ¥/百万 tokens）</summary>
+        <label class="field"><span class="field-label">普通档 max_tokens</span><input v-model="adminForm.max_tokens_standard" class="field-input" type="number" min="1" /></label>
+        <label class="field"><span class="field-label">深度档 max_tokens</span><input v-model="adminForm.max_tokens_deep" class="field-input" type="number" min="1" /></label>
+        <label class="field"><span class="field-label">普通档输入价</span><input v-model="adminForm.price_standard_in" class="field-input" type="number" min="0" step="0.1" /></label>
+        <label class="field"><span class="field-label">普通档输出价</span><input v-model="adminForm.price_standard_out" class="field-input" type="number" min="0" step="0.1" /></label>
+        <label class="field"><span class="field-label">深度档输入价</span><input v-model="adminForm.price_deep_in" class="field-input" type="number" min="0" step="0.1" /></label>
+        <label class="field"><span class="field-label">深度档输出价</span><input v-model="adminForm.price_deep_out" class="field-input" type="number" min="0" step="0.1" /></label>
+      </details>
+      <p v-if="adminMissing.length" class="mode-note admin-warn">配置尚不完整（服务端会拒答）：{{ adminMissing.join('、') }}</p>
+      <p v-if="adminUpdatedAt" class="mode-note">最近更新：{{ adminUpdatedAt }} · 保存后最迟 60 秒生效，无需重新部署</p>
+      <button class="btn-solid btn-block" :class="{ 'is-loading': adminSaving }" :disabled="adminSaving" @click="saveAdminConfig">保存配置</button>
+
+      <div class="invite-gen">
+        <span class="field-label">生成邀请码（一人一码 · 只显示一次）</span>
+        <div class="invite-row">
+          <select v-model.number="inviteDays" class="field-input invite-days" aria-label="有效天数">
+            <option :value="7">7 天</option>
+            <option :value="14">14 天</option>
+            <option :value="30">30 天</option>
+            <option :value="90">90 天</option>
+          </select>
+          <button class="btn-ghost" :disabled="inviteBusy" @click="genInviteCode">{{ inviteBusy ? '生成中…' : '生成邀请码' }}</button>
+        </div>
+        <div v-if="newInviteCode" class="invite-result">
+          <code class="invite-code">{{ newInviteCode }}</code>
+          <button class="btn-ghost" @click="copyInviteCode">复制</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 配置分享链接二维码弹层 -->
     <div v-if="shareLink" class="modal" @click.self="shareLink = ''">
       <div class="dialog card">
@@ -215,6 +384,17 @@ function copyShareLink() {
 .mode-picker .chips { display: flex; gap: 8px; margin-top: 7px; }
 .mode-picker .chip { flex: 1; }
 .mode-note { margin-top: 9px; color: var(--dim); font-size: var(--fs-note); line-height: 1.6; }
+
+.admin-card { display: grid; gap: 10px; }
+.admin-advanced summary { cursor: pointer; color: var(--dim); font-size: var(--fs-note); }
+.admin-advanced .field { margin-top: 8px; }
+.admin-warn { color: var(--coral); }
+.invite-gen { padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.invite-row { display: flex; gap: 8px; margin-top: 4px; }
+.invite-row .btn-ghost { flex: 1; }
+.invite-days { width: 104px; flex: none; }
+.invite-result { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.invite-code { flex: 1; padding: 10px; border: 1px dashed var(--gold-deep); border-radius: var(--radius-sm); color: var(--ink); font-size: 1rem; letter-spacing: .08em; text-align: center; }
 
 .field {
   display: block;

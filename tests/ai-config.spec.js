@@ -7,6 +7,7 @@ import {
   missingAiConfigFields,
   resolveAiConfig,
   maskApiKey,
+  buildConfigPatch,
   AI_CONFIG_DEFAULTS
 } from '../api/_lib/ai-config.js'
 
@@ -106,5 +107,51 @@ describe('ai-config：maskApiKey', () => {
     expect(maskApiKey('sk-abcdef123456')).toBe('sk-a…56')
     expect(maskApiKey('short')).toBe('••••')
     expect(maskApiKey('')).toBe('（未设置）')
+  })
+})
+
+describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
+  it('合法字符串与数字收进补丁，数字自动转换', () => {
+    const { ok, patch } = buildConfigPatch({
+      base_url: ' https://api.example.com/v1 ',
+      api_key: 'sk-new',
+      model_standard: 'm-std',
+      model_deep: 'm-deep',
+      monthly_budget_cny: '120',
+      max_tokens_standard: 900
+    })
+    expect(ok).toBe(true)
+    expect(patch).toEqual({
+      base_url: 'https://api.example.com/v1',
+      api_key: 'sk-new',
+      model_standard: 'm-std',
+      model_deep: 'm-deep',
+      monthly_budget_cny: 120,
+      max_tokens_standard: 900
+    })
+  })
+
+  it('未知键一律丢弃，缺席字段不进补丁', () => {
+    const { ok, patch } = buildConfigPatch({ model_standard: 'm', hacker: 1, admin: true })
+    expect(ok).toBe(true)
+    expect(patch).toEqual({ model_standard: 'm' })
+    expect(buildConfigPatch(null).patch).toEqual({})
+    expect(buildConfigPatch({}).patch).toEqual({})
+  })
+
+  it('空串显式拒绝（防 Number("")=0 把档位参数写成 0）', () => {
+    expect(buildConfigPatch({ model_standard: '  ' }).ok).toBe(false)
+    expect(buildConfigPatch({ max_tokens_deep: '' }).ok).toBe(false)
+    expect(buildConfigPatch({ monthly_budget_cny: '' }).ok).toBe(false)
+  })
+
+  it('非法数值拒绝：负数/非有限数/预算为 0', () => {
+    expect(buildConfigPatch({ price_deep_in: -1 }).ok).toBe(false)
+    expect(buildConfigPatch({ price_deep_in: 'abc' }).ok).toBe(false)
+    expect(buildConfigPatch({ monthly_budget_cny: 0 }).ok).toBe(false)
+  })
+
+  it('空串允许缺席但 api_key 显式传空串也拒绝（前端留空=不改，直接不传）', () => {
+    expect(buildConfigPatch({ api_key: '' }).ok).toBe(false)
   })
 })
