@@ -7,13 +7,15 @@ import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   messages: { type: Array, required: true },
-  placeholder: { type: String, default: '思考中…' }
+  placeholder: { type: String, default: '思考中…' },
+  tier: { type: String, default: 'standard' }
 })
 
 const emit = defineEmits(['done'])
 
 const { text, error, streaming, cancelled, start, stop } = useStream(() => props.messages, {
   immediate: true,
+  tier: props.tier,
   onDone: (full) => emit('done', full)
 })
 const retry = start

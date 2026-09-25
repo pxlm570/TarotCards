@@ -7,6 +7,8 @@ import { useRouter } from 'vue-router'
 import cardsData from '../data/cards.json'
 import { loadSettings } from '../lib/storage.js'
 import { useProfileStore } from '../stores/profile.js'
+import { useAuthStore } from '../stores/auth.js'
+import { customAIAllowed } from '../lib/supabase.js'
 import { birthCards } from '../lib/birth-cards.js'
 import { useDeck } from '../lib/use-deck.js'
 import { version } from '../../package.json'
@@ -16,6 +18,7 @@ import { tap, toast, success } from '../lib/feedback.js'
 
 const router = useRouter()
 const profile = useProfileStore()
+const auth = useAuthStore()
 const settings = loadSettings()
 const { cardUrl } = useDeck()
 
@@ -102,7 +105,10 @@ const groups = computed(() => [
         to: '/profile/ai',
         icon: 'sparkle',
         name: 'AI 解读',
-        sub: settings.baseUrl ? settings.model || '已配置端点' : '未配置（可选功能）'
+        // 自定义入口下线时统一按默认 AI 展示（与 ai-client/AiPanel 分流一致）
+        sub: !customAIAllowed || settings.aiMode === 'default'
+          ? '星语提供 · 深度解读每日一次'
+          : settings.baseUrl ? settings.model || '已配置端点' : '选择 AI 使用方式'
       }
     ]
   },
@@ -119,11 +125,21 @@ function goEntry(to) {
   tap()
   router.push(to)
 }
+
+async function signOut() {
+  await auth.signOut()
+  router.replace('/access')
+}
 </script>
 
 <template>
   <div class="profile">
     <h1 class="title">我的</h1>
+
+    <section v-if="auth.required" class="card account-card">
+      <div><strong>受邀体验账号</strong><span>{{ auth.email }}</span></div>
+      <button class="btn-ghost" @click="signOut">退出登录</button>
+    </section>
 
     <section class="card block">
       <XpBar show-next />
@@ -189,6 +205,19 @@ function goEntry(to) {
 </template>
 
 <style scoped>
+.account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 20px 12px;
+}
+
+.account-card div { display: grid; gap: 3px; min-width: 0; }
+.account-card span { overflow: hidden; color: var(--dim); font-size: var(--fs-note); text-overflow: ellipsis; }
+.account-card button { flex: none; padding: 8px 12px; }
+
 .profile {
   padding: var(--sp-3) 20px var(--sp-4);
 }

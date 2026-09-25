@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件是**唯一**的 AI 工作指令（整合了原 CLAUDE.md）。项目：**星语塔罗** —— 移动端优先的塔罗 PWA（Vue 3 + Vite + Pinia），纯静态、无后端、无账号，数据全存本机，部署 GitHub Pages，全部 UI 为中文。
+本文件是**唯一**的 AI 工作指令（整合了原 CLAUDE.md）。项目：**星语塔罗** —— 移动端优先的塔罗 PWA（Vue 3 + Vite + Pinia），主要数据保存在本机，全部 UI 为中文。GitHub Pages 仍运行公开静态版；小范围邀请体验新增可选的 Vercel Functions + Supabase 账号/邀请门禁/默认 AI 服务端代理，未配置相关 VITE 环境变量时原有静态版行为保持不变。
 
 > 旧文档已归档到 `docs/archive/`（见其 README 索引），只作历史，不作为执行依据。若归档文档与现代码冲突，**以代码为准**。
 
@@ -19,13 +19,19 @@ npm run build     # 生产构建（含 PWA 离线缓存）
 npm run preview   # 预览构建产物
 npm test          # vitest run（没有 "vitest" npm script，别用 npm run vitest）
 npx vitest run tests/<file>.spec.js   # 单文件测试
+npm run invite:create                  # 生成一次性邀请码（写 Supabase；须本地设 SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY；--days=N 改有效期 1–90 天，默认 14；码只显示一次，库仅存 SHA-256）
+npm run ai:config                      # 配置统一 LLM（写 Supabase app_config 表；同一环境变量要求；不带参数=查看当前配置，Key 脱敏；改动最迟 60s 生效免重部署）
 ```
 
-- Vite 固定在 v7（为兼容 vitest 曾降级，升级前先验证）；vitest 配置 `pool:'threads', isolate:false` 是有意的，勿改回（本机高负载下 forks 会超时）。
+- Vite 固定在 v7（为兼容 vitest 曾降级，升级前先验证）；vitest 配置 `pool:'threads', isolate:false` 是有意的，勿改回（本机高负载下 forks 会超时）。Node 引擎要求 `>=22`（package.json engines）。
 - E2E：`scripts/e2e-flow.py`（需本机 Playwright 环境）。
 - **preview 端口坑**：旧 preview 进程常残留占住 4173/4174，新起 vite 自动换端口导致对着旧服务器测试/截图。反常结果先查监听端口并 kill；起服务加 `--strictPort`。
 
 ## 里程碑状态
+
+- 🚧 **邀请体验部署骨架（2026-09-23，本地实现、尚未提交或部署）**：按用户决定新增 Vercel + Supabase 路线；Supabase 邮箱密码账号 + 一次性个人邀请码（数据库只存 SHA-256），邀请码由 `npm run invite:create` 创建；服务端验证成员后调用站长配置的 OpenAI 兼容模型服务，深度解读每个账号按上海自然日最多一次、共享月预算预留与结算。迁移 `supabase/migrations/202609230001_beta_access.sql`，函数在 `api/`，部署说明在 README。GitHub Pages 旧站仍公开，切换邀请体验前必须先验收 Vercel 并停用旧站发布入口；SMTP/API Key/Supabase/Vercel 环境配置需要站点所有者完成。
+
+- ✅ **统一 LLM 收口 + 自定义 AI 下线开关（2026-09-25，用户拍板）**：①**供应商信息全部出仓**——模型端点/名称/Key/价格/预算移入 Supabase `app_config` 表（迁移 `202609250001_app_config.sql`，RLS 无策略+客户端角色无授权，仅 service_role 可读写），`chat.js` 删光写死的供应商常量与供应商 Key 环境变量，代码/README/.env.example 零供应商字样（**AGENTS.md 入库，供应商名与可推断字样不能写进本文件，历史条目同步泛化**）；配置入口=`npm run ai:config`（`api/_lib/ai-config.js` 纯函数守卫：坏值回落默认、必需字段不齐 503 拒服、Key 脱敏显示；服务端 60s 进程内缓存免每次查库）。②**`VITE_ALLOW_CUSTOM_AI=false` 隐藏自定义 AI**（代码全保留，放开只需改环境变量）：AiView 只留「星语统一提供」说明卡+强制 aiMode 回 default+作废 #import 链，AiPanel/ProfileView 摘要用 `effectiveMode` 分流，ai-client 残留 custom 模式也强制走 `/api/ai/chat`，hasAI 同步；静态版/本地开发未设变量=保持原行为。测试 418 绿（新增 ai-config 纯函数 8 例 + default-ai-flag 4 例）。**坑：vi.mock 工厂快照值会被冻结（resetModules 不重跑工厂），且 isolate:false 下全量跑时真实模块已被同 worker 缓存导致 mock 失效——双保险=工厂 getter 返回活值+每例 resetModules 动态导入**。
 
 - ✅ **独立评审七项修复（2026-09-22，本地完成，未推送）**：AI 端点变更且未显式提供新 key 时清旧凭证，表单同步更新；`learning-data.js` / `persisted-data.js` 与自定义阵 sanitizer 收口导入和本地读取的深层校验；新历史记录存 `spreadSnapshot`（名称/牌位/坐标/旋转），详情优先快照，旧记录回退注册表；20 篇文章正文步骤显式绑定 `cards`（无适合素材时空数组），禁止按数组序循环轮图；首页每日一抽/连胜/复习计数及记录日期分组接入响应式日键；实战任务改 `reading.practiceTask` 随 flow 保存、取消清理、完成一次性消费，删除独立 pending 模块；流式调用增加 cancelled 状态，ChatStream 中止后可重新生成。备份页面注明可能包含 API key。48 文件 406 测试默认/单线程均通过，构建成功；Chrome 验证端点换 key、课程配图、实战取消后普通局不误完成、历史快照改名/删除稳定、四点换日、AI 中止→重新生成→追问。旧记录没有快照时无法倒推出原布局，不伪造历史迁移。
 
@@ -72,13 +78,16 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 
 - **内容与代码分离**：内容全是 JSON，代码只渲染。`src/data/cards.json`（78 牌，**牌 id 是全局契约** `major-00…21`、`wands|cups|swords|pentacles-01…14`）、`src/data/spreads.json`、`src/data/courses/`、`public/decks/<皮肤id>/`（皮肤包须注册进 `public/decks/index.json`）。
 - **牌阵注册表 = 静态 + 自定义运行时合并**：静态 `spreads.json` 与用户自定义牌阵（`lib/custom-spreads.js`）在运行时合并；自定义 id 强制 `custom-` 前缀永不撞车，位置 key 稳定跟随牌位（编辑删位不重排、允许稀疏，历史记录 positionKey 不漂移；无 key 行顺位补号向后兼容）；自由摆放抽牌的布局也经该模块存为「我的牌阵」。
-- **路由是 hash 模式**（createWebHashHistory）——GitHub Pages 子路径下 HTML5 history 刷新会 404。`vite.config.js` 的 `base:'/TarotCards/'` 与仓库名绑定。
+- **路由是 hash 模式**（createWebHashHistory）——GitHub Pages 子路径下 HTML5 history 刷新会 404。`vite.config.js` 的 base 按部署平台切换：`process.env.VERCEL ? '/' : '/TarotCards/'`（GitHub Pages 仍绑仓库名，Vercel 用域名根路径）；线上资源 404 排查先确认部署平台。
 - **占卜动线是 Pinia 状态机**（`src/stores/reading.js`）：`idle→spreadSelected→breathing→questioning→shuffling→picking→revealing→interpreting`；流程态持久化 sessionStorage `tarot.flow.v1`。
 - **取牌面图只走 `src/lib/deck-loader.js`/`use-deck.js`**，URL 必须带 `import.meta.env.BASE_URL` 前缀——硬编码 `/decks/...` 部署子路径全 404。皮肤切换用 `useDeck().switchDeck(id)`（写 `settings.deckId` 并重载）。
 - **本地专属皮肤（2026-08-19）**：`listDecks` 会把 `public/decks/local-index.json`（gitignore，不随公开仓分发）与公开注册表合并去重。用途：版权素材（如 CP2077 游戏原画）可做成本机皮肤自用，目录与索引均 gitignore，**绝不 push**；可公开分发的皮肤仍走 `index.json` 正常注册。
 - **随机**（`src/lib/tarot-engine.js`）：`crypto.getRandomValues` + 拒绝采样 + Fisher-Yates。
 - localStorage 读写走 `src/lib/storage.js` 的 safe 封装，key 统一 `tarot.<name>.v1`；零散标记位也须走 safe 封装（iOS 阻止 Cookie 时裸用抛 SecurityError）。
 - 触感走 `lib/feedback.js` 的 `tap()/success()`，轻提示 `toast()`；勿裸用 `navigator.vibrate`。
+- **Vercel + Supabase 邀请体验层（可选，未配变量即纯静态版）**：全部前端环境变量只在 `src/lib/supabase.js` 读取（`isSupabaseConfigured`/`inviteGateRequired`/`defaultAIEnabled`/`customAIAllowed`），清单见 `.env.example`。服务端专用秘密（`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`AI_MONTHLY_BUDGET_CNY`）**绝不能加 `VITE_` 前缀**。
+- **邀请门禁**：`VITE_REQUIRE_INVITE=true` 时路由守卫先跑 `stores/auth.js` 的 `initialize()`（状态机 open/loading/signed-out/checking/active/invite-needed/service-error/config-error），非 `active` 一律弹 `/access`（`AccessView.vue`）；auth 与占卜状态机（reading）互不相干，勿混接。
+- **`api/` = Vercel Functions**（`api/auth/me`、`api/invite/redeem`、`api/ai/chat`、`api/ai/status` + 公共 `api/_lib`）；`vercel.json` 把 `/(.*)` 重写到 index.html（SPA 回退）并设 functions maxDuration 60。静态 HTML/JS/素材在两种部署下都公开可下载，门禁只挡应用入口与服务端 AI 资格。
 
 ## 视觉与反馈
 
@@ -101,7 +110,8 @@ npx vitest run tests/<file>.spec.js   # 单文件测试
 
 ## AI 集成边界（M4）
 
-- OpenAI 兼容协议 + SSE 流式，baseUrl/model/key 全由用户在设置页配置，**不做官方端点绑定**；无 key 时产品 100% 完整可用，AI 入口优雅降级。
+- 自定义 AI：OpenAI 兼容协议（baseUrl 含 `/anthropic` 自动走 `/v1/messages`）+ SSE 流式，baseUrl/model/key 全由用户在设置页配置，**不做官方端点绑定**；无 key 时产品 100% 完整可用，AI 入口优雅降级。
+- 项目自带默认 AI（邀请体验层）：`settings.aiMode==='default'` 且 `VITE_DEFAULT_AI_ENABLED=true` 时，`ai-client.streamChat` 改 POST `/api/ai/chat`（带 Supabase access_token，`tier: standard|deep`，服务端管额度与预算）。供应商端点/模型/Key 全存 Supabase `app_config` 表（`npm run ai:config` 维护），**代码与公开文档零供应商信息，浏览器端永不接触 Key 与模型名**（SSE 响应剥 model 字段）。自定义入口由 `VITE_ALLOW_CUSTOM_AI` 控制（部署环境设 false），关闭时残留 `aiMode:'custom'` 也强制走默认代理，`hasAI`/AiPanel/ProfileView 分流口径一致。
 - AI 不给医疗/法律/财务决定性建议。
 - `docs/archive/CLAUDE.md`（原 local-secrets 说明）中的 bytecatcode key **仅限开发期生图**，不进入产品代码。
 

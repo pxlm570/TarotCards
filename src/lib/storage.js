@@ -7,6 +7,7 @@ const SETTINGS_KEY = 'tarot.settings.v1'
 export const FLOW_KEY = 'tarot.flow.v1'
 
 export const DEFAULT_SETTINGS = Object.freeze({
+  aiMode: import.meta.env?.VITE_DEFAULT_AI_ENABLED === 'true' ? 'default' : 'custom',
   apiKey: '',
   baseUrl: '', // 不做官方端点绑定，默认留空；用户自填或从设置页「快捷填充」选
   model: '',
@@ -95,6 +96,7 @@ export function safeKeys() {
 
 // 已知字段逐项校验：存储里的坏值（null/类型漂移/旧版本残留）不得覆盖默认值
 const SETTINGS_VALIDATORS = {
+  aiMode: (v) => (['default', 'custom'].includes(v) ? v : DEFAULT_SETTINGS.aiMode),
   apiKey: (v) => (typeof v === 'string' ? v : ''),
   baseUrl: (v) => (typeof v === 'string' ? v : ''),
   model: (v) => (typeof v === 'string' ? v : ''),

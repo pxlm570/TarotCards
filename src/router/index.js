@@ -4,6 +4,9 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { useReadingStore } from '../stores/reading.js'
 import { safeGetItem, safeSetItem } from '../lib/storage.js'
 import HomeView from '../views/HomeView.vue'
+import AccessView from '../views/AccessView.vue'
+import { inviteGateRequired } from '../lib/supabase.js'
+import { useAuthStore } from '../stores/auth.js'
 
 const VISITED_KEY = 'tarot.visited.v1'
 
@@ -35,6 +38,7 @@ const PHASE_ROUTE = {
 }
 
 const routes = [
+  { path: '/access', name: 'access', component: AccessView },
   { path: '/', name: 'home', component: HomeView },
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
   // 选牌阵独立页（Task 21）：刻意放在 /reading/* 之外——守卫会把无进行中占卜的 /reading/* 直链弹回首页
@@ -79,10 +83,27 @@ export function createAppRouter() {
   })
 
   router.beforeEach((to) => {
+    if (inviteGateRequired) {
+      const auth = useAuthStore()
+      return auth.initialize().then(() => {
+        if (to.name === 'access') return true
+        if (auth.state !== 'active') return { name: 'access', query: { next: to.fullPath } }
+
+        // 首次启动强制引导（可从首页 ? 入口重看）
+        if (!hasVisited() && to.path !== '/welcome') return '/welcome'
+        return guardReadingRoute(to)
+      })
+    }
+
     // 首次启动强制引导（可从首页 ? 入口重看）
     if (!hasVisited() && to.path !== '/welcome') {
       return '/welcome'
     }
+
+    return guardReadingRoute(to)
+  })
+
+  function guardReadingRoute(to) {
 
     if (to.path.startsWith('/reading')) {
       const store = useReadingStore()
@@ -95,7 +116,7 @@ export function createAppRouter() {
       if (expected && to.path !== expected) return expected
     }
     return true
-  })
+  }
 
   // 部署新版本后旧 hash chunk 被 SW 清掉：动态 import 失败时整页刷新，
   // 流程态在 sessionStorage（tarot.flow.v1），刷新后守卫按 phase 归位，几乎无损

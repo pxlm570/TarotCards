@@ -3,7 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/TarotCards/', // GitHub Pages 路径 = 仓库名；仓库改名或用自定义域名时同步修改（自定义域名用 '/'）
+  // GitHub Pages 使用仓库子路径；Vercel 使用域名根路径。
+  base: process.env.VERCEL ? '/' : '/TarotCards/',
   plugins: [
     vue(),
     VitePWA({

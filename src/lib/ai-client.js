@@ -1,6 +1,7 @@
 // 兼容 AI 客户端（M4 + 追加）：OpenAI 兼容 + Anthropic 协议。
 // 通过 baseUrl 是否含 /anthropic 自动判别；SSE 流式解析，统一 yield 文本增量。
 import { loadSettings } from './storage.js'
+import { customAIAllowed, defaultAIEnabled, supabase } from './supabase.js'
 
 export class AIError extends Error {
   constructor(status, message, userMessage) {
@@ -120,9 +121,14 @@ async function* streamBody(body, onChunk) {
   }
 }
 
-export async function* streamChat({ messages, signal } = {}) {
-  const { baseUrl, model, apiKey } = loadSettings()
-  if (!baseUrl || !model || !apiKey) throw new Error(AI_NOT_CONFIGURED)
+export async function* streamChat({ messages, signal, tier = 'standard', forceCustom = false } = {}) {
+  const settings = loadSettings()
+  const { baseUrl, model, apiKey } = settings
+  // 自定义入口被关闭（customAIAllowed=false）时，设置里残留的 aiMode:'custom'
+  // 不再分流——统一走服务端默认 AI，防止用户被引导去填一个已被下线的表单。
+  const useDefault =
+    !forceCustom && defaultAIEnabled && (settings.aiMode === 'default' || !customAIAllowed)
+  if (!useDefault && (!baseUrl || !model || !apiKey)) throw new Error(AI_NOT_CONFIGURED)
 
   const controller = new AbortController()
   // 超时语义 = 空闲超时：建连或流中途超过 TIMEOUT_MS 没有任何新数据即中止
@@ -148,14 +154,41 @@ export async function* streamChat({ messages, signal } = {}) {
     }
   }
 
-  const req = isAnthropic(baseUrl)
-    ? buildAnthropicRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
-    : buildOpenAIRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
-
   try {
+    let req
+    if (useDefault) {
+      if (!supabase) throw new AIError(503, 'Supabase 未配置', '默认 AI 服务暂不可用。')
+      const { data } = await supabase.auth.getSession()
+      if (!data.session?.access_token) throw new AIError(401, '登录状态已失效', '请重新登录后使用 AI。')
+      req = {
+        url: '/api/ai/chat',
+        init: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${data.session.access_token}`
+          },
+          body: JSON.stringify({ messages, mode: tier === 'deep' ? 'deep' : 'standard' }),
+          signal: controller.signal
+        }
+      }
+    } else {
+      req = isAnthropic(baseUrl)
+        ? buildAnthropicRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
+        : buildOpenAIRequest({ baseUrl, model, apiKey, messages, signal: controller.signal })
+    }
+
     const res = await fetch(req.url, req.init)
     if (!res.ok || !res.body) {
-      throw new AIError(res.status, await res.text().catch(() => ''))
+      const raw = await res.text().catch(() => '')
+      let userMessage
+      try {
+        userMessage = JSON.parse(raw)?.error
+        if (typeof userMessage === 'object') userMessage = userMessage.message
+      } catch {
+        userMessage = ''
+      }
+      throw new AIError(res.status, raw, userMessage || undefined)
     }
     for await (const delta of streamBody(res.body, resetTimer)) yield delta
   } catch (e) {

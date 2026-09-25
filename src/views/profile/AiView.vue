@@ -7,13 +7,16 @@ import { useSettingsStore } from '../../stores/settings.js'
 import { streamChat } from '../../lib/ai-client.js'
 import { renderSVG } from 'uqr'
 import { useEscClose } from '../../composables/use-esc-close.js'
-import { takePendingImport } from '../../lib/config-import.js'
+import { takePendingImport, discardPendingImport } from '../../lib/config-import.js'
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { toast } from '../../lib/feedback.js'
+import { customAIAllowed, defaultAIEnabled } from '../../lib/supabase.js'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()
+const hasDefaultAI = defaultAIEnabled
+const customEnabled = customAIAllowed
 const testing = ref(false)
 const aiInput = ref({ ...loadSettings() })
 const shareLink = ref('') // 生成的配置分享链接（二维码弹层）
@@ -24,6 +27,13 @@ useEscClose(() => (shareLink.value = '')) // Esc 关闭二维码弹层
 // 由用户亲眼确认「应用/放弃」——不再静默写入，防伪造链接静默替换 AI 端点。
 const pendingImport = ref(null)
 onMounted(() => {
+  // 统一 LLM 部署（customEnabled=false）：自定义入口已下线，残留的 custom 模式
+  // 与 #import 分享链一并作废，避免把用户导向一个不再生效的表单。
+  if (!customEnabled) {
+    if (aiInput.value.aiMode !== 'default') saveAI({ aiMode: 'default' })
+    discardPendingImport()
+    return
+  }
   if (route.query.import === '1') pendingImport.value = takePendingImport()
 })
 function applyImport() {
@@ -50,7 +60,11 @@ function quickFill(endpoint) {
 
 function saveAI(patch) {
   const previousKey = aiInput.value.apiKey
-  const next = settingsStore.update(patch)
+  const writesCustomConfig = ['baseUrl', 'model', 'apiKey'].some((key) => Object.hasOwn(patch, key))
+  const next = settingsStore.update({
+    ...patch,
+    ...(writesCustomConfig && !Object.hasOwn(patch, 'aiMode') ? { aiMode: 'custom' } : {})
+  })
   Object.assign(aiInput.value, next)
   if (previousKey && !next.apiKey) toast('端点已更换，请填写该服务的 API key', 'info')
 }
@@ -60,7 +74,7 @@ async function testConnection() {
   try {
     // for-await + break：让 generator 走完 finally 释放 reader/连接（.next() 丢弃 generator 会泄漏）。
     // 刻意不走 useStream：一次性探测、首块即断、生成器自带清理，接入流式状态机反而绕
-    for await (const _d of streamChat({ messages: [{ role: 'user', content: 'ping' }] })) break
+    for await (const _d of streamChat({ messages: [{ role: 'user', content: 'ping' }], forceCustom: true })) break
     toast('连接正常', 'success')
   } catch (e) {
     toast(e.status === 401 ? '密钥无效' : e.status ? `失败（${e.status}）` : '连接失败，检查 baseUrl 或网络', 'info')
@@ -98,10 +112,13 @@ function copyShareLink() {
 
 <template>
   <div class="page ai-view">
-    <PageHead title="AI 解读" back-to="/profile" back-label="我的" sub="baseUrl / 模型 / key 全部自填，任何 OpenAI 兼容端点都行。key 只存在本机浏览器。不配置时应用 100% 可用。" />
+    <PageHead
+      title="AI 解读" back-to="/profile" back-label="我的"
+      :sub="customEnabled ? '可使用星语提供的 AI，也可连接自己的模型服务。自定义 API key 只保存在当前浏览器。' : '由星语统一提供 AI 解读，无需自行配置。'"
+    />
 
-    <!-- 分享配置确认条：链接导入的第二段（第一段在 main.js 暂存） -->
-    <section v-if="pendingImport" class="card block import-banner">
+    <!-- 分享配置确认条：链接导入的第二段（第一段在 main.js 暂存）；自定义下线时不生效 -->
+    <section v-if="pendingImport && customEnabled" class="card block import-banner">
       <p class="import-title">检测到分享的 AI 配置</p>
       <p class="import-meta">
         {{ pendingImport.baseUrl || '（未填端点）' }} · {{ pendingImport.model || '（未填模型）' }} ·
@@ -116,6 +133,18 @@ function copyShareLink() {
     </section>
 
     <section class="card block">
+      <div v-if="customEnabled" class="mode-picker">
+        <p class="field-label">使用方式</p>
+        <div class="chips">
+          <button v-if="hasDefaultAI" class="chip" :class="{ on: aiInput.aiMode === 'default' }" @click="saveAI({ aiMode: 'default' })">星语提供</button>
+          <button class="chip" :class="{ on: aiInput.aiMode === 'custom' }" @click="saveAI({ aiMode: 'custom' })">自定义 AI</button>
+        </div>
+        <p v-if="aiInput.aiMode === 'default'" class="mode-note">普通 AI 解读每日可用；深度解读每日限一次。AI 请求会发送给模型服务，并计入本项目体验额度。</p>
+        <p v-else class="mode-note">填入你自己的模型端点、模型名称和 API key。请求由浏览器直接发送到该服务，费用由你的服务账户承担。</p>
+      </div>
+      <p v-else class="mode-note">星语统一提供 AI 解读：普通解读每日可用，深度解读每日限一次。AI 请求会发送给模型服务，并计入本项目体验额度。</p>
+
+      <template v-if="customEnabled && aiInput.aiMode === 'custom'">
       <div class="quickfill">
         <span class="field-label">快捷填充（只填 baseUrl）</span>
         <div class="chips">
@@ -140,6 +169,8 @@ function copyShareLink() {
         <span class="field-label">API key</span>
         <input v-model="aiInput.apiKey" class="field-input" type="password" placeholder="sk-…" @change="saveAI({ apiKey: aiInput.apiKey })" />
       </label>
+      </template>
+
       <div class="persona">
         <button
           v-for="p in [['gentle', '温柔治愈'], ['direct', '直率犀利'], ['scholar', '学术严谨']]"
@@ -149,8 +180,10 @@ function copyShareLink() {
           @click="saveAI({ persona: p[0] })"
         >{{ p[1] }}</button>
       </div>
-      <button class="btn-ghost btn-block" :class="{ 'is-loading': testing }" :disabled="testing" @click="testConnection">测试连接</button>
-      <button class="btn-ghost btn-block" style="margin-top:8px" @click="genShareLink">生成配置分享链接（复制）</button>
+      <template v-if="customEnabled && aiInput.aiMode === 'custom'">
+        <button class="btn-ghost btn-block" :class="{ 'is-loading': testing }" :disabled="testing" @click="testConnection">测试连接</button>
+        <button class="btn-ghost btn-block" style="margin-top:8px" @click="genShareLink">生成配置分享链接（复制）</button>
+      </template>
     </section>
 
     <!-- 配置分享链接二维码弹层 -->
@@ -177,6 +210,11 @@ function copyShareLink() {
 .block {
   padding: var(--sp-2);
 }
+
+.mode-picker { margin-bottom: 16px; }
+.mode-picker .chips { display: flex; gap: 8px; margin-top: 7px; }
+.mode-picker .chip { flex: 1; }
+.mode-note { margin-top: 9px; color: var(--dim); font-size: var(--fs-note); line-height: 1.6; }
 
 .field {
   display: block;

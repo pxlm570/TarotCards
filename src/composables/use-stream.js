@@ -5,7 +5,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { streamChat, AI_NOT_CONFIGURED, AIError, AI_TIMEOUT_STATUS } from '../lib/ai-client.js'
 
-export function useStream(getMessages, { immediate = false, onDone = null } = {}) {
+export function useStream(getMessages, { immediate = false, onDone = null, tier = 'standard', forceCustom = false } = {}) {
   const text = ref('')
   const error = ref('')
   const streaming = ref(false)
@@ -21,7 +21,7 @@ export function useStream(getMessages, { immediate = false, onDone = null } = {}
     streaming.value = true
     controller = new AbortController()
     try {
-      for await (const delta of streamChat({ messages: getMessages(), signal: controller.signal })) {
+      for await (const delta of streamChat({ messages: getMessages(), signal: controller.signal, tier, forceCustom })) {
         if (disposed || controller.signal.aborted) return
         text.value += delta
       }

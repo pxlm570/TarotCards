@@ -1,6 +1,6 @@
 # 星语塔罗
 
-私人塔罗空间：占卜 · 学习 · 记录 · AI 增强。移动端优先的 Vue 3 + Vite PWA——纯静态、无后端、无账号，所有数据只保存在你自己的设备上（支持 JSON 备份导出/导入）。
+私人塔罗空间：占卜 · 学习 · 记录 · AI 增强。移动端优先的 Vue 3 + Vite PWA。占卜记录、学习进度和偏好保存在用户设备；邀请登录、默认 AI 和体验额度由 Vercel Functions + Supabase 提供。
 
 **在线访问**：https://pxlm570.github.io/TarotCards/
 
@@ -13,7 +13,7 @@
 - **收藏馆**：收集墙（78 格点亮 + 出现次数）、皮肤墙、牌背墙（连胜解锁梯度）。
 - **记录**：每次占卜自动落库，时间线 / 详情 / 日记编辑 / 删除，Mirror 统计面板。
 - **留存**：每日一抽 + 连胜打卡、XP 22 级（大阿尔克那命名）、成就、今日小目标、本命牌。
-- **AI 增强**（可选）：深度解读 / 追问 / 我先解点评、问题澄清、学习助教、周期复盘、人格化问候——baseUrl / 模型 / key 全由你在「我的」页自填（任何 OpenAI 兼容端点，含 Anthropic 协议），不配置则产品 100% 可用。支持配置分享链接 `#import=` 一键导入。
+- **AI 增强**：受邀用户可使用项目统一提供的 AI 解读与追问（深度解读每账号每天限一次，共享月预算），三种解读人格可选；自定义模型入口默认隐藏，可经 `VITE_ALLOW_CUSTOM_AI` 开启（OpenAI 兼容端点含 Anthropic 协议，Key 只保存在用户本机）。
 - **体验**：浅色 / 暗夜双主题、睡前大字档、减弱动效、分享卡片、PWA 可安装离线、返回手势逐级回退。
 
 ## 开发
@@ -26,6 +26,22 @@ npm run build    # 生产构建（含 PWA 离线缓存）
 ```
 
 推送到 `master` 会自动测试、构建并部署到 GitHub Pages。
+
+## Vercel 小范围体验部署
+
+默认 AI 由项目统一提供：所有受邀用户共用站长在后台配置的 OpenAI 兼容模型服务，调用只发生在 Vercel 服务端。模型端点、模型名称和 API Key 都存放在 Supabase 配置表里（对网站访客完全不可读），不写进代码仓库、不下发到浏览器；界面上只显示「AI 解读 / 深度解读」，不出现任何供应商与模型信息。自定义 AI 入口默认隐藏（`VITE_ALLOW_CUSTOM_AI` 控制），站长未配置模型服务时 AI 入口优雅降级为不可用，应用其余功能不受影响。
+
+1. 在 Supabase 新建项目，在 SQL Editor 依次运行 `supabase/migrations/202609230001_beta_access.sql` 和 `supabase/migrations/202609250001_app_config.sql`。
+2. 在 Supabase Auth 启用邮箱和密码注册，并保持邮箱验证开启。配置自有 SMTP，再把 Vercel 域名加入 Site URL 和 Redirect URLs。Supabase 默认邮件服务不能给非项目成员发送登录邮件。
+3. 在 Vercel 连接仓库并配置环境变量：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VITE_REQUIRE_INVITE=true`、`VITE_DEFAULT_AI_ENABLED=true`、`VITE_ALLOW_CUSTOM_AI=false`。Service Role Key 只设为 Vercel 服务端变量；不要使用 `VITE_` 前缀。
+4. 在本地管理员环境中设置 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`，然后：
+   - `npm run ai:config -- --base-url=https://你的模型服务/v1 --api-key=你的Key --model-standard=普通档模型 --model-deep=深度档模型 --budget=100` 配置统一 LLM（可选 `--max-tokens-*` 与 `--price-*-in/out` 按实际供应商价格覆盖，影响预算估算精度）；`npm run ai:config` 不带参数可查看当前配置（Key 脱敏），改动最迟 60 秒生效，无需重新部署。
+   - `npm run invite:create` 生成 14 天内有效的一次性邀请码。可用 `npm run invite:create -- --days=7` 设置有效天数；邀请码只显示一次，数据库仅存哈希。
+5. 部署后先用一个邀请码验证注册、兑换、AI 调用、深度额度和月预算，再发放其余邀请码。
+
+部署前需要配置真实 Supabase 项目、SMTP 和模型服务 Key；仓库不包含这些秘密。当前 GitHub Pages 仍是公开的纯静态旧站，Vercel 邀请门禁不会自动关闭它。正式切换为邀请制后，应在 Vercel 验收完成时关闭旧 GitHub Pages 发布入口。
+
+邀请门禁用于控制应用入口和服务端 AI 使用资格。PWA 的静态 HTML、JavaScript 与素材仍是公开可下载资源，不承载秘密或他人云端数据；若未来需要隐藏整个应用内容，应改为服务端渲染或增加真正的边缘身份验证层。
 
 ## 素材与内容版权
 

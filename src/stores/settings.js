@@ -4,11 +4,16 @@
 // 由各自模块直写 saveSettings——新代码请勿从本 store 读那些字段（会读到陈旧值）。
 import { defineStore } from 'pinia'
 import { loadSettings, saveSettings } from '../lib/storage.js'
+import { customAIAllowed, defaultAIEnabled } from '../lib/supabase.js'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({ ...loadSettings() }),
   getters: {
-    hasAI: (s) => !!s.baseUrl && !!s.apiKey && !!s.model
+    // 自定义入口被关闭时按默认 AI 判定可用性（残留的 aiMode:'custom' 不再让 hasAI 变 false）
+    hasAI: (s) =>
+      s.aiMode === 'default' || !customAIAllowed
+        ? defaultAIEnabled
+        : !!s.baseUrl && !!s.apiKey && !!s.model
   },
   actions: {
     update(patch) {
