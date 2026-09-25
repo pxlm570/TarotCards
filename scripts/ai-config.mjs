@@ -6,7 +6,7 @@
 // 用法：
 //   npm run ai:config                # 查看当前配置（API Key 脱敏显示）
 //   npm run ai:config -- --base-url=https://api.example.com/v1 --api-key=sk-xxx \
-//     --model-standard=模型A --model-deep=模型B --budget=100
+//     --model-standard=模型A --model-deep=模型B --daily-standard=5 --daily-deep=1
 // 字段只增改不清除；首次配置必须补齐 base-url / api-key / model-standard / model-deep。
 import { createClient } from '@supabase/supabase-js'
 import {
@@ -35,9 +35,10 @@ const FIELD_DEFS = [
   { arg: 'price-standard-out', key: 'price_standard_out' },
   { arg: 'price-deep-in', key: 'price_deep_in' },
   { arg: 'price-deep-out', key: 'price_deep_out' },
-  { arg: 'budget', key: 'monthly_budget_cny' }
+  { arg: 'daily-standard', key: 'daily_standard_limit', desc: '普通档每人每天次数' },
+  { arg: 'daily-deep', key: 'daily_deep_limit', desc: '深度档每人每天次数' }
 ]
-const NUMERIC_KEYS = new Set(Object.keys(AI_CONFIG_DEFAULTS).concat(['monthly_budget_cny']))
+const NUMERIC_KEYS = new Set(Object.keys(AI_CONFIG_DEFAULTS))
 
 function parsePatch(argv) {
   const patch = {}
@@ -52,7 +53,7 @@ function parsePatch(argv) {
     const value = match[2].trim()
     if (NUMERIC_KEYS.has(def.key)) {
       const n = Number(value)
-      if (!Number.isFinite(n) || n < 0 || (def.key === 'monthly_budget_cny' && n <= 0)) {
+      if (!Number.isFinite(n) || n < 0) {
         console.error(`--${def.arg} 需要一个正数，收到：${value}`)
         process.exit(1)
       }
@@ -78,7 +79,8 @@ function printConfig(config) {
     ['price_standard_out (¥/百万tokens)', config.price_standard_out],
     ['price_deep_in (¥/百万tokens)', config.price_deep_in],
     ['price_deep_out (¥/百万tokens)', config.price_deep_out],
-    ['monthly_budget_cny', config.monthly_budget_cny ?? '（未设置，服务端回落环境变量或 100）'],
+    ['daily_standard_limit (次/人/天)', config.daily_standard_limit],
+    ['daily_deep_limit (次/人/天)', config.daily_deep_limit],
     ['api_key', maskApiKey(config.api_key)]
   ]
   for (const [label, value] of rows) console.log(`  ${label.padEnd(34)}${value}`)

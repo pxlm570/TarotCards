@@ -5,7 +5,6 @@ import { loadAiConfig, resolveAiConfig } from '../_lib/ai-config.js'
 
 const MAX_MESSAGES = 24
 const MAX_TOTAL_CHARS = 24000
-const MICRO_YUAN_PER_CNY = 1_000_000
 
 function shanghaiDayAndMonth() {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
@@ -92,7 +91,7 @@ export default async function handler(req, res) {
 
     // 统一 LLM 配置只存 Supabase app_config 表；读取失败/未配置都不外呼，直接拒服。
     try {
-      ai = resolveAiConfig(await loadAiConfig(), mode, process.env.AI_MONTHLY_BUDGET_CNY)
+      ai = resolveAiConfig(await loadAiConfig(), mode)
     } catch {
       ai = { error: 'not_configured' }
     }
@@ -101,22 +100,28 @@ export default async function handler(req, res) {
     requestId = randomUUID()
     const { day, month } = shanghaiDayAndMonth()
     estimatedCost = estimateMicroYuan(ai, body.messages)
-    const budgetCny = ai.monthlyBudgetCny
+    // 按人按天限额（普通/深度各自计数），用量成本仅记录不拦截
     const { data: reservation, error: reservationError } = await access.client.rpc('reserve_ai_request', {
       p_user_id: access.user.id,
       p_request_id: requestId,
       p_day: day,
       p_month: month,
       p_mode: mode,
-      p_estimated_cost_micro_yuan: estimatedCost,
-      p_budget_micro_yuan: Math.max(1, Math.floor(budgetCny * MICRO_YUAN_PER_CNY))
+      p_standard_limit: ai.dailyStandardLimit,
+      p_deep_limit: ai.dailyDeepLimit,
+      p_reserved_cost_micro_yuan: estimatedCost
     })
     if (reservationError) throw new Error('AI 额度服务暂不可用')
     if (!reservation?.reserved) {
-      const dailyLimit = reservation?.reason === 'daily_limit'
-      return sendJson(res, 429, {
-        error: dailyLimit ? '今天的深度解读次数已用完，请明天再来。' : '本月 AI 体验额度已用完。'
-      })
+      if (reservation?.reason === 'daily_limit') {
+        return sendJson(res, 429, {
+          error:
+            mode === 'deep'
+              ? '今天的深度解读次数已用完，请明天再来。'
+              : '今天的 AI 解读次数已用完，请明天再来。'
+        })
+      }
+      return sendJson(res, 429, { error: '今天的 AI 体验资格校验未通过，请稍后再试。' })
     }
     reserved = true
 

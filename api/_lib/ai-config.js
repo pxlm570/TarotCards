@@ -5,19 +5,24 @@ import { getServiceClient } from './supabase.js'
 
 export const AI_CONFIG_KEY = 'ai'
 
-// 兜底档位参数：价格按「每百万 tokens 人民币」计。预算估算精度取决于这里与
-// 实际供应商价格的偏差，上线前应通过 ai:config 按真实价格覆盖。
+// 兜底档位参数：价格按「每百万 tokens 人民币」计；每日限额为按人按天（2026-09-26
+// 用户拍板：普通 5/天、深度 1/天，共享月预算机制已移除）。预算/用量记录仍写
+// ai_usage_events 供站长查账，但不再做预算拦截。上线前应通过 ai:config 按实际价格覆盖。
 export const AI_CONFIG_DEFAULTS = Object.freeze({
   max_tokens_standard: 1200,
   max_tokens_deep: 3000,
   price_standard_in: 2,
   price_standard_out: 8,
   price_deep_in: 2,
-  price_deep_out: 8
+  price_deep_out: 8,
+  daily_standard_limit: 5,
+  daily_deep_limit: 1
 })
 
 const AI_CONFIG_STRINGS = ['base_url', 'api_key', 'model_standard', 'model_deep']
 const AI_CONFIG_NUMBERS = Object.keys(AI_CONFIG_DEFAULTS)
+// 每日限额必须 >=1 才算合法值，0/-1 一类坏值回落默认（0 等于把该档整体关停）
+const AI_CONFIG_LIMIT_KEYS = new Set(['daily_standard_limit', 'daily_deep_limit'])
 
 function cleanString(v) {
   return typeof v === 'string' ? v.trim() : ''
@@ -29,6 +34,7 @@ function cleanNumber(v) {
 }
 
 // 坏值不落库不生效：字符串字段非空才收，数值字段非负有限才收，未知键一律丢弃
+// （含历史残留的 monthly_budget_cny——月预算机制已移除）
 export function normalizeAiConfig(doc) {
   const out = { ...AI_CONFIG_DEFAULTS }
   if (!doc || typeof doc !== 'object') return out
@@ -38,10 +44,10 @@ export function normalizeAiConfig(doc) {
   }
   for (const key of AI_CONFIG_NUMBERS) {
     const v = cleanNumber(doc[key])
-    if (v !== null) out[key] = v
+    if (v === null) continue
+    if (AI_CONFIG_LIMIT_KEYS.has(key) && v < 1) continue
+    out[key] = v
   }
-  const budget = cleanNumber(doc.monthly_budget_cny)
-  if (budget !== null && budget > 0) out.monthly_budget_cny = budget
   if (out.base_url) out.base_url = out.base_url.replace(/\/+$/, '')
   return out
 }
@@ -51,19 +57,19 @@ export function missingAiConfigFields(config) {
 }
 
 // 服务端每次外呼前的最终解析；必需字段不齐返回 not_configured，调用方 503 拒服
-export function resolveAiConfig(config, mode, fallbackBudgetCny) {
+export function resolveAiConfig(config, mode) {
   const c = normalizeAiConfig(config)
   if (missingAiConfigFields(c).length) return { error: 'not_configured' }
   const deep = mode === 'deep'
-  const envBudget = Number(fallbackBudgetCny)
   return {
     baseUrl: c.base_url,
     apiKey: c.api_key,
     model: deep ? c.model_deep : c.model_standard,
-    maxTokens: Math.round(deep ? c.max_tokens_deep : c.max_tokens_standard),
+    maxTokens: Math.max(1, Math.round(deep ? c.max_tokens_deep : c.max_tokens_standard)),
     priceIn: deep ? c.price_deep_in : c.price_standard_in,
     priceOut: deep ? c.price_deep_out : c.price_standard_out,
-    monthlyBudgetCny: c.monthly_budget_cny ?? (envBudget > 0 ? envBudget : 100)
+    dailyStandardLimit: Math.max(1, Math.floor(c.daily_standard_limit)),
+    dailyDeepLimit: Math.max(1, Math.floor(c.daily_deep_limit))
   }
 }
 
@@ -76,7 +82,7 @@ export function maskApiKey(key) {
 // 站长 GUI 配置表单（2026-09-25 用户要求表单化）的补丁校验：字段白名单 +
 // 类型检查。空串必须显式拒绝——Number('') === 0 会把档位参数悄悄写成 0。
 const PATCH_STRING_FIELDS = AI_CONFIG_STRINGS
-const PATCH_NUMBER_FIELDS = [...AI_CONFIG_NUMBERS, 'monthly_budget_cny']
+const PATCH_NUMBER_FIELDS = [...AI_CONFIG_NUMBERS]
 
 export function buildConfigPatch(input) {
   const patch = {}
@@ -93,7 +99,7 @@ export function buildConfigPatch(input) {
       return { ok: false, error: `${key} 不能为空` }
     }
     const n = Number(input[key])
-    if (!Number.isFinite(n) || n < 0 || (key === 'monthly_budget_cny' && n <= 0)) {
+    if (!Number.isFinite(n) || n < 0) {
       return { ok: false, error: `${key} 需要是正数` }
     }
     patch[key] = n

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { customAIAllowed, isSupabaseConfigured } from '../lib/supabase.js'
+import InviteGenerator from '../components/InviteGenerator.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -97,6 +98,10 @@ async function exitAccount() {
 
       <template v-else-if="auth.state === 'invite-needed'">
         <p class="sub">此邀请码只能兑换一次，请使用邀请者发给你的个人邀请码。</p>
+        <div v-if="auth.owner" class="owner-bootstrap">
+          <p class="field-label">站长通道：还没有邀请码？先生成一个</p>
+          <InviteGenerator />
+        </div>
         <form class="form" @submit.prevent="redeem">
           <label class="field-label" for="invite-code">邀请码</label>
           <input id="invite-code" v-model="code" class="field-input code-input" autocomplete="one-time-code" required maxlength="40" placeholder="例如 AB12-CD34-EF56" />
@@ -142,6 +147,7 @@ h1 { margin: 8px 0; font-size: var(--fs-title); }
 .field-input { width: 100%; padding: 12px; border: 2px solid var(--line); border-radius: var(--radius-sm); color: var(--ink); background: var(--surface); font: inherit; }
 .code-input { text-align: center; letter-spacing: .1em; text-transform: uppercase; }
 .form .btn-solid { margin-top: 8px; }
+.owner-bootstrap { width: 100%; margin-bottom: 18px; padding: 14px; border: 1px dashed var(--line); border-radius: var(--radius-sm); text-align: left; }
 .message { margin: 14px 0 0; color: var(--dim); line-height: 1.55; }
 .message.error { color: var(--coral); }
 .text-button { margin-top: 14px; border: 0; color: var(--gold-deep); background: none; }

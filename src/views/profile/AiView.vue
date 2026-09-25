@@ -10,6 +10,7 @@ import { useEscClose } from '../../composables/use-esc-close.js'
 import { takePendingImport, discardPendingImport } from '../../lib/config-import.js'
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import InviteGenerator from '../../components/InviteGenerator.vue'
 import { toast } from '../../lib/feedback.js'
 import { customAIAllowed, defaultAIEnabled, supabase } from '../../lib/supabase.js'
 
@@ -42,7 +43,8 @@ onMounted(() => {
 // 门禁完全在服务端：/api/ai/config 对普通成员回 403、未配 ADMIN_EMAIL 回 503，
 // 前端只「拿得到就渲染」，普通用户既看不到表单也拿不到任何配置数据。
 const ADMIN_NUMBER_FIELDS = [
-  'monthly_budget_cny',
+  'daily_standard_limit',
+  'daily_deep_limit',
   'max_tokens_standard',
   'max_tokens_deep',
   'price_standard_in',
@@ -54,9 +56,6 @@ const adminConfig = ref(null)
 const adminForm = ref({ api_key: '' })
 const adminMissing = ref([])
 const adminSaving = ref(false)
-const inviteDays = ref(14)
-const newInviteCode = ref('')
-const inviteBusy = ref(false)
 const adminUpdatedAt = computed(() =>
   adminConfig.value?.updated_at ? new Date(adminConfig.value.updated_at).toLocaleString('zh-CN') : ''
 )
@@ -117,38 +116,6 @@ async function saveAdminConfig() {
     toast('保存失败，请检查网络', 'warn')
   } finally {
     adminSaving.value = false
-  }
-}
-
-async function genInviteCode() {
-  inviteBusy.value = true
-  try {
-    const token = await adminToken()
-    const res = await fetch('/api/invite/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ days: Number(inviteDays.value) || 14 })
-    })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      toast(body.error || '生成失败', 'warn')
-      return
-    }
-    newInviteCode.value = body.code
-    toast(`邀请码已生成，${body.days} 天内有效，只显示这一次`, 'success')
-  } catch {
-    toast('生成失败，请检查网络', 'warn')
-  } finally {
-    inviteBusy.value = false
-  }
-}
-
-async function copyInviteCode() {
-  try {
-    await navigator.clipboard.writeText(newInviteCode.value)
-    toast('已复制', 'success')
-  } catch {
-    toast('复制失败，请手动长按复制', 'warn')
   }
 }
 function applyImport() {
@@ -321,8 +288,12 @@ function copyShareLink() {
         <input v-model="adminForm.model_deep" class="field-input" type="text" />
       </label>
       <label class="field">
-        <span class="field-label">共享月预算（元）</span>
-        <input v-model="adminForm.monthly_budget_cny" class="field-input" type="number" min="1" step="1" />
+        <span class="field-label">普通档每人每天次数</span>
+        <input v-model="adminForm.daily_standard_limit" class="field-input" type="number" min="1" step="1" />
+      </label>
+      <label class="field">
+        <span class="field-label">深度档每人每天次数</span>
+        <input v-model="adminForm.daily_deep_limit" class="field-input" type="number" min="1" step="1" />
       </label>
       <details class="admin-advanced">
         <summary>高级参数（单档 tokens 上限与单价 ¥/百万 tokens）</summary>
@@ -337,22 +308,7 @@ function copyShareLink() {
       <p v-if="adminUpdatedAt" class="mode-note">最近更新：{{ adminUpdatedAt }} · 保存后最迟 60 秒生效，无需重新部署</p>
       <button class="btn-solid btn-block" :class="{ 'is-loading': adminSaving }" :disabled="adminSaving" @click="saveAdminConfig">保存配置</button>
 
-      <div class="invite-gen">
-        <span class="field-label">生成邀请码（一人一码 · 只显示一次）</span>
-        <div class="invite-row">
-          <select v-model.number="inviteDays" class="field-input invite-days" aria-label="有效天数">
-            <option :value="7">7 天</option>
-            <option :value="14">14 天</option>
-            <option :value="30">30 天</option>
-            <option :value="90">90 天</option>
-          </select>
-          <button class="btn-ghost" :disabled="inviteBusy" @click="genInviteCode">{{ inviteBusy ? '生成中…' : '生成邀请码' }}</button>
-        </div>
-        <div v-if="newInviteCode" class="invite-result">
-          <code class="invite-code">{{ newInviteCode }}</code>
-          <button class="btn-ghost" @click="copyInviteCode">复制</button>
-        </div>
-      </div>
+      <InviteGenerator />
     </section>
 
     <!-- 配置分享链接二维码弹层 -->
@@ -389,12 +345,6 @@ function copyShareLink() {
 .admin-advanced summary { cursor: pointer; color: var(--dim); font-size: var(--fs-note); }
 .admin-advanced .field { margin-top: 8px; }
 .admin-warn { color: var(--coral); }
-.invite-gen { padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
-.invite-row { display: flex; gap: 8px; margin-top: 4px; }
-.invite-row .btn-ghost { flex: 1; }
-.invite-days { width: 104px; flex: none; }
-.invite-result { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.invite-code { flex: 1; padding: 10px; border: 1px dashed var(--gold-deep); border-radius: var(--radius-sm); color: var(--ink); font-size: 1rem; letter-spacing: .08em; text-align: center; }
 
 .field {
   display: block;

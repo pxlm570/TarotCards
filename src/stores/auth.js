@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   const state = ref(required ? 'loading' : 'open')
   const session = ref(null)
   const email = ref('')
+  const owner = ref(false)
   const error = ref('')
   let initialized = false
   let initialization = null
@@ -28,6 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateAccess(nextSession) {
     session.value = nextSession
     email.value = nextSession?.user?.email || ''
+    owner.value = false
     if (!required) {
       state.value = 'open'
       return
@@ -39,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     state.value = 'checking'
     try {
       const access = await requestJson('/api/auth/me', nextSession)
+      owner.value = Boolean(access.owner)
       state.value = access.invited ? 'active' : 'invite-needed'
     } catch {
       state.value = 'service-error'
@@ -108,5 +111,5 @@ export const useAuthStore = defineStore('auth', () => {
     await updateAccess(null)
   }
 
-  return { required, state, session, email, error, initialize, signUp, signIn, redeem, signOut }
+  return { required, state, session, email, owner, error, initialize, signUp, signIn, redeem, signOut }
 })

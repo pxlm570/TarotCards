@@ -22,6 +22,7 @@ const followUp = ref('')
 const tier = ref('standard')
 const deepAvailable = ref(true)
 const deepStatusLoading = ref(false)
+const standardRemaining = ref(null)
 
 async function refreshDeepStatus() {
   if (effectiveMode.value !== 'default' || !supabase) return
@@ -34,7 +35,10 @@ async function refreshDeepStatus() {
       cache: 'no-store'
     })
     const status = await response.json()
-    if (response.ok) deepAvailable.value = Boolean(status.deepAvailable)
+    if (response.ok) {
+      deepAvailable.value = Boolean(status.deepAvailable)
+      standardRemaining.value = Number.isFinite(status.standardRemaining) ? status.standardRemaining : null
+    }
   } catch {
     // 状态接口失败时保留可点击状态，让服务端额度校验给出权威结果。
   } finally {
@@ -113,6 +117,7 @@ function ask() {
           <span><strong>深度解读</strong><small>{{ effectiveMode === 'default' ? (deepAvailable ? '每日限一次，深入梳理牌阵' : '今日额度已用完，明天再来') : '使用你自己的模型服务' }}</small></span>
         </button>
       </div>
+      <p v-if="effectiveMode === 'default' && standardRemaining !== null" class="quota-note">今日普通解读剩余 {{ standardRemaining }} 次</p>
       <div v-else class="active">
         <p class="meta">星语 · {{ personaLabel }}</p>
         <ChatStream :key="turn" :messages="conversation" :tier="tier" @done="onDone" />
@@ -141,6 +146,7 @@ function ask() {
 .ai-options { display: grid; gap: 10px; }
 .ai-options button { display: flex; align-items: center; justify-content: flex-start; gap: 10px; text-align: left; }
 .ai-options button span { display: grid; gap: 2px; }
+.quota-note { margin-top: 4px; text-align: center; color: var(--dim); font-size: var(--fs-note); }
 .ai-options small { color: currentColor; opacity: .78; font-size: var(--fs-note); font-weight: 400; }
 .ai-deep { justify-content: flex-start; }
 .ai-deep:disabled { opacity: .55; }

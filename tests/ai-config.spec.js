@@ -1,6 +1,8 @@
 // 统一 LLM 配置（2026-09-25 用户拍板）：供应商端点/模型/Key 只存 Supabase app_config
-// 表，代码零供应商信息。本 spec 守卫服务端与 ai:config 脚本共用的纯函数——
+// 表，代码零供应商信息。本 spec 守卫服务端、站长 GUI 与 ai:config 脚本共用的纯函数——
 // 坏值不得覆盖默认值（同 settings 逐字段校验约定），必需字段缺失一律 503 拒服。
+// 额度模型（2026-09-26 用户拍板）：按人按天限额（普通 5/天、深度 1/天，可配置），
+// 共享月预算机制整体移除。
 import { describe, it, expect } from 'vitest'
 import {
   normalizeAiConfig,
@@ -24,26 +26,28 @@ describe('ai-config：normalizeAiConfig', () => {
       api_key: 'sk-x',
       model_standard: 'm-std',
       model_deep: 'm-deep',
-      monthly_budget_cny: 50,
+      daily_standard_limit: 8,
       hacker_key: 'nope'
     })
     expect(doc.base_url).toBe('https://api.example.com/v1')
     expect(doc.api_key).toBe('sk-x')
     expect(doc.model_standard).toBe('m-std')
     expect(doc.model_deep).toBe('m-deep')
-    expect(doc.monthly_budget_cny).toBe(50)
+    expect(doc.daily_standard_limit).toBe(8)
     expect(doc).not.toHaveProperty('hacker_key')
+    // 月预算机制已移除：历史残留键一律丢弃
+    expect(doc).not.toHaveProperty('monthly_budget_cny')
   })
 
   it('非正数/非有限数值回落默认，不产生 NaN', () => {
     const doc = normalizeAiConfig({
       max_tokens_standard: -5,
       price_deep_in: 'abc',
-      monthly_budget_cny: 0
+      daily_deep_limit: 0
     })
     expect(doc.max_tokens_standard).toBe(AI_CONFIG_DEFAULTS.max_tokens_standard)
     expect(doc.price_deep_in).toBe(AI_CONFIG_DEFAULTS.price_deep_in)
-    expect(doc.monthly_budget_cny).toBeUndefined()
+    expect(doc.daily_deep_limit).toBe(AI_CONFIG_DEFAULTS.daily_deep_limit)
     expect(JSON.stringify(doc)).not.toContain('NaN')
   })
 })
@@ -71,34 +75,38 @@ describe('ai-config：resolveAiConfig', () => {
     model_deep: 'm-deep',
     max_tokens_standard: 900,
     price_deep_out: 12,
-    monthly_budget_cny: 66
+    daily_standard_limit: 8,
+    daily_deep_limit: 2
   }
 
-  it('按档位解析模型/tokens/价格，base_url 已去尾斜杠', () => {
-    const std = resolveAiConfig(full, 'standard', 100)
+  it('按档位解析模型/tokens/价格与每日限额，base_url 已去尾斜杠', () => {
+    const std = resolveAiConfig(full, 'standard')
     expect(std).toMatchObject({
       baseUrl: 'https://api.example.com/v1',
       apiKey: 'sk-x',
       model: 'm-std',
       maxTokens: 900,
       priceOut: AI_CONFIG_DEFAULTS.price_standard_out,
-      monthlyBudgetCny: 66
+      dailyStandardLimit: 8,
+      dailyDeepLimit: 2
     })
-    const deep = resolveAiConfig(full, 'deep', 100)
-    expect(deep).toMatchObject({ model: 'm-deep', maxTokens: AI_CONFIG_DEFAULTS.max_tokens_deep, priceOut: 12 })
+    const deep = resolveAiConfig(full, 'deep')
+    expect(deep).toMatchObject({
+      model: 'm-deep',
+      maxTokens: AI_CONFIG_DEFAULTS.max_tokens_deep,
+      priceOut: 12
+    })
   })
 
-  it('预算取值链：配置 > 环境变量兜底 > 默认 100', () => {
-    expect(resolveAiConfig(full, 'standard', 80).monthlyBudgetCny).toBe(66)
-    const noBudget = { ...full, monthly_budget_cny: undefined }
-    expect(resolveAiConfig(noBudget, 'standard', 80).monthlyBudgetCny).toBe(80)
-    expect(resolveAiConfig(noBudget, 'standard', -1).monthlyBudgetCny).toBe(100)
-    expect(resolveAiConfig(noBudget, 'standard').monthlyBudgetCny).toBe(100)
+  it('缺省时每日限额回落默认：普通 5/天、深度 1/天', () => {
+    const r = resolveAiConfig({ base_url: 'https://a.b/v1', api_key: 'k', model_standard: 'm', model_deep: 'm2' }, 'standard')
+    expect(r.dailyStandardLimit).toBe(5)
+    expect(r.dailyDeepLimit).toBe(1)
   })
 
   it('必需字段不齐 -> not_configured（服务端据此 503 拒服，不外呼）', () => {
-    expect(resolveAiConfig({ api_key: 'sk-x' }, 'standard', 100).error).toBe('not_configured')
-    expect(resolveAiConfig(null, 'deep', 100).error).toBe('not_configured')
+    expect(resolveAiConfig({ api_key: 'sk-x' }, 'standard').error).toBe('not_configured')
+    expect(resolveAiConfig(null, 'deep').error).toBe('not_configured')
   })
 })
 
@@ -117,7 +125,7 @@ describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
       api_key: 'sk-new',
       model_standard: 'm-std',
       model_deep: 'm-deep',
-      monthly_budget_cny: '120',
+      daily_standard_limit: '8',
       max_tokens_standard: 900
     })
     expect(ok).toBe(true)
@@ -126,7 +134,7 @@ describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
       api_key: 'sk-new',
       model_standard: 'm-std',
       model_deep: 'm-deep',
-      monthly_budget_cny: 120,
+      daily_standard_limit: 8,
       max_tokens_standard: 900
     })
   })
@@ -142,16 +150,12 @@ describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
   it('空串显式拒绝（防 Number("")=0 把档位参数写成 0）', () => {
     expect(buildConfigPatch({ model_standard: '  ' }).ok).toBe(false)
     expect(buildConfigPatch({ max_tokens_deep: '' }).ok).toBe(false)
-    expect(buildConfigPatch({ monthly_budget_cny: '' }).ok).toBe(false)
+    expect(buildConfigPatch({ daily_deep_limit: '' }).ok).toBe(false)
   })
 
-  it('非法数值拒绝：负数/非有限数/预算为 0', () => {
+  it('非法数值拒绝：负数/非有限数', () => {
     expect(buildConfigPatch({ price_deep_in: -1 }).ok).toBe(false)
     expect(buildConfigPatch({ price_deep_in: 'abc' }).ok).toBe(false)
-    expect(buildConfigPatch({ monthly_budget_cny: 0 }).ok).toBe(false)
-  })
-
-  it('空串允许缺席但 api_key 显式传空串也拒绝（前端留空=不改，直接不传）', () => {
-    expect(buildConfigPatch({ api_key: '' }).ok).toBe(false)
+    expect(buildConfigPatch({ daily_standard_limit: -3 }).ok).toBe(false)
   })
 })

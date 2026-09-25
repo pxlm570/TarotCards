@@ -29,14 +29,15 @@ npm run build    # 生产构建（含 PWA 离线缓存）
 
 ## Vercel 小范围体验部署
 
-默认 AI 由项目统一提供：所有受邀用户共用站长在后台配置的 OpenAI 兼容模型服务，调用只发生在 Vercel 服务端。模型端点、模型名称和 API Key 都存放在 Supabase 配置表里（对网站访客完全不可读），不写进代码仓库、不下发到浏览器；界面上只显示「AI 解读 / 深度解读」，不出现任何供应商与模型信息。自定义 AI 入口默认隐藏（`VITE_ALLOW_CUSTOM_AI` 控制），站长未配置模型服务时 AI 入口优雅降级为不可用，应用其余功能不受影响。
+默认 AI 由项目统一提供：所有受邀用户共用站长在后台配置的 OpenAI 兼容模型服务，调用只发生在 Vercel 服务端。模型端点、模型名称和 API Key 都存放在 Supabase 配置表里（对网站访客完全不可读），不写进代码仓库、不下发到浏览器；界面上只显示「AI 解读 / 深度解读」，不出现任何供应商与模型信息。用量限额按人按天：普通解读每人每天 5 次、深度解读每人每天 1 次（次数由站长在后台可调），调用成本仅记账不拦截。自定义 AI 入口默认隐藏（`VITE_ALLOW_CUSTOM_AI` 控制），站长未配置模型服务时 AI 入口优雅降级为不可用，应用其余功能不受影响。
 
-1. 在 Supabase 新建项目，在 SQL Editor 依次运行 `supabase/migrations/202609230001_beta_access.sql` 和 `supabase/migrations/202609250001_app_config.sql`。
+1. 在 Supabase 新建项目，在 SQL Editor 依次运行 `supabase/migrations/` 下的三个迁移文件（`202609230001_beta_access.sql`、`202609250001_app_config.sql`、`202609260001_ai_daily_limits.sql`）。
 2. 在 Supabase Auth 启用邮箱和密码注册，并保持邮箱验证开启。配置自有 SMTP，再把 Vercel 域名加入 Site URL 和 Redirect URLs。Supabase 默认邮件服务不能给非项目成员发送登录邮件。
 3. 在 Vercel 连接仓库并配置环境变量：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VITE_REQUIRE_INVITE=true`、`VITE_DEFAULT_AI_ENABLED=true`、`VITE_ALLOW_CUSTOM_AI=false`、`ADMIN_EMAIL=站长邮箱`。Service Role Key 与 `ADMIN_EMAIL` 只设为 Vercel 服务端变量；不要使用 `VITE_` 前缀。
-4. 配置统一 LLM 与邀请码，两种方式任选：
-   - **站长 GUI（推荐）**：用与 `ADMIN_EMAIL` 一致的邮箱注册账号并兑换邀请码后，进入「我的 → AI 解读」页的「站长配置」卡片，表单填写模型服务地址、API Key、两档模型名与月预算，保存即生效（最迟 60 秒，无需重新部署）；邀请码也在同一卡片生成，只显示一次。API Key 更换时才填写，留空保持不变。
-   - **本地命令行**：在本地管理员环境设置 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 后，`npm run ai:config -- --base-url=… --api-key=… --model-standard=… --model-deep=… --budget=100` 配置统一 LLM（`npm run ai:config` 不带参数查看，Key 脱敏）；`npm run invite:create` 生成 14 天内有效的一次性邀请码（`--days=7` 改有效期）。
+4. 配置统一 LLM 与邀请码（全程网页操作，无需命令行）：
+   - 用与 `ADMIN_EMAIL` 一致的邮箱注册账号；登录后在邀请门禁页会出现「站长通道」，生成第一个邀请码并在同页兑换，即可进入应用。
+   - 进入「我的 → AI 解读」页的「站长配置」卡片，表单填写模型服务地址、API Key、两档模型名与每日次数，保存即生效（最迟 60 秒，无需重新部署）；后续邀请码也在同一卡片生成，只显示一次。API Key 更换时才填写，留空保持不变。
+   - 备用：本地命令行 `npm run ai:config`（设 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` 后运行，不带参数查看当前配置）与 `npm run invite:create` 仍可用。
 5. 部署后先用一个邀请码验证注册、兑换、AI 调用、深度额度和月预算，再发放其余邀请码。
 
 部署前需要配置真实 Supabase 项目、SMTP 和模型服务 Key；仓库不包含这些秘密。当前 GitHub Pages 仍是公开的纯静态旧站，Vercel 邀请门禁不会自动关闭它。正式切换为邀请制后，应在 Vercel 验收完成时关闭旧 GitHub Pages 发布入口。
