@@ -16,6 +16,23 @@ async function requestJson(path, session, payload) {
   return data
 }
 
+// 会话状态查询专用（2026-09-26 修注册断点）：/api/auth/me 的 403 invited:false
+// 是「已登录未兑换成员」的正常语义（要引流到邀请码页），不是服务故障——
+// 此前与网络错误、5xx 混为一谈，新用户全部卡在 service-error 红字。
+async function requestAccess(session) {
+  const response = await fetch('/api/auth/me', {
+    headers: {
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+    }
+  })
+  const data = await response.json().catch(() => ({}))
+  if (response.status === 401) {
+    throw Object.assign(new Error('登录状态已过期'), { authExpired: true })
+  }
+  if (response.status >= 500) throw new Error(data.error || '访问服务暂不可用')
+  return data
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const required = inviteGateRequired
   const state = ref(required ? 'loading' : 'open')
@@ -40,11 +57,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
     state.value = 'checking'
     try {
-      const access = await requestJson('/api/auth/me', nextSession)
+      const access = await requestAccess(nextSession)
       owner.value = Boolean(access.owner)
       state.value = access.invited ? 'active' : 'invite-needed'
-    } catch {
-      state.value = 'service-error'
+    } catch (error) {
+      state.value = error?.authExpired ? 'signed-out' : 'service-error'
     }
   }
 
