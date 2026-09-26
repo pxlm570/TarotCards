@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { customAIAllowed, isSupabaseConfigured } from '../lib/supabase.js'
+import { safeGetItem } from '../lib/storage.js'
 import InviteGenerator from '../components/InviteGenerator.vue'
 
 const auth = useAuthStore()
@@ -22,9 +23,15 @@ onMounted(async () => {
 })
 
 function nextPath() {
-  return typeof route.query.next === 'string' && route.query.next.startsWith('/')
-    ? route.query.next
-    : '/welcome'
+  if (typeof route.query.next === 'string' && route.query.next.startsWith('/')) {
+    return route.query.next
+  }
+  // 老用户（引导已看过）兑换/进入后直接落首页，不再绕一遍欢迎引导
+  try {
+    return safeGetItem('tarot.visited.v1') === null ? '/welcome' : '/'
+  } catch {
+    return '/'
+  }
 }
 
 async function submitAuth() {

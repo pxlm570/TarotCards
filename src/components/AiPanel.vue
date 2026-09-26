@@ -104,7 +104,11 @@ function ask() {
 
     <template v-else>
       <div v-if="!started" class="ai-options">
-        <button class="ai-start btn-solid btn-block" @click="startAI('standard')">
+        <button
+          class="ai-start btn-solid btn-block"
+          :disabled="effectiveMode === 'default' && standardRemaining === 0"
+          @click="startAI('standard')"
+        >
           <AppIcon name="sparkle" :size="18" />
           <span><strong>AI 解读</strong><small>快速梳理牌面与问题</small></span>
         </button>
