@@ -127,7 +127,7 @@ async function exitAccount() {
         <p v-if="notice" class="message" role="status">{{ notice }}</p>
       </template>
 
-      <p class="privacy">占卜记录和学习进度仍保存在当前浏览器。{{ customAIAllowed ? '使用默认 AI 时，当前问题与牌阵内容会发送到模型服务以生成解读；不会把你的自定义 API Key 上传到网站。' : '使用 AI 解读时，当前问题与牌阵内容会发送到模型服务以生成解读。' }}</p>
+      <p class="privacy">占卜记录和学习进度仍保存在当前浏览器。使用 AI 解读时，当前问题与牌阵内容会发送到模型服务以生成解读。{{ customAIAllowed ? '不会把你的自定义 API Key 上传到网站。' : '' }}为改进产品，站点会记录匿名使用统计（页面访问与功能使用次数），不包含你的占卜内容与提问文字。</p>
     </section>
   </main>
 </template>

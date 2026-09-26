@@ -307,6 +307,7 @@ function copyShareLink() {
       <p v-if="adminMissing.length" class="mode-note admin-warn">配置尚不完整（服务端会拒答）：{{ adminMissing.join('、') }}</p>
       <p v-if="adminUpdatedAt" class="mode-note">最近更新：{{ adminUpdatedAt }} · 保存后最迟 60 秒生效，无需重新部署</p>
       <button class="btn-solid btn-block" :class="{ 'is-loading': adminSaving }" :disabled="adminSaving" @click="saveAdminConfig">保存配置</button>
+      <router-link class="btn-ghost btn-block" to="/admin">打开数据看板</router-link>
 
       <InviteGenerator />
     </section>

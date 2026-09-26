@@ -7,6 +7,7 @@ import HomeView from '../views/HomeView.vue'
 import AccessView from '../views/AccessView.vue'
 import { inviteGateRequired } from '../lib/supabase.js'
 import { useAuthStore } from '../stores/auth.js'
+import { track } from '../lib/telemetry.js'
 
 const VISITED_KEY = 'tarot.visited.v1'
 
@@ -64,6 +65,9 @@ const routes = [
   { path: '/profile/ai', name: 'profile-ai', component: () => import('../views/profile/AiView.vue') },
   { path: '/profile/data', name: 'profile-data', component: () => import('../views/profile/DataView.vue') },
   { path: '/profile/about', name: 'profile-about', component: () => import('../views/profile/AboutView.vue') },
+  // 站长数据看板（2026-09-26）：入口在 AI 解读页站长卡，页面本身无权限逻辑，
+  // 数据由 /api/admin/stats 服务端 owner 门禁把守（非站长拿到 403 空态）
+  { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue') },
   { path: '/reading/question', name: 'question', component: () => import('../views/reading/QuestionView.vue') },
   { path: '/reading/shuffle', name: 'shuffle', component: () => import('../views/reading/ShuffleView.vue') },
   { path: '/reading/pick', name: 'pick', component: () => import('../views/reading/PickView.vue') },
@@ -124,6 +128,12 @@ export function createAppRouter() {
     if (/Failed to fetch dynamically imported|error loading dynamically imported/i.test(err?.message ?? '')) {
       location.reload()
     }
+  })
+
+  // 匿名产品统计：只记页面路径与功能次数（2026-09-26），不含任何占卜内容；
+  // 非成员上报被服务端拒绝后静默丢弃
+  router.afterEach((to) => {
+    track('page_view', to.path)
   })
 
   return router

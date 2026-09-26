@@ -2,6 +2,7 @@
 // 章节所有 lesson 完成 → 解锁下一章；当日复习计数供 M3 今日小目标使用。
 // 持久化 tarot.learning.v1。
 import { defineStore } from 'pinia'
+import { track } from '../lib/telemetry.js'
 import chapters from '../data/courses/index.json'
 import ch01 from '../data/courses/chapter-01.json'
 import ch02 from '../data/courses/chapter-02.json'
@@ -94,6 +95,8 @@ export const useLearningStore = defineStore('learning', {
         return { chapterCompleted: this._chapterComplete(chapterId), chapterId }
       }
       this.progress = { ...this.progress, [chapterId]: { ...(this.progress[chapterId] ?? {}), [lessonId]: true } }
+      // 首次完成才计数（幂等分支已在上面 return），统计口径与 XP 发放一致
+      track('lesson_complete')
 
       const chapterCompleted = this._chapterComplete(chapterId)
       if (chapterCompleted) {

@@ -20,6 +20,7 @@ import SelfReadPanel from '../../components/SelfReadPanel.vue'
 import ShareCardModal from '../../components/ShareCardModal.vue'
 import FlowExit from '../../components/FlowExit.vue'
 import { tap, success, toast, scrollBehavior } from '../../lib/feedback.js'
+import { track } from '../../lib/telemetry.js'
 
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业' }
 
@@ -62,10 +63,12 @@ function ensureSaved() {
 // 实战课（M2）回来自动打勾 + 本局落库（M3）
 onMounted(() => {
   ensureSaved()
+  track(store.isDaily ? 'daily_draw' : 'reading_complete')
   const p = store.consumePractice()
   if (p) {
     try {
       learning.completeLesson(p.chapterId, p.lessonId)
+      track('practice_complete')
       toast('实战完成，本课已打勾', 'success')
     } catch {
       /* 章节未解锁等异常：静默 */
