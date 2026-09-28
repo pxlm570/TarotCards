@@ -48,8 +48,16 @@ async function submitAuth() {
       }
     } else await auth.signIn(input)
     password.value = ''
-    notice.value = auth.state === 'active' ? '登录成功，正在进入星语。' : '账号已就绪，请输入你收到的邀请码。'
-    if (auth.state === 'active') await router.replace(nextPath())
+    if (auth.state === 'active') {
+      notice.value = '登录成功，正在进入星语。'
+      await router.replace(nextPath())
+    } else if (auth.state === 'signed-out') {
+      // 刚签发的会话立刻被 /api/auth/me 打回 401：不是「等邀请码」的正常态，
+      // 多半是服务端鉴权配置问题——原措辞会把用户引去找一个不存在的输入框。
+      notice.value = '登录状态没有被服务器确认，请稍后重试；若反复出现，请联系邀请你的站长。'
+    } else {
+      notice.value = '账号已就绪，请输入你收到的邀请码。'
+    }
   } catch (error) {
     notice.value = error.message || '登录失败，请检查邮箱和密码。'
   } finally {
