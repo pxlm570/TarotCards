@@ -29,6 +29,9 @@ function stubMe(status, body) {
 
 describe('auth store：initialize 状态机', () => {
   beforeEach(() => {
+    // isolate:false 下同 worker 的兄弟 spec（如 access-view-notice）可能先缓存
+    // 带不同 mock 的 supabase.js/auth.js——resetModules 强制本文件工厂重新套用
+    vi.resetModules()
     setActivePinia(createPinia())
   })
   afterEach(() => {
