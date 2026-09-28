@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { generateInviteCode, inviteCodeHash } from '../api/_lib/invite-code.js'
 
 const baseUrl = process.env.SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY

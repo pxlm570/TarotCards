@@ -112,14 +112,13 @@ async function exitAccount() {
       </template>
 
       <template v-else-if="auth.state === 'invite-needed'">
-        <p class="sub">此邀请码只能兑换一次，请使用邀请者发给你的个人邀请码。</p>
+        <p class="sub">此邀请码只能兑换一次，请使用邀请者发给你的 6 位个人邀请码。</p>
         <div v-if="auth.owner" class="owner-bootstrap">
-          <p class="field-label">站长通道：还没有邀请码？先生成一个</p>
           <InviteGenerator />
         </div>
         <form class="form" @submit.prevent="redeem">
           <label class="field-label" for="invite-code">邀请码</label>
-          <input id="invite-code" v-model="code" class="field-input code-input" autocomplete="one-time-code" required maxlength="40" placeholder="例如 AB12-CD34-EF56" />
+          <input id="invite-code" v-model="code" class="field-input code-input" autocomplete="one-time-code" required maxlength="40" placeholder="例如 K7Q4XB" />
           <button class="btn-solid btn-block" :disabled="busy">{{ busy ? '正在验证…' : '兑换并进入' }}</button>
         </form>
         <p v-if="notice" class="message" role="status">{{ notice }}</p>
@@ -128,7 +127,7 @@ async function exitAccount() {
 
       <template v-else>
         <p class="sub">受邀测试者可创建账号或登录，再输入个人邀请码。</p>
-        <div class="mode-switch" role="tablist" aria-label="账号操作">
+        <div class="segment" role="tablist" aria-label="账号操作">
           <button :class="{ on: mode === 'signup' }" @click="mode = 'signup'">创建账号</button>
           <button :class="{ on: mode === 'signin' }" @click="mode = 'signin'">已有账号</button>
         </div>
@@ -154,15 +153,13 @@ async function exitAccount() {
 .eyebrow { color: var(--dim); font-size: var(--fs-note); letter-spacing: .08em; }
 h1 { margin: 8px 0; font-size: var(--fs-title); }
 .sub { margin: 8px 0 20px; color: var(--dim); line-height: 1.6; }
-.mode-switch { display: flex; padding: 4px; margin: 18px 0; border-radius: 14px; background: var(--bg); }
-.mode-switch button { flex: 1; padding: 9px; border: 0; border-radius: 11px; color: var(--dim); background: transparent; }
-.mode-switch button.on { color: var(--ink); background: var(--surface); box-shadow: var(--shadow-sm); }
 .form { display: grid; gap: 8px; text-align: left; }
+.segment { margin: 18px 0; }
 .field-label { margin-top: 5px; color: var(--dim); font-size: var(--fs-note); }
 .field-input { width: 100%; padding: 12px; border: 2px solid var(--line); border-radius: var(--radius-sm); color: var(--ink); background: var(--surface); font: inherit; }
 .code-input { text-align: center; letter-spacing: .1em; text-transform: uppercase; }
 .form .btn-solid { margin-top: 8px; }
-.owner-bootstrap { width: 100%; margin-bottom: 18px; padding: 14px; border: 1px dashed var(--line); border-radius: var(--radius-sm); text-align: left; }
+.owner-bootstrap { width: 100%; margin-bottom: 18px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); text-align: left; }
 .message { margin: 14px 0 0; color: var(--dim); line-height: 1.55; }
 .message.error { color: var(--coral); }
 .text-button { margin-top: 14px; border: 0; color: var(--gold-deep); background: none; }
