@@ -7,6 +7,7 @@ import {
   buildDaySeries,
   aggregateAiUsage,
   aggregateActivity,
+  costPerDay,
   summarizeInvites
 } from '../_lib/stats.js'
 
@@ -35,6 +36,8 @@ export default async function handler(req, res) {
     const series = buildDaySeries(14, today)
     const dayKeys = series.map((d) => d.day)
     const since30 = dayKeyOf(new Date(Date.now() - 30 * DAY_MS).toISOString())
+    const costSeries = buildDaySeries(30, today)
+    const costKeys = costSeries.map((d) => d.day)
 
     const [usersRes, membersRes, invitesRes, usageRes, eventsRes] = await Promise.all([
       client.auth.admin.listUsers({ perPage: 1000 }),
@@ -64,8 +67,12 @@ export default async function handler(req, res) {
 
     for (const d of series) {
       d.aiCalls = usage.perDay[d.day] || 0
+      d.standard = usage.perDayStandard[d.day] || 0
+      d.deep = usage.perDayDeep[d.day] || 0
       d.dau = activity.perDay[d.day] || 0
     }
+    const cost = costPerDay(usageRes.data || [], costKeys)
+    for (const d of costSeries) d.costCny = Math.round((cost.perDayCny[d.day] || 0) * 10000) / 10000
 
     const todayCounts = countTodayByUser(usageRes.data || [], today)
     const usageByUser = new Map(usage.perUser.map((u) => [u.user_id, u]))
@@ -87,10 +94,14 @@ export default async function handler(req, res) {
     return sendJson(res, 200, {
       today,
       totals: {
+        accounts: (usersRes.data?.users || []).length,
         members: members.length,
         dauToday: activity.dauToday,
         aiCallsToday: usage.callsToday,
+        aiCallsTodayStandard: usage.callsTodayStandard,
+        aiCallsTodayDeep: usage.callsTodayDeep,
         aiUsersToday: usage.usersToday,
+        costTodayCny: Math.round((cost.perDayCny[today] || 0) * 10000) / 10000,
         cost30dCny: usage.costCnyTotal,
         invites: {
           total: invites.length,
@@ -100,6 +111,7 @@ export default async function handler(req, res) {
         }
       },
       series,
+      cost30: costSeries,
       features: activity.features,
       members,
       invites

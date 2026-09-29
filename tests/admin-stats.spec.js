@@ -6,6 +6,7 @@ import {
   buildDaySeries,
   aggregateAiUsage,
   aggregateActivity,
+  costPerDay,
   summarizeInvites
 } from '../api/_lib/stats.js'
 
@@ -53,6 +54,31 @@ describe('stats：aggregateAiUsage', () => {
   it('今日活跃 AI 用户数 = 今天有调用的去重人数', () => {
     const agg = aggregateAiUsage(rows, '2026-09-27', ['2026-09-26', '2026-09-27'])
     expect(agg.usersToday).toBe(2)
+  })
+
+  it('普/深分列：按日与今日调用都拆开（failed/pending 仍计入次数）', () => {
+    const agg = aggregateAiUsage(rows, '2026-09-27', ['2026-09-26', '2026-09-27'])
+    expect(agg.perDayStandard['2026-09-27']).toBe(1)
+    expect(agg.perDayDeep['2026-09-27']).toBe(1)
+    expect(agg.perDayDeep['2026-09-26']).toBe(1)
+    expect(agg.perDayStandard['2026-09-26']).toBe(0)
+    expect(agg.callsTodayStandard).toBe(1)
+    expect(agg.callsTodayDeep).toBe(1)
+  })
+})
+
+describe('stats：costPerDay（成本趋势）', () => {
+  const rows = [
+    { state: 'succeeded', used_on: '2026-09-26', actual_cost_micro_yuan: 20000, reserved_cost_micro_yuan: 21000 },
+    { state: 'succeeded', used_on: '2026-09-27', actual_cost_micro_yuan: null, reserved_cost_micro_yuan: 1500 },
+    { state: 'failed', used_on: '2026-09-27', actual_cost_micro_yuan: 500, reserved_cost_micro_yuan: 900 }
+  ]
+
+  it('按天换算成元，failed 不计，无调用日为 0；今日成本取当日键', () => {
+    const cost = costPerDay(rows, ['2026-09-26', '2026-09-27', '2026-09-28'])
+    expect(cost.perDayCny['2026-09-26']).toBeCloseTo(0.02, 6)
+    expect(cost.perDayCny['2026-09-27']).toBeCloseTo(0.0015, 6)
+    expect(cost.perDayCny['2026-09-28']).toBe(0)
   })
 })
 

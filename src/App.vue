@@ -13,7 +13,12 @@ const route = useRoute()
 const router = useRouter()
 // 占卜动线、引导页、选牌阵页沉浸式展示，不显示 TabBar
 const IMMERSIVE = ['/welcome', '/spreads', '/spread-editor', '/collection', '/access']
-const showTabBar = computed(() => !route.path.startsWith('/reading') && !IMMERSIVE.includes(route.path))
+// 站长台（/admin）有自己的顶栏导航与退出入口，作为独立控制台不显示主站 TabBar
+const showTabBar = computed(
+  () => !route.path.startsWith('/reading') && !route.path.startsWith('/admin') && !IMMERSIVE.includes(route.path)
+)
+// 看板是数据密集页，桌面豁免 480px 手机框，宽度交给站长台自己的版式
+const isAdminArea = computed(() => route.path.startsWith('/admin'))
 
 // 记录每次导航的来源页。popstate 触发时 vue-router 的导航已经落地（两个 popstate 监听之间
 // 会排空微任务），route.path 读到的是「返回后的目标页」，判断不了「按返回前在哪」——
@@ -54,7 +59,7 @@ onUnmounted(() => window.removeEventListener('popstate', onBack))
 
 <template>
   <div class="app-shell">
-    <main class="app-content" :class="{ 'with-tabbar': showTabBar }">
+    <main class="app-content" :class="{ 'with-tabbar': showTabBar, 'admin-area': isAdminArea }">
       <!-- out-in：两屏永不同时存在，避免转场期出现重复内容 -->
       <router-view v-slot="{ Component }">
         <Transition name="page" mode="out-in">
@@ -82,6 +87,10 @@ onUnmounted(() => window.removeEventListener('popstate', onBack))
   margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+.app-content.admin-area {
+  max-width: none;
 }
 
 .app-content.with-tabbar {

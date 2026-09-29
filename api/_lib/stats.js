@@ -33,21 +33,32 @@ function isCounted(state) {
 export function aggregateAiUsage(rows, todayKey, dayKeys) {
   const daySet = new Set(dayKeys)
   const perDay = Object.fromEntries(dayKeys.map((d) => [d, 0]))
+  const perDayStandard = Object.fromEntries(dayKeys.map((d) => [d, 0]))
+  const perDayDeep = Object.fromEntries(dayKeys.map((d) => [d, 0]))
   const users = new Map()
   const todayUsers = new Set()
   let callsToday = 0
+  let callsTodayStandard = 0
+  let callsTodayDeep = 0
   let costMicro = 0
 
   for (const row of rows || []) {
     if (!isCounted(row.state)) continue
     const day = row.used_on
-    if (daySet.has(day)) perDay[day] = (perDay[day] || 0) + 1
+    const isDeep = row.mode === 'deep'
+    if (daySet.has(day)) {
+      perDay[day] = (perDay[day] || 0) + 1
+      if (isDeep) perDayDeep[day] = (perDayDeep[day] || 0) + 1
+      else perDayStandard[day] = (perDayStandard[day] || 0) + 1
+    }
     if (day === todayKey) {
       callsToday++
+      if (isDeep) callsTodayDeep++
+      else callsTodayStandard++
       todayUsers.add(row.user_id)
     }
     const entry = users.get(row.user_id) || { user_id: row.user_id, standard: 0, deep: 0, total: 0, costCny: 0 }
-    if (row.mode === 'deep') entry.deep++
+    if (isDeep) entry.deep++
     else entry.standard++
     entry.total++
     if (row.state === 'succeeded') {
@@ -62,10 +73,30 @@ export function aggregateAiUsage(rows, todayKey, dayKeys) {
 
   return {
     callsToday,
+    callsTodayStandard,
+    callsTodayDeep,
     usersToday: todayUsers.size,
     perDay,
+    perDayStandard,
+    perDayDeep,
     perUser: [...users.values()],
     costCnyTotal: costMicro / MICRO_YUAN_PER_CNY
+  }
+}
+
+// 按天成本（仅成功调用），供看板成本趋势图；dayKeys 由调用方按窗口给（通常 30 天），
+// 今日成本取 perDayCny[todayKey]
+export function costPerDay(rows, dayKeys) {
+  const perDayMicro = Object.fromEntries(dayKeys.map((d) => [d, 0]))
+  for (const row of rows || []) {
+    if (row.state !== 'succeeded') continue
+    const cost = Number(row.actual_cost_micro_yuan ?? row.reserved_cost_micro_yuan ?? 0)
+    if (!Number.isFinite(cost) || cost <= 0) continue
+    const day = row.used_on
+    if (day in perDayMicro) perDayMicro[day] += cost
+  }
+  return {
+    perDayCny: Object.fromEntries(Object.entries(perDayMicro).map(([d, m]) => [d, m / MICRO_YUAN_PER_CNY]))
   }
 }
 

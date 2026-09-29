@@ -65,9 +65,17 @@ const routes = [
   { path: '/profile/ai', name: 'profile-ai', component: () => import('../views/profile/AiView.vue') },
   { path: '/profile/data', name: 'profile-data', component: () => import('../views/profile/DataView.vue') },
   { path: '/profile/about', name: 'profile-about', component: () => import('../views/profile/AboutView.vue') },
-  // 站长数据看板（2026-09-26）：入口在 AI 解读页站长卡，页面本身无权限逻辑，
-  // 数据由 /api/admin/stats 服务端 owner 门禁把守（非站长拿到 403 空态）
-  { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue') },
+  // 站长台（2026-09-28 拆分为独立链接的三页，Sakai 版式）：数据看板 / AI 配置 / 邀请码管理，
+  // 壳与子页均无权限逻辑，数据由服务端 owner 门禁把守（非站长拿到 403 空态）
+  {
+    path: '/admin',
+    component: () => import('../components/AdminLayout.vue'),
+    children: [
+      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
+      { path: 'config', name: 'admin-config', component: () => import('../views/admin/AdminConfigView.vue') },
+      { path: 'invites', name: 'admin-invites', component: () => import('../views/admin/AdminInvitesView.vue') }
+    ]
+  },
   { path: '/reading/question', name: 'question', component: () => import('../views/reading/QuestionView.vue') },
   { path: '/reading/shuffle', name: 'shuffle', component: () => import('../views/reading/ShuffleView.vue') },
   { path: '/reading/pick', name: 'pick', component: () => import('../views/reading/PickView.vue') },
