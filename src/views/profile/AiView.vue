@@ -11,6 +11,7 @@ import { takePendingImport, discardPendingImport } from '../../lib/config-import
 import PageHead from '../../components/PageHead.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import InviteGenerator from '../../components/InviteGenerator.vue'
+import PasswordField from '../../components/PasswordField.vue'
 import { toast } from '../../lib/feedback.js'
 import { customAIAllowed, defaultAIEnabled, supabase } from '../../lib/supabase.js'
 
@@ -128,18 +129,6 @@ function discardImport() {
   pendingImport.value = null // 暂存在进页时已被 takePendingImport 取走清掉
 }
 
-// 快捷填充：只帮填 baseUrl（不做官方端点绑定，其余常见端点自填 model/key）
-const QUICK_ENDPOINTS = [
-  { label: '小米 MiMo', baseUrl: 'https://token-plan-cn.xiaomimimo.com/anthropic' },
-  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com' },
-  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' }
-]
-
-function quickFill(endpoint) {
-  saveAI({ baseUrl: endpoint.baseUrl })
-  toast(`已填入 ${endpoint.label} 端点`)
-}
-
 function saveAI(patch) {
   const previousKey = aiInput.value.apiKey
   const writesCustomConfig = ['baseUrl', 'model', 'apiKey'].some((key) => Object.hasOwn(patch, key))
@@ -227,29 +216,17 @@ function copyShareLink() {
       <p v-else class="mode-note">星语统一提供 AI 解读：普通解读每日可用，深度解读每日限一次。AI 请求会发送给模型服务，并计入本项目体验额度。</p>
 
       <template v-if="customEnabled && aiInput.aiMode === 'custom'">
-      <div class="quickfill">
-        <span class="field-label">快捷填充（只填 baseUrl）</span>
-        <div class="chips">
-          <button
-            v-for="ep in QUICK_ENDPOINTS"
-            :key="ep.label"
-            class="chip"
-            :class="{ on: aiInput.baseUrl === ep.baseUrl }"
-            @click="quickFill(ep)"
-          >{{ ep.label }}</button>
-        </div>
-      </div>
       <label class="field">
-        <span class="field-label">baseUrl</span>
-        <input v-model="aiInput.baseUrl" class="field-input" type="url" placeholder="https://api.deepseek.com" @change="saveAI({ baseUrl: aiInput.baseUrl })" />
+        <span class="field-label">baseUrl（服务商提供的 OpenAI 兼容根地址，填到 /v1 为止）</span>
+        <input v-model="aiInput.baseUrl" class="field-input" type="url" placeholder="https://（填你的模型服务根地址）" @change="saveAI({ baseUrl: aiInput.baseUrl })" />
       </label>
       <label class="field">
-        <span class="field-label">模型</span>
-        <input v-model="aiInput.model" class="field-input" type="text" placeholder="deepseek-chat" @change="saveAI({ model: aiInput.model })" />
+        <span class="field-label">模型（填服务商提供的模型名）</span>
+        <input v-model="aiInput.model" class="field-input" type="text" placeholder="服务商提供的模型名" @change="saveAI({ model: aiInput.model })" />
       </label>
       <label class="field">
         <span class="field-label">API key</span>
-        <input v-model="aiInput.apiKey" class="field-input" type="password" placeholder="sk-…" @change="saveAI({ apiKey: aiInput.apiKey })" />
+        <PasswordField v-model="aiInput.apiKey" placeholder="sk-…" @change="saveAI({ apiKey: aiInput.apiKey })" />
       </label>
       </template>
 
@@ -277,7 +254,7 @@ function copyShareLink() {
       </label>
       <label class="field">
         <span class="field-label">API Key（留空 = 保持不变 · 当前 {{ adminConfig.api_key }}）</span>
-        <input v-model="adminForm.api_key" class="field-input" type="password" autocomplete="off" placeholder="sk-…" />
+        <PasswordField v-model="adminForm.api_key" autocomplete="off" placeholder="sk-…" />
       </label>
       <label class="field">
         <span class="field-label">普通档模型名</span>
@@ -350,22 +327,6 @@ function copyShareLink() {
 .field {
   display: block;
   margin-bottom: 10px;
-}
-
-.quickfill {
-  margin-bottom: 12px;
-}
-
-.quickfill .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.quickfill .chip {
-  padding: 8px 14px;
-  font-size: 0.8125rem;
 }
 
 .field-label {

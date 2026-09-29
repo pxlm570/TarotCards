@@ -1,5 +1,6 @@
 // 站长 GUI 生成邀请码（2026-09-25，与 npm run invite:create 同规则）：
-// 一人一码、只显示一次、库内只存 SHA-256，有效期 1–90 天默认 14。
+// 一人一码、只显示一次、库内只存 SHA-256，有效期 1–3650 天默认 14（3650≈10 年
+// 即 UI 的「长期有效」，库表 expires_at 必填，免 schema 迁移）。
 // 门禁见 _lib/owner.js——只有 ADMIN_EMAIL 的会话能调。
 import { readJson, sendJson } from '../_lib/http.js'
 import { requireOwner } from '../_lib/owner.js'
@@ -13,7 +14,7 @@ export default async function handler(req, res) {
 
     const body = await readJson(req, 2048).catch(() => ({}))
     let days = Number(body?.days ?? 14)
-    if (!Number.isInteger(days) || days < 1 || days > 90) days = 14
+    if (!Number.isInteger(days) || days < 1 || days > 3650) days = 14
 
     const code = generateInviteCode()
     const codeHash = inviteCodeHash(code)

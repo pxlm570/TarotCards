@@ -140,7 +140,7 @@ function fmtFeature(name) {
                 <td><span class="status" :class="i.status">{{ STATUS_LABEL[i.status] }}</span></td>
                 <td class="cell-email">{{ i.redeemedEmail || '—' }}</td>
                 <td>{{ fmtTime(i.createdAt) }}</td>
-                <td>{{ fmtTime(i.expiresAt) }}</td>
+                <td>{{ i.longTerm ? '长期有效' : fmtTime(i.expiresAt) }}</td>
               </tr>
             </tbody>
           </table>

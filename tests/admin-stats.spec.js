@@ -84,15 +84,21 @@ describe('stats：summarizeInvites', () => {
   const invites = [
     { code_hash: 'aaa111222333', redeemed_by: 'u1', redeemed_at: '2026-09-26T11:00:00Z', created_at: '2026-09-20T00:00:00Z', expires_at: '2099-01-01T00:00:00Z' },
     { code_hash: 'bbb444555666', redeemed_by: null, redeemed_at: null, created_at: '2026-09-21T00:00:00Z', expires_at: '2099-01-01T00:00:00Z' },
-    { code_hash: 'ccc777888999', redeemed_by: null, redeemed_at: null, created_at: '2026-08-01T00:00:00Z', expires_at: '2026-08-15T00:00:00Z' }
+    { code_hash: 'ccc777888999', redeemed_by: null, redeemed_at: null, created_at: '2026-08-01T00:00:00Z', expires_at: '2026-08-15T00:00:00Z' },
+    { code_hash: 'ddd000111222', redeemed_by: null, redeemed_at: null, created_at: '2026-09-12T00:00:00Z', expires_at: '2026-09-27T00:00:00Z' }
   ]
 
   it('状态三分类：已兑换/未用/过期；兑换人映射邮箱；哈希只露前 8 位', () => {
     const list = summarizeInvites(invites, emailById, '2026-09-26')
-    expect(list.map((r) => r.status)).toEqual(['redeemed', 'available', 'expired'])
+    expect(list.map((r) => r.status)).toEqual(['redeemed', 'available', 'expired', 'available'])
     expect(list[0].redeemedEmail).toBe('owner@test.com')
     expect(list[0].tail).toBe('aaa11122')
     expect(list[1].redeemedEmail).toBe('')
     expect(list[2].redeemedEmail).toBe('')
+  })
+
+  it('长期有效标志：有效期跨度 ≥3 年为 true（「长期」=3650 天），短码为 false', () => {
+    const list = summarizeInvites(invites, emailById, '2026-09-26')
+    expect(list.map((r) => r.longTerm)).toEqual([true, true, false, false])
   })
 })

@@ -93,7 +93,10 @@ export function aggregateActivity(rows, todayKey, dayKeys) {
   return { perDay, dauToday: perDay[todayKey] || 0, features }
 }
 
-// 邀请码明文不可恢复（库内只有哈希），看板只露前 8 位作标识
+// 邀请码明文不可恢复（库内只有哈希），看板只露前 8 位作标识。
+// 长期有效判定：有效期跨度 ≥3 年（UI 的「长期」=3650 天，普通档最长 90 天，无重叠）。
+const LONG_TERM_MS = 3 * 365 * 24 * 60 * 60 * 1000
+
 export function summarizeInvites(invites, emailById, now) {
   const nowMs = new Date(now || 0).getTime()
   return (invites || []).map((row) => {
@@ -102,9 +105,12 @@ export function summarizeInvites(invites, emailById, now) {
       : new Date(row.expires_at).getTime() > nowMs
         ? 'available'
         : 'expired'
+    const longTerm =
+      new Date(row.expires_at).getTime() - new Date(row.created_at).getTime() >= LONG_TERM_MS
     return {
       tail: String(row.code_hash || '').slice(0, 8),
       status,
+      longTerm,
       redeemedEmail: (row.redeemed_by && emailById.get(row.redeemed_by)) || '',
       createdAt: row.created_at,
       expiresAt: row.expires_at

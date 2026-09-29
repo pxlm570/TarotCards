@@ -9,8 +9,8 @@ if (!baseUrl || !serviceKey) {
 
 const daysArg = process.argv.find((arg) => arg.startsWith('--days='))
 const days = daysArg ? Number(daysArg.slice('--days='.length)) : 14
-if (!Number.isInteger(days) || days < 1 || days > 90) {
-  console.error('有效期请设为 1 到 90 天，例如：npm run invite:create -- --days=14')
+if (!Number.isInteger(days) || days < 1 || days > 3650) {
+  console.error('有效期请设为 1 到 3650 天（3650≈长期），例如：npm run invite:create -- --days=14')
   process.exit(1)
 }
 
@@ -31,4 +31,4 @@ if (!response.ok) {
   console.error(`邀请码创建失败（HTTP ${response.status}）。`)
   process.exit(1)
 }
-console.log(`邀请码（${days} 天内有效、只能兑换一次）：\n${code}`)
+console.log(`邀请码（${days >= 3650 ? '长期有效' : `${days} 天内有效`}、只能兑换一次）：\n${code}`)

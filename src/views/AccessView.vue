@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { customAIAllowed, isSupabaseConfigured } from '../lib/supabase.js'
 import { safeGetItem } from '../lib/storage.js'
 import InviteGenerator from '../components/InviteGenerator.vue'
+import PasswordField from '../components/PasswordField.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -135,7 +136,7 @@ async function exitAccount() {
           <label class="field-label" for="email">邮箱</label>
           <input id="email" v-model="email" class="field-input" type="email" autocomplete="email" required placeholder="you@example.com" />
           <label class="field-label" for="password">密码</label>
-          <input id="password" v-model="password" class="field-input" type="password" :autocomplete="mode === 'signup' ? 'new-password' : 'current-password'" minlength="8" required placeholder="至少 8 位" />
+          <PasswordField id="password" v-model="password" :autocomplete="mode === 'signup' ? 'new-password' : 'current-password'" minlength="8" required placeholder="至少 8 位" />
           <button class="btn-solid btn-block" :disabled="busy">{{ busy ? '请稍候…' : mode === 'signup' ? '创建账号并继续' : '登录并继续' }}</button>
         </form>
         <p v-if="notice" class="message" role="status">{{ notice }}</p>

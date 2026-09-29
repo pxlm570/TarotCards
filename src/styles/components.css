@@ -84,6 +84,14 @@
   color: var(--ink);
 }
 
+/* ---------- 密码输入 ---------- */
+/* 浏览器原生「显示密码」键（Edge ::-ms-reveal）只在聚焦时出现、无法由页面控制，
+   统一隐藏，可见性切换一律走自绘 PasswordField（2026-09-28） */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* ---------- 卡片 ---------- */
 .card {
   background: var(--surface);
