@@ -3,12 +3,22 @@
 // （/admin 数据看板、/admin/config AI 配置、/admin/invites 邀请码管理），
 // 子页面各自向服务端 owner 门禁取数，本壳不含权限逻辑。
 // 版式参照 Sakai（MIT，primefaces/sakai-vue）的管理台结构，配色走本项目 tokens。
-import { RouterLink, RouterView } from 'vue-router'
+// 入口收口（2026-09-29）：非站长打开 /admin 直接弹回应用首页，不渲染空壳
+// （数据本就被服务端 owner 门禁 403 挡住，这里只是不给他们看空态页）。
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { watchEffect } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { useAuthStore } from '../stores/auth.js'
+
+const auth = useAuthStore()
+const router = useRouter()
+watchEffect(() => {
+  if (auth.state === 'active' && !auth.owner) router.replace('/')
+})
 </script>
 
 <template>
-  <div class="adm-shell">
+  <div v-if="auth.owner" class="adm-shell">
     <header class="adm-topbar">
       <div class="adm-brand">
         <AppIcon name="star" :size="18" />

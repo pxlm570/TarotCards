@@ -1,5 +1,6 @@
 import { bearerToken, sendJson } from '../_lib/http.js'
 import { getServiceClient } from '../_lib/supabase.js'
+import { ownerEmails } from '../_lib/owner.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return sendJson(res, 405, { error: '仅支持 GET' })
@@ -10,9 +11,8 @@ export default async function handler(req, res) {
     const { data, error } = await client.auth.getUser(bearerToken(req))
     if (error || !data.user) return sendJson(res, 401, { error: '登录状态已过期，请重新登录', invited: false })
 
-    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
     const email = (data.user.email || '').trim().toLowerCase()
-    const owner = Boolean(adminEmail) && email === adminEmail
+    const owner = ownerEmails().includes(email)
 
     const { data: member, error: memberError } = await client
       .from('beta_members')

@@ -33,11 +33,10 @@ npm run build    # 生产构建（含 PWA 离线缓存）
 
 1. 在 Supabase 新建项目，在 SQL Editor 依次运行 `supabase/migrations/` 下的四个迁移文件（`202609230001_beta_access.sql`、`202609250001_app_config.sql`、`202609260001_ai_daily_limits.sql`、`202609260002_app_events.sql`）。
 2. 在 Supabase Auth 启用邮箱和密码注册，并保持邮箱验证开启。配置自有 SMTP，再把 Vercel 域名加入 Site URL 和 Redirect URLs。Supabase 默认邮件服务不能给非项目成员发送登录邮件。
-3. 在 Vercel 连接仓库并配置环境变量：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VITE_REQUIRE_INVITE=true`、`VITE_DEFAULT_AI_ENABLED=true`、`VITE_ALLOW_CUSTOM_AI=false`、`ADMIN_EMAIL=站长邮箱`。Service Role Key 与 `ADMIN_EMAIL` 只设为 Vercel 服务端变量；不要使用 `VITE_` 前缀。
+3. 在 Vercel 连接仓库并配置环境变量：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VITE_REQUIRE_INVITE=true`、`VITE_DEFAULT_AI_ENABLED=true`、`VITE_ALLOW_CUSTOM_AI=false`、`ADMIN_EMAIL=站长邮箱`（可选 `ADMIN_EMAILS=其他站长邮箱,逗号分隔` 白名单）。Service Role Key 与 `ADMIN_EMAIL`/`ADMIN_EMAILS` 只设为 Vercel 服务端变量；不要使用 `VITE_` 前缀。
 4. 配置统一 LLM 与邀请码（全程网页操作，无需命令行）：
    - 用与 `ADMIN_EMAIL` 一致的邮箱注册账号；登录后在邀请门禁页会出现「站长通道」，生成第一个邀请码并在同页兑换，即可进入应用。
-   - 进入「我的 → AI 解读」页的「站长配置」卡片，表单填写模型服务地址、API Key、两档模型名与每日次数，保存即生效（最迟 60 秒，无需重新部署）；后续邀请码也在同一卡片生成，只显示一次。API Key 更换时才填写，留空保持不变。
-   - 数据看板：「我的 → AI 解读 → 打开数据看板」（或直接访问 `/admin`），可查看成员列表、邀请码兑换状态、每人 AI 用量与成本、近 14 天调用与日活趋势、功能使用统计。站点会记录匿名使用统计（页面访问与功能使用次数），不包含用户的占卜内容与提问文字。
+   - 站长台（`/#/admin`，仅站长白名单内账号可进）分三个独立页面：`/admin/config` 填写模型服务地址、API Key、两档模型名与每日次数，保存即生效（最迟 60 秒，无需重新部署；API Key 更换时才填写，留空保持不变）；`/admin/invites` 生成与管理邀请码（码只显示一次）；`/admin` 数据看板（成员列表、每人 AI 用量与成本、近 14 天调用与日活趋势、近 30 天成本、功能使用统计）。站点会记录匿名使用统计（页面访问与功能使用次数），不包含用户的占卜内容与提问文字。
    - 备用：本地命令行 `npm run ai:config`（设 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` 后运行，不带参数查看当前配置）与 `npm run invite:create` 仍可用。
 5. 部署后先用一个邀请码验证注册、兑换、AI 调用、深度额度和月预算，再发放其余邀请码。
 
