@@ -40,6 +40,9 @@ export const useAuthStore = defineStore('auth', () => {
   const email = ref('')
   const owner = ref(false)
   const error = ref('')
+  // 密码重置落地标志（2026-09-29 SMTP 根治配套）：用户点重置邮件链接后 Supabase
+  // 消费链接并派发 PASSWORD_RECOVERY，守卫据此把用户带去 /reset-password 设新密码
+  const recovering = ref(false)
   let initialized = false
   let initialization = null
 
@@ -52,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
     if (!nextSession) {
+      recovering.value = false
       state.value = 'signed-out'
       return
     }
@@ -86,7 +90,8 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
           await updateAccess(data.session)
         }
-        supabase.auth.onAuthStateChange((_event, nextSession) => {
+        supabase.auth.onAuthStateChange((event, nextSession) => {
+          if (event === 'PASSWORD_RECOVERY') recovering.value = true
           // Do not await network work inside Supabase's auth callback.
           queueMicrotask(() => updateAccess(nextSession))
         })
@@ -123,10 +128,35 @@ export const useAuthStore = defineStore('auth', () => {
     return result
   }
 
+  async function requestPasswordReset(email) {
+    if (!supabase) throw new Error('登录服务尚未配置。')
+    // redirectTo 不带 hash：Supabase 在链接上追加一次性凭证、落在根路径，由
+    // supabase-js 消费后派发 PASSWORD_RECOVERY，再由应用带到 /reset-password
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`
+    })
+    if (resetError) throw resetError
+  }
+
+  async function resendConfirmation(email) {
+    if (!supabase) throw new Error('登录服务尚未配置。')
+    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() })
+    if (resendError) throw resendError
+  }
+
+  async function updatePassword(password) {
+    if (!supabase) throw new Error('登录服务尚未配置。')
+    const { error: updateError } = await supabase.auth.updateUser({ password })
+    if (updateError) throw updateError
+  }
+
   async function signOut() {
     if (supabase) await supabase.auth.signOut()
     await updateAccess(null)
   }
 
-  return { required, state, session, email, owner, error, initialize, signUp, signIn, redeem, signOut }
+  return {
+    required, state, session, email, owner, error, recovering,
+    initialize, signUp, signIn, redeem, requestPasswordReset, resendConfirmation, updatePassword, signOut
+  }
 })

@@ -40,6 +40,8 @@ const PHASE_ROUTE = {
 
 const routes = [
   { path: '/access', name: 'access', component: AccessView },
+  // 密码重置落地页（2026-09-29）：公开页，用户点重置邮件链接后到达
+  { path: '/reset-password', name: 'reset-password', component: () => import('../views/ResetPasswordView.vue') },
   { path: '/', name: 'home', component: HomeView },
   { path: '/welcome', name: 'welcome', component: () => import('../views/WelcomeView.vue') },
   // 选牌阵独立页（Task 21）：刻意放在 /reading/* 之外——守卫会把无进行中占卜的 /reading/* 直链弹回首页
@@ -98,7 +100,10 @@ export function createAppRouter() {
     if (inviteGateRequired) {
       const auth = useAuthStore()
       return auth.initialize().then(() => {
-        if (to.name === 'access') return true
+        // 密码重置落地（2026-09-29 SMTP 根治配套）：recovering 期间把用户带去设新密码，
+        // 且 /reset-password 本身对任何状态开放（用户刚点完邮件链接、状态尚未落定）
+        if (auth.recovering && to.name !== 'reset-password') return { name: 'reset-password' }
+        if (to.name === 'access' || to.name === 'reset-password') return true
         if (auth.state !== 'active') return { name: 'access', query: { next: to.fullPath } }
 
         // 首次启动强制引导（可从首页 ? 入口重看）

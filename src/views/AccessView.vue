@@ -16,7 +16,18 @@ const password = ref('')
 const code = ref('')
 const busy = ref(false)
 const notice = ref('')
+const needsConfirm = ref(false)
 const inviteRequired = computed(() => auth.state === 'invite-needed')
+
+// Supabase 的英文错误按常见项中文化；CONFIRM_NEEDED 是哨兵值 → 额外给「重发确认邮件」入口
+function friendlyAuthError(message) {
+  const msg = String(message || '')
+  if (/not confirmed/i.test(msg)) return 'CONFIRM_NEEDED'
+  if (/invalid login credentials/i.test(msg)) return '邮箱或密码不正确。'
+  if (/already registered/i.test(msg)) return '该邮箱已注册，请直接登录。'
+  if (/rate limit/i.test(msg)) return '操作太频繁，请稍后再试。'
+  return msg || '登录失败，请检查邮箱和密码。'
+}
 
 onMounted(async () => {
   await auth.initialize()
@@ -38,13 +49,15 @@ function nextPath() {
 async function submitAuth() {
   busy.value = true
   notice.value = ''
+  needsConfirm.value = false
   try {
     const input = { email: email.value, password: password.value }
     if (mode.value === 'signup') {
       const result = await auth.signUp(input)
       if (!result.session) {
         password.value = ''
-        notice.value = '账号已创建。请先通过邮箱确认，再返回此页登录并输入邀请码。'
+        needsConfirm.value = true
+        notice.value = '账号已创建。请先通过邮箱确认，再返回此页登录并输入邀请码；没收到可重发。'
         return
       }
     } else await auth.signIn(input)
@@ -60,7 +73,44 @@ async function submitAuth() {
       notice.value = '账号已就绪，请输入你收到的邀请码。'
     }
   } catch (error) {
-    notice.value = error.message || '登录失败，请检查邮箱和密码。'
+    const mapped = friendlyAuthError(error?.message)
+    if (mapped === 'CONFIRM_NEEDED') {
+      needsConfirm.value = true
+      notice.value = '这个邮箱还没完成确认：请到邮箱点击确认链接（注意垃圾箱）。没收到可重发。'
+    } else {
+      notice.value = mapped
+    }
+  } finally {
+    busy.value = false
+  }
+}
+
+async function forgotPassword() {
+  if (!email.value.trim()) {
+    needsConfirm.value = false
+    notice.value = '先在上面填好你的注册邮箱，再点「忘记密码」。'
+    return
+  }
+  busy.value = true
+  notice.value = ''
+  try {
+    await auth.requestPasswordReset(email.value)
+    notice.value = '重置邮件已发送，请到邮箱点击链接设置新密码（注意垃圾箱）。'
+  } catch (error) {
+    notice.value = friendlyAuthError(error?.message)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function resendConfirm() {
+  busy.value = true
+  notice.value = ''
+  try {
+    await auth.resendConfirmation(email.value)
+    notice.value = '确认邮件已重发，请到邮箱查收（注意垃圾箱）。'
+  } catch (error) {
+    notice.value = friendlyAuthError(error?.message)
   } finally {
     busy.value = false
   }
@@ -139,6 +189,8 @@ async function exitAccount() {
           <PasswordField id="password" v-model="password" :autocomplete="mode === 'signup' ? 'new-password' : 'current-password'" minlength="8" required placeholder="至少 8 位" />
           <button class="btn-solid btn-block" :disabled="busy">{{ busy ? '请稍候…' : mode === 'signup' ? '创建账号并继续' : '登录并继续' }}</button>
         </form>
+        <button v-if="mode === 'signin'" type="button" class="text-button" @click="forgotPassword">忘记密码？</button>
+        <button v-if="needsConfirm" type="button" class="text-button" @click="resendConfirm">没收到？重新发送确认邮件</button>
         <p v-if="notice" class="message" role="status">{{ notice }}</p>
       </template>
 

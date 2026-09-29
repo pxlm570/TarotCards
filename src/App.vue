@@ -1,24 +1,35 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import TabBar from './components/TabBar.vue'
 import AppToast from './components/AppToast.vue'
 import AchievementToast from './components/AchievementToast.vue'
 import AppInstallBanner from './components/AppInstallBanner.vue'
 import LevelUpToast from './components/LevelUpToast.vue'
 import { useReadingStore } from './stores/reading.js'
+import { useAuthStore } from './stores/auth.js'
 import { PHASE_ROUTE } from './router/index.js'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 // 占卜动线、引导页、选牌阵页沉浸式展示，不显示 TabBar
-const IMMERSIVE = ['/welcome', '/spreads', '/spread-editor', '/collection', '/access']
+const IMMERSIVE = ['/welcome', '/spreads', '/spread-editor', '/collection', '/access', '/reset-password']
 // 站长台（/admin）有自己的顶栏导航与退出入口，作为独立控制台不显示主站 TabBar
 const showTabBar = computed(
   () => !route.path.startsWith('/reading') && !route.path.startsWith('/admin') && !IMMERSIVE.includes(route.path)
 )
 // 看板是数据密集页，桌面豁免 480px 手机框，宽度交给站长台自己的版式
 const isAdminArea = computed(() => route.path.startsWith('/admin'))
+
+// 密码重置落地（2026-09-29 SMTP 根治配套）：Supabase 消费重置邮件链接后派发
+// PASSWORD_RECOVERY，auth store 置 recovering，这里统一把用户带去设新密码页
+watch(
+  () => auth.recovering,
+  (v) => {
+    if (v && route.name !== 'reset-password') router.replace('/reset-password')
+  }
+)
 
 // 记录每次导航的来源页。popstate 触发时 vue-router 的导航已经落地（两个 popstate 监听之间
 // 会排空微任务），route.path 读到的是「返回后的目标页」，判断不了「按返回前在哪」——
