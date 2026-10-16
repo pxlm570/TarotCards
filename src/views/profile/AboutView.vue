@@ -14,7 +14,7 @@ const year = new Date().getFullYear()
       <h2 class="app-name">星语塔罗</h2>
       <p class="ver">v{{ version }}</p>
       <p class="row-hint">私人塔罗空间：占卜、学习、记录。牌面为 Pamela Colman Smith 绘制的韦特塔罗（1909，公有领域）；牌意以《The Pictorial Key to the Tarot》为底本中文自撰。定位为塔罗文化学习与自我探索工具，不提供医疗、法律或财务建议。</p>
-      <p class="row-hint">数据全部存在本机浏览器，无账号、无后端。© {{ year }}</p>
+      <p class="row-hint">占卜记录、学习进度和偏好仍保存在本机浏览器。邀请体验使用账号与邀请码，登录和 AI 由 Vercel 与 Supabase 提供。© {{ year }}</p>
       <router-link to="/welcome" class="btn-ghost btn-block" style="margin-top:10px">重看新手引导</router-link>
     </section>
   </div>
