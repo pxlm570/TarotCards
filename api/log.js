@@ -1,7 +1,10 @@
 // 匿名产品统计上报（2026-09-26 用户拍板）：只收页面路径与功能使用次数，
 // 绝不收占卜内容。事件名走服务端白名单，仅受邀成员的上报会入库。
-import { bearerToken, readJson, sendJson } from '../_lib/http.js'
-import { getAuthorizedUser } from '../_lib/supabase.js'
+// 本文件直接放在 api/ 下，比 api/auth、api/ai 少一层目录。写成 ../_lib 会在
+// 模块求值时 ERR_MODULE_NOT_FOUND，Vercel 对任意方法都报 FUNCTION_INVOCATION_FAILED，
+// handler 里的 405/401 根本执行不到。
+import { bearerToken, readJson, sendJson } from './_lib/http.js'
+import { getAuthorizedUser } from './_lib/supabase.js'
 
 const ALLOWED_EVENTS = new Set([
   'page_view',
