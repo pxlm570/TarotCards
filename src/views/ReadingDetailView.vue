@@ -10,7 +10,7 @@ import { useJournalStore } from '../stores/journal.js'
 import { useDeck } from '../lib/use-deck.js'
 import SpreadCanvas from '../components/SpreadCanvas.vue'
 import AppIcon from '../components/AppIcon.vue'
-import { tap, toast, success } from '../lib/feedback.js'
+import { toast, success } from '../lib/feedback.js'
 import { useBack } from '../composables/use-back.js'
 
 const route = useRoute()
