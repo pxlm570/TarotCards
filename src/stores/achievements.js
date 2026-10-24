@@ -23,8 +23,7 @@ export const useAchievementsStore = defineStore('achievements', {
 
   getters: {
     count: (s) => s.unlocked.length,
-    total: () => achievementsData.length,
-    defById: () => (id) => achievementsData.find((a) => a.id === id)
+    total: () => achievementsData.length
   },
 
   actions: {

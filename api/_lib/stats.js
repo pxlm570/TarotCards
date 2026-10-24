@@ -2,15 +2,14 @@
 // 上海日键贯穿用量与活跃统计，与 AI 额度口径保持一致；成本单位 micro_yuan
 // 在此统一换算成元，且只统计成功调用（与额度「失败不占额」互为镜像）。
 
+import { shanghaiDayKey } from './shanghai-day.js'
+
 const MICRO_YUAN_PER_CNY = 1_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
-const SHANGHAI_DAY = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
-})
 
 export function dayKeyOf(iso) {
   try {
-    return SHANGHAI_DAY.format(new Date(iso))
+    return shanghaiDayKey(new Date(iso))
   } catch {
     return ''
   }

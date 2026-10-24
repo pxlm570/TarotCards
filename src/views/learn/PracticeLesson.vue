@@ -3,7 +3,7 @@
 import { useRouter } from 'vue-router'
 import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
-import { tap, toast } from '../../lib/feedback.js'
+import { tap } from '../../lib/feedback.js'
 import AppIcon from '../../components/AppIcon.vue'
 
 const props = defineProps({

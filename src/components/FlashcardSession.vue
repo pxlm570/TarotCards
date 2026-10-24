@@ -2,7 +2,7 @@
 // 闪卡复习会话（M2 Task 4）：按 cardIds 逐张翻面 + 三档评分（走 learning.rateCard）。
 // 全部评完 emit complete。课程闪卡与「今日/全库复习」共用。
 import { ref, computed } from 'vue'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import { useLearningStore } from '../stores/learning.js'
 import { useDeck } from '../lib/use-deck.js'
 import { tap, success } from '../lib/feedback.js'
@@ -17,7 +17,6 @@ const emit = defineEmits(['complete'])
 const learning = useLearningStore()
 const { cardUrl } = useDeck()
 
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 const index = ref(0)
 const done = ref(0)
 

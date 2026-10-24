@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
@@ -28,8 +28,6 @@ const profile = useProfileStore()
 const settings = useSettingsStore()
 const { cardUrl, backUrl } = useDeck()
 const today = useDayKey()
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 // Android 返回手势/误退出后，进行中的占卜仍在（store 或 sessionStorage）——
 // 给出「继续占卜」入口，否则 standalone PWA 下没有任何途径回到动线
@@ -164,7 +162,7 @@ function startReading(spreadId) {
 
 // M5 仪式牌阵（Task 21 起只在首页留一行提示，完整列表在 /spreads）：
 // 新月/满月当天或生日窗口命中时出现，点击直达该牌阵，平日不占位。
-const { ritualToday, ritualSpread } = useRitualToday()
+const { ritualToday, ritualSpread, ritualIcon } = useRitualToday()
 const RITUAL_PREFIX = {
   'new-moon': '今晚新月',
   'full-moon': '今晚满月',
@@ -175,11 +173,6 @@ const RITUAL_PREFIX = {
   'winter-solstice': '今日冬至'
 }
 const ritualPrefix = computed(() => RITUAL_PREFIX[ritualToday.value] ?? '')
-const ritualIcon = computed(() => {
-  if (ritualToday.value === 'birthday') return 'star'
-  if (ritualToday.value?.endsWith('-equinox') || ritualToday.value?.endsWith('-solstice')) return 'sun'
-  return 'moon'
-})
 </script>
 
 <template>

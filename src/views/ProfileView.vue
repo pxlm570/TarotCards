@@ -4,12 +4,13 @@
 // 本命牌 2026-09-02 用户反馈：不单独开页，直接在主页展示（输入与结果都内联）。
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import { loadSettings } from '../lib/storage.js'
 import { useProfileStore } from '../stores/profile.js'
 import { useAuthStore } from '../stores/auth.js'
 import { customAIAllowed } from '../lib/supabase.js'
 import { birthCards } from '../lib/birth-cards.js'
+import { formatDayKey } from '../lib/day-key.js'
 import { useDeck } from '../lib/use-deck.js'
 import { version } from '../../package.json'
 import XpBar from '../components/XpBar.vue'
@@ -21,8 +22,6 @@ const profile = useProfileStore()
 const auth = useAuthStore()
 const settings = loadSettings()
 const { cardUrl } = useDeck()
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '暗夜' }
 
@@ -49,8 +48,7 @@ function isRealDate(s) {
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
 }
 function localToday() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return formatDayKey(new Date())
 }
 const todayStr = localToday()
 const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRealDate(birthdayInput.value) && birthdayInput.value <= localToday())

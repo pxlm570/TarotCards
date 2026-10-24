@@ -1,15 +1,11 @@
 // 连胜计算（M3 Task 3）。dates 为已打卡的 YYYY-MM-DD（本地时区），today 同格式。
 // 不含 -4h 逻辑——dayKey 的换算统一由 lib/day-key.js 负责，这里只做纯日期运算。
-
-function toDayStr(date) {
-  const p = (n) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`
-}
+import { formatDayKey } from './day-key.js'
 
 function offset(dayStr, days) {
   const d = new Date(dayStr + 'T12:00:00') // 正午构造，避免时区/夏令时边界
   d.setDate(d.getDate() + days)
-  return toDayStr(d)
+  return formatDayKey(d)
 }
 
 function countBack(set, from) {

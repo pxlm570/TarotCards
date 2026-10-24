@@ -2,7 +2,7 @@
 // hash 模式零配置可靠；M4 的 #import= 配置链接在 main.js 挂载路由前拦截，互不冲突。
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useReadingStore } from '../stores/reading.js'
-import { safeGetItem, safeSetItem } from '../lib/storage.js'
+import { safeSetItem } from '../lib/storage.js'
 import HomeView from '../views/HomeView.vue'
 import AccessView from '../views/AccessView.vue'
 import { inviteGateRequired } from '../lib/supabase.js'

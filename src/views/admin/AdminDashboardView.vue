@@ -45,7 +45,6 @@ const FEATURE_LABEL = {
   practice_complete: '完成练习',
   share_card: '生成分享卡'
 }
-const STATUS_LABEL = { redeemed: '已兑换', available: '未使用', expired: '已过期' }
 
 function fmtTime(t) {
   if (!t) return ''

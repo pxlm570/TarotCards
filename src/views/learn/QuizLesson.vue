@@ -92,8 +92,6 @@ function retry() {
   // 单选类重试：重置（因每次点选已即时判，重试即再点）
   wrongMsg.value = ''
 }
-
-const isDone = computed(() => !!learning.progress[props.chapterId]?.[props.lessonId])
 </script>
 
 <template>

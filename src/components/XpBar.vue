@@ -3,9 +3,7 @@
 import { computed } from 'vue'
 import { useProfileStore } from '../stores/profile.js'
 import { levelProgress, levelCardId } from '../lib/xp.js'
-import cardsData from '../data/cards.json'
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
+import { cardById } from '../lib/cards.js'
 
 const props = defineProps({
   showNext: { type: Boolean, default: false }
