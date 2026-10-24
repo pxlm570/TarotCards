@@ -1,6 +1,6 @@
 // 分享卡片（M5 Task 2）：纯布局与截断函数。
-import { describe, it, expect } from 'vitest'
-import { truncate, buildShareLayout, SHARE_W, SHARE_H } from '../src/lib/share-card.js'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { truncate, buildShareLayout, SHARE_W, SHARE_H, generateShareCard } from '../src/lib/share-card.js'
 
 const spread = { positions: [{ key: 'past', label: '过去' }, { key: 'present', label: '现在' }] }
 const reading = {
@@ -115,5 +115,180 @@ describe('share-card：布局边界', () => {
     expect(p.h).toBe(400)
     expect(p.w).toBeCloseTo(400 * (300 / 527), 6)
     expect(p.w / p.h).toBeCloseTo(300 / 527, 6)
+  })
+})
+
+// 绘制管线（2026-10-24 补覆盖）：jsdom 无 canvas 实现，stub 2D 上下文与 Image 走通
+// generateShareCard 全链路——「分享永不因一张图失败而失败」「toBlob 空必须 reject」
+// 这两条契约此前只有布局层在守，绘制层零覆盖。
+describe('generateShareCard：绘制管线（stub 2D 上下文）', () => {
+  const spread = { positions: [{ key: 'past', label: '过去' }, { key: 'present', label: '现在' }] }
+  const reading2 = {
+    question: '近期事业走势',
+    cards: [
+      { cardId: 'major-00', positionKey: 'past', reversed: false },
+      { cardId: 'major-01', positionKey: 'present', reversed: true }
+    ]
+  }
+
+  let ctx
+  let blob
+  // Image 行为按用例注入：默认 500×839 标准牌面加载成功；failSrc 命中片段的走 onerror
+  let imgBehavior = {}
+
+  function stubCanvas({ roundRect = true } = {}) {
+    const calls = []
+    const grad = { addColorStop: (...args) => calls.push(['addColorStop', ...args]) }
+    ctx = { calls }
+    for (const prop of ['fillStyle', 'strokeStyle', 'lineWidth', 'font', 'textAlign']) {
+      let v
+      Object.defineProperty(ctx, prop, {
+        set: (x) => { calls.push([`set:${prop}`, x]); v = x },
+        get: () => v
+      })
+    }
+    Object.assign(ctx, {
+      createLinearGradient: (...args) => { calls.push(['createLinearGradient', ...args]); return grad },
+      fillRect: (...args) => calls.push(['fillRect', ...args]),
+      fillText: (...args) => calls.push(['fillText', ...args]),
+      beginPath: () => calls.push(['beginPath']),
+      clip: () => calls.push(['clip']),
+      save: () => calls.push(['save']),
+      restore: () => calls.push(['restore']),
+      translate: (...args) => calls.push(['translate', ...args]),
+      rotate: (...args) => calls.push(['rotate', ...args]),
+      drawImage: (...args) => calls.push(['drawImage', ...args]),
+      stroke: () => calls.push(['stroke']),
+      rect: (...args) => calls.push(['rect', ...args])
+    })
+    if (roundRect) ctx.roundRect = (...args) => calls.push(['roundRect', ...args])
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (cb, type) {
+      cb(blob, type)
+    })
+    return ctx
+  }
+
+  function stubImage() {
+    class FakeImage {
+      set src(value) {
+        this._src = value
+        queueMicrotask(() => {
+          if ((imgBehavior.failSrc ?? []).some((frag) => String(value).includes(frag))) this.onerror?.()
+          else {
+            this.width = imgBehavior.width ?? 500
+            this.height = imgBehavior.height ?? 839
+            this.onload?.()
+          }
+        })
+      }
+      get src() { return this._src }
+    }
+    vi.stubGlobal('Image', FakeImage)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    imgBehavior = {}
+  })
+
+  it('真图管线：标题/问题/牌位标签/逆位/落款全部落笔，逆位旋转 180°，最终产出 blob', async () => {
+    stubCanvas()
+    stubImage()
+    blob = { size: 42 }
+    const out = await generateShareCard(reading2, spread, {
+      includeQuestion: true,
+      cardUrl: (id) => `/decks/rws/${id}.webp`
+    })
+    expect(out).toBe(blob)
+    expect(HTMLCanvasElement.prototype.toBlob).toHaveBeenCalledWith(expect.any(Function), 'image/png')
+    const texts = ctx.calls.filter(([k]) => k === 'fillText').map(([, t]) => t)
+    expect(texts).toContain('星语塔罗')
+    expect(texts).toContain('「近期事业走势」')
+    expect(texts).toContain('过去')
+    expect(texts).toContain('现在')
+    expect(texts).toContain('逆位')
+    expect(texts.some((t) => String(t).includes('来自 星语塔罗'))).toBe(true)
+    expect(texts.some((t) => String(t).includes(location.origin))).toBe(true)
+    // 逆位卡：平移到牌位中心后旋转半圈
+    expect(ctx.calls.filter(([k]) => k === 'rotate').map(([, a]) => a)).toEqual([Math.PI])
+    expect(ctx.calls.filter(([k]) => k === 'drawImage')).toHaveLength(2)
+  })
+
+  it('cardUrl 缺席：不加载任何图片，牌位回退占位底色，分享照常产出', async () => {
+    stubCanvas()
+    stubImage()
+    blob = { size: 1 }
+    const out = await generateShareCard(reading2, spread, {})
+    expect(out).toBe(blob)
+    expect(ctx.calls.some(([k]) => k === 'drawImage')).toBe(false)
+    expect(ctx.calls.filter(([k, v]) => k === 'set:fillStyle' && v === '#232850')).toHaveLength(2)
+    // 占位底色同样走圆角裁剪 + 金边描边
+    expect(ctx.calls.filter(([k]) => k === 'clip')).toHaveLength(2)
+    expect(ctx.calls.filter(([k]) => k === 'stroke')).toHaveLength(2)
+  })
+
+  it('单图加载失败不拖垮整卡：失败位占位、成功位真图，依然 resolve', async () => {
+    stubCanvas()
+    stubImage()
+    imgBehavior = { failSrc: ['major-01'] }
+    blob = { size: 7 }
+    const out = await generateShareCard(reading2, spread, { cardUrl: (id) => `/decks/rws/${id}.webp` })
+    expect(out).toBe(blob)
+    expect(ctx.calls.filter(([k]) => k === 'drawImage')).toHaveLength(1)
+    expect(ctx.calls.filter(([k, v]) => k === 'set:fillStyle' && v === '#232850')).toHaveLength(1)
+  })
+
+  it('toBlob 回调 null（画布过大被拒等）必须 reject，不得拿空 blob 假成功', async () => {
+    stubCanvas()
+    stubImage()
+    blob = null
+    await expect(
+      generateShareCard(reading2, spread, { cardUrl: (id) => `/decks/rws/${id}.webp` })
+    ).rejects.toThrow('分享卡生成失败')
+  })
+
+  it('canvas 2D 上下文不可用（老内核）时明确报错', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    await expect(generateShareCard(reading2, spread, {})).rejects.toThrow('canvas 不支持')
+  })
+
+  it('cover 裁剪：图比框更宽时左右居中裁剪（sx>0、不变形）', async () => {
+    stubCanvas()
+    stubImage()
+    imgBehavior = {}
+    blob = { size: 1 }
+    await generateShareCard(reading2, spread, { cardUrl: () => '/decks/rws/major-00.webp' })
+    const [, img, sx, sy, sw, sh] = ctx.calls.find(([k]) => k === 'drawImage')
+    expect(img.width).toBe(500)
+    expect(img.height).toBe(839)
+    expect(sx).toBeGreaterThan(0) // 500×839 装进 300/527 框：宽出部分左右各裁
+    expect(sy).toBe(0)
+    expect(sh).toBe(839) // 高度铺满
+    expect(sw).toBeLessThan(500)
+  })
+
+  it('cover 裁剪：图比框更窄高时上下居中裁剪（sy>0）', async () => {
+    stubCanvas()
+    stubImage()
+    imgBehavior = { width: 300, height: 1000 }
+    blob = { size: 1 }
+    await generateShareCard(reading2, spread, { cardUrl: () => '/decks/rws/major-00.webp' })
+    const [, , sx, sy, sw, sh] = ctx.calls.find(([k]) => k === 'drawImage')
+    expect(sx).toBe(0)
+    expect(sy).toBeGreaterThan(0)
+    expect(sw).toBe(300)
+    expect(sh).toBeLessThan(1000)
+  })
+
+  it('老 WebView 无 roundRect：圆角降级直角矩形路径，不炸', async () => {
+    stubCanvas({ roundRect: false })
+    stubImage()
+    blob = { size: 1 }
+    const out = await generateShareCard(reading2, spread, {})
+    expect(out).toBe(blob)
+    expect(ctx.calls.some(([k]) => k === 'rect')).toBe(true)
+    expect(ctx.calls.some(([k]) => k === 'roundRect')).toBe(false)
   })
 })

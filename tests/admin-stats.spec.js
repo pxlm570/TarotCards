@@ -139,6 +139,18 @@ describe('stats：summarizeInvites', () => {
     expect(summarizeInvites([row], emailById, '2026-09-26T00:00:00Z')[0].status).toBe('expired')
     expect(summarizeInvites([row], emailById, '2026-09-25T23:59:59Z')[0].status).toBe('available')
   })
+
+  it('now 缺省按 0（epoch）兜底判定：调用方漏传不炸，判定基准退回 1970 年', () => {
+    const rows = [
+      // 1970 年后的到期时间相对 epoch 都算「未过期」——漏传 now 只会误判宽松，不会崩
+      { code_hash: 'fff000111222', redeemed_by: null, created_at: '2026-01-01T00:00:00Z', expires_at: '2026-02-01T00:00:00Z' },
+      { code_hash: 'aaa000111222', redeemed_by: null, created_at: '1960-01-01T00:00:00Z', expires_at: '1969-12-31T23:59:59Z' }
+    ]
+    const list = summarizeInvites(rows, new Map(), undefined)
+    expect(list.map((r) => r.status)).toEqual(['available', 'expired'])
+    // longTerm 只看 created→expires 跨度，与 now 无关：十年跨度的过期码依旧标长期
+    expect(list.map((r) => r.longTerm)).toEqual([false, true])
+  })
 })
 
 describe('stats：空与脏输入兜底', () => {

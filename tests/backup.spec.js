@@ -209,4 +209,26 @@ describe('backup：导入逐键校验与 flow 清理', () => {
     expect(() => applyImport(backup, 'overwrite')).toThrow()
     expect(sessionStorage.getItem('tarot.flow.v1')).not.toBeNull()
   })
+
+  // 脏输入边界（2026-10-24 补）：journal 键显式 null 走「键在但为空」路径——
+  // 与非法结构抛错不同，null 不许炸也不许把现库静默清空
+  it('journal 键为 null 的坏备份：两种模式都静默跳过，现库原样保留', () => {
+    seed()
+    const before = localStorage.getItem('tarot.journal.v1')
+    const payload = { version: 1, data: { 'tarot.journal.v1': null } }
+    expect(applyImport(payload, 'merge')).toEqual([])
+    expect(applyImport(payload, 'overwrite')).toEqual([])
+    expect(localStorage.getItem('tarot.journal.v1')).toBe(before)
+  })
+
+  // applyImport 的防御边界：data 缺失（未过 parseImport 的手工构造对象）不得抛错或写库
+  it('直接调用 applyImport 缺 data 键：返回空跳过清单且现库不动', () => {
+    seed()
+    const journalBefore = localStorage.getItem('tarot.journal.v1')
+    const profileBefore = localStorage.getItem('tarot.profile.v1')
+    expect(applyImport({ version: 1 }, 'merge')).toEqual([])
+    expect(applyImport({ version: 1 }, 'overwrite')).toEqual([])
+    expect(localStorage.getItem('tarot.journal.v1')).toBe(journalBefore)
+    expect(localStorage.getItem('tarot.profile.v1')).toBe(profileBefore)
+  })
 })

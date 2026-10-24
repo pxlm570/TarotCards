@@ -232,6 +232,44 @@ describe('useDeck：牌面/牌背独立', () => {
     expect(d.faceId.value).toBe('rws-sepia')
   })
 
+  it('旧索引请求「成功」晚到：作废请求的成功响应同样无效，不回退 rws、不写坏 settings', async () => {
+    let resolveStaleIndex
+    let indexCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/decks/index.json')) {
+        indexCalls++
+        return indexCalls === 1
+          ? new Promise((resolve) => { resolveStaleIndex = resolve })
+          : jsonResponse(['rws', 'rws-sepia'])
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(indexCalls).toBe(1))
+    d.switchFace('rws-sepia')
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(SEPIA))
+    // 旧索引此刻才到，且清单里没有 rws-sepia——作废守卫若失效，会误判「皮肤已移除」
+    // 而回退 rws 并把 settings.deckId 写坏
+    resolveStaleIndex(jsonResponse(['rws']))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(d.faceId.value).toBe('rws-sepia')
+    expect(d.manifest.value).toEqual(SEPIA)
+    expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws-sepia')
+  })
+
+  it('牌背已就绪时再次进入页面（useDeck 重入）：不重拉注册表也不重拉牌面', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    deck.useDeck() // 组件重挂载走 useDeck：backItem 已匹配 backId 须直接复用
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(d.backItem.value?.id).toBe('star-gold')
+    expect(d.manifest.value).toEqual(RWS)
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
   it('local-index.json 存在时本地皮肤并入列表（与公开索引去重），缺失时静默跳过', async () => {
     const LOCAL = { id: 'my-local', name: '本地皮肤', back: 'back.webp', cards: { 'major-00': 'm0.webp' } }
     vi.resetModules()
