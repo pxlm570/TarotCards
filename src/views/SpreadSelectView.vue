@@ -15,7 +15,7 @@ const reading = useReadingStore()
 // 冷启动直接落在本页（深链 / PWA 恢复 / 本页刷新）时 store 还没水合，phase 会恒读到 idle，
 // 点牌阵就会不弹确认、静默作废进行中的一局——先从 sessionStorage 恢复（同 HomeView）
 reading.hasActiveReading()
-const { ritualToday, ritualSpread, spreads } = useRitualToday()
+const { ritualToday, ritualSpread, ritualIcon, spreads } = useRitualToday()
 
 // 新手/进阶分组已在方案甲（2026-09-04）退役：主列表按生活场景 scene 分组，内容在 spreads.json
 const restSpreads = computed(() => spreads.filter((s) => s.id !== ritualToday.value))
@@ -35,12 +35,6 @@ const sceneGroups = computed(() =>
     items: restSpreads.value.filter((s) => s.scene === sc.key)
   })).filter((g) => g.items.length)
 )
-
-const ritualIcon = computed(() => {
-  if (ritualToday.value === 'birthday') return 'star'
-  if (ritualToday.value?.endsWith('-equinox') || ritualToday.value?.endsWith('-solstice')) return 'sun'
-  return 'moon'
-})
 
 function startReading(spreadId) {
   if (reading.phase !== 'idle' && !window.confirm('有一局占卜正在进行，开始新的将丢弃它。确定吗？')) {

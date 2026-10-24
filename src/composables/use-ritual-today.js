@@ -60,5 +60,12 @@ export function useRitualToday(dayKey) {
   // 命中的仪式牌阵本体：首页提示行与选牌阵页「今日限定」置顶节都取它
   const ritualSpread = computed(() => spreads.find((s) => s.id === ritualToday.value) ?? null)
 
-  return { ritualToday, ritualSpread, spreads }
+  // 仪式类型展示图标：生日=星、节气=太阳、月相=月亮
+  const ritualIcon = computed(() => {
+    if (ritualToday.value === 'birthday') return 'star'
+    if (ritualToday.value?.endsWith('-equinox') || ritualToday.value?.endsWith('-solstice')) return 'sun'
+    return 'moon'
+  })
+
+  return { ritualToday, ritualSpread, ritualIcon, spreads }
 }
