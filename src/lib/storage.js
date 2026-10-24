@@ -26,7 +26,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
 // domain 合法值（null = 随心抽）；journal 与 Mirror 引用同一枚举
 export const DOMAIN_VALUES = Object.freeze(['love', 'career', 'wealth', 'study', 'general'])
 
-function safeParse(json) {
+// JSON 容错解析：空/坏文本返回 null（journal-store/backup 等存储层共用）
+export function safeParse(json) {
   if (!json) return null
   try {
     return JSON.parse(json)
