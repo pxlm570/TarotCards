@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import AppIcon from '../components/AppIcon.vue'
 import { tap } from '../lib/feedback.js'
 import { useReadingStore } from '../stores/reading.js'
@@ -28,8 +28,6 @@ const profile = useProfileStore()
 const settings = useSettingsStore()
 const { cardUrl, backUrl } = useDeck()
 const today = useDayKey()
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 // Android 返回手势/误退出后，进行中的占卜仍在（store 或 sessionStorage）——
 // 给出「继续占卜」入口，否则 standalone PWA 下没有任何途径回到动线

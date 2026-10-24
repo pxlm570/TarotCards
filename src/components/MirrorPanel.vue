@@ -2,7 +2,7 @@
 // Mirror 统计面板（M3 Task 5）+ 周期复盘（M4 Task 6，AI 流式 + 保存为日记）。
 // 复盘流式生命周期走 useStream（卸载即中止、超时/失败分类文案）。
 import { ref, computed } from 'vue'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import { topCards, suitDist, orientationDist, domainDist, dailyFreq } from '../lib/mirror.js'
 import { useDeck } from '../lib/use-deck.js'
 import { useSettingsStore } from '../stores/settings.js'
@@ -18,7 +18,6 @@ const props = defineProps({
 const settings = useSettingsStore()
 const journal = useJournalStore()
 const { cardUrl } = useDeck()
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 const SUIT_LABEL = { major: '大阿尔克那', wands: '权杖', cups: '圣杯', swords: '宝剑', pentacles: '星币' }
 const DOMAIN_LABEL = { love: '感情', career: '事业', wealth: '财运', study: '学业', general: '综合' }

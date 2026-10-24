@@ -4,7 +4,7 @@
 // 本命牌 2026-09-02 用户反馈：不单独开页，直接在主页展示（输入与结果都内联）。
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import { loadSettings } from '../lib/storage.js'
 import { useProfileStore } from '../stores/profile.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -22,8 +22,6 @@ const profile = useProfileStore()
 const auth = useAuthStore()
 const settings = loadSettings()
 const { cardUrl } = useDeck()
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '暗夜' }
 

@@ -2,7 +2,7 @@
 // 记录详情页（M3 Task 2）：只读牌阵全景 + 每位置解读 + 日记编辑 + 删除。
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import spreadsData from '../data/spreads.json'
 import { listCustomSpreads } from '../lib/custom-spreads.js'
 import { resolveReadingSpread } from '../lib/reading-record.js'
@@ -19,7 +19,6 @@ const journal = useJournalStore()
 const { cardUrl } = useDeck()
 const goBack = useBack()
 
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 const reading = computed(() => journal.getById(route.params.readingId))
 // 合并注册表：自定义牌阵的记录也要能还原全景；free/recap 无注册表项，给可读名称
 const spread = computed(() => {
