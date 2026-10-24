@@ -12,7 +12,6 @@ import AppIcon from './AppIcon.vue'
 
 const reading = useReadingStore()
 const settings = useSettingsStore()
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 const started = ref(false)
 const done = ref(false)
