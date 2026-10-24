@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useLearningStore } from '../src/stores/learning.js'
 import { useProfileStore } from '../src/stores/profile.js'
+import { useAchievementsStore } from '../src/stores/achievements.js'
 import ch01 from '../src/data/courses/chapter-01.json'
 import ch02 from '../src/data/courses/chapter-02.json'
 import ch03 from '../src/data/courses/chapter-03.json'
@@ -190,6 +191,35 @@ describe('learning store', () => {
   it('未毕业时 graduated 为 false', () => {
     const s = useLearningStore()
     expect(s.graduated).toBe(false)
+  })
+
+  it('isChapterComplete / chapterDoneCount 对未开始章节返回 false / 0（不炸在 ?? 空档）', () => {
+    const s = useLearningStore()
+    expect(s.isChapterComplete('ch-01')).toBe(false)
+    expect(s.chapterDoneCount('ch-02')).toBe(0)
+    completeChapter(s, 'ch-01', L1)
+    expect(s.isChapterComplete('ch-01')).toBe(true)
+    expect(s.chapterDoneCount('ch-01')).toBe(L1.length)
+    expect(s.isChapterComplete('ch-02')).toBe(false) // 解锁了≠完成了
+  })
+
+  it('recordReview 复习里程碑：满 10 次解锁 flash-10、满 50 次解锁 flash-50', () => {
+    // 里程碑写入 achievements.unlocked，不是 learning.unlocked（后者只放章节）
+    const s = useLearningStore()
+    const ach = useAchievementsStore()
+    for (let i = 0; i < 9; i++) s.recordReview()
+    expect(ach.unlocked).not.toContain('flash-10')
+    s.recordReview() // 第 10 次
+    expect(ach.unlocked).toContain('flash-10')
+    expect(s.unlocked).not.toContain('flash-10') // 章节列表不被污染
+    s.totalReviews = 49 // 跨过 50 门槛前一步（50 次循环太慢，直接置状态）
+    s.recordReview()
+    expect(s.totalReviews).toBe(50)
+    expect(ach.unlocked).toContain('flash-50')
+    // 已解锁的里程碑重复触发不再重复入队（unlock 幂等）
+    s.totalReviews = 60
+    s.recordReview()
+    expect(ach.unlocked.filter((id) => id === 'flash-10')).toHaveLength(1)
   })
 })
 

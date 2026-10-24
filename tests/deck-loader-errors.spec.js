@@ -34,6 +34,14 @@ describe('deck-loader 错误路径', () => {
     await expect(loader.listDecks()).resolves.toEqual(['rws'])
   })
 
+  it('listDecks：local-index.json 返回非数组（脏数据）时忽略，基础列表原样', async () => {
+    // 本地索引是可选文件，内容坏了同样按「无本地皮肤」处理，不许污染公开注册表
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/decks/local-index.json')
+      ? jsonResponse({ broken: true })
+      : jsonResponse(['rws'])))
+    await expect(loader.listDecks()).resolves.toEqual(['rws'])
+  })
+
   it('loadDeck：manifest 非 2xx 时报错带皮肤 id', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ error: 'boom' }, 500)))
     await expect(loader.loadDeck('rws')).rejects.toThrow('加载皮肤 rws 失败：500')

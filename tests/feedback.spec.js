@@ -100,6 +100,20 @@ describe('feedback：轻提示', () => {
     expect(toasts[0].text).toBe('注意')
     expect(toasts[0].type).toBe('warn')
   })
+
+  it('toast 已被清空后超时回调不炸，也不误删后来入队的提示', () => {
+    toast('会被先清掉')
+    toasts.splice(0, toasts.length) // 视图批量清队先于超时发生
+    vi.advanceTimersByTime(TOAST_MS - 1)
+    const freshId = toast('后入队的')
+    // 旧 toast 的超时到点（新 toast 还没到点）：i===-1 分支不得动队列——
+    // 若漏了守卫，splice(-1,1) 会把队尾的新提示误删
+    vi.advanceTimersByTime(1)
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0].id).toBe(freshId)
+    vi.advanceTimersByTime(TOAST_MS + 50) // 新 toast 自己的超时正常出队
+    expect(toasts).toHaveLength(0)
+  })
 })
 
 describe('feedback：动效降级', () => {
@@ -145,6 +159,14 @@ describe('feedback：动效降级', () => {
     window.matchMedia = vi.fn(() => {
       throw new Error('媒体查询不支持')
     })
+    expect(prefersReducedMotion()).toBe(false)
+    applyMotionPreference()
+    expect(document.documentElement.getAttribute('data-motion')).toBe('full')
+    expect(scrollBehavior()).toBe('smooth')
+  })
+
+  it('宿主没有 matchMedia（老 WebView）时同样按「不降级」处理', () => {
+    window.matchMedia = undefined
     expect(prefersReducedMotion()).toBe(false)
     applyMotionPreference()
     expect(document.documentElement.getAttribute('data-motion')).toBe('full')

@@ -19,7 +19,10 @@ const flags = vi.hoisted(() => {
     signInWithPassword: vi.fn(async () => ({
       data: { session: { access_token: 'tok-new', user: { email: 'a@b.c' } } },
       error: null
-    }))
+    })),
+    resetPasswordForEmail: vi.fn(async () => ({ data: {}, error: null })),
+    resend: vi.fn(async () => ({ data: {}, error: null })),
+    updateUser: vi.fn(async () => ({ data: {}, error: null }))
   }
   return { configured: true, required: true, auth, authCallback: null }
 })
@@ -269,5 +272,55 @@ describe('auth store：账号动作、邀请码兑换与降级守卫', () => {
     await expect(auth.requestPasswordReset('a@b.c')).rejects.toThrow('登录服务尚未配置。')
     await expect(auth.updatePassword('new-password')).rejects.toThrow('登录服务尚未配置。')
     await expect(auth.resendConfirmation('a@b.c')).rejects.toThrow('登录服务尚未配置。')
+  })
+
+  it('找回密码/重发确认/改密码把 Supabase 错误原样抛出（AccessView 的中文化映射依赖原始 message）', async () => {
+    const { useAuthStore } = await import('../src/stores/auth.js')
+    const auth = useAuthStore()
+    flags.auth.resetPasswordForEmail.mockResolvedValueOnce({ data: {}, error: { message: 'rate limited' } })
+    await expect(auth.requestPasswordReset('a@b.c')).rejects.toMatchObject({ message: 'rate limited' })
+    flags.auth.resend.mockResolvedValueOnce({ data: {}, error: { message: 'Email not confirmed' } })
+    await expect(auth.resendConfirmation('a@b.c')).rejects.toMatchObject({ message: 'Email not confirmed' })
+    flags.auth.updateUser.mockResolvedValueOnce({ data: {}, error: { message: 'weak password' } })
+    await expect(auth.updatePassword('password-8')).rejects.toMatchObject({ message: 'weak password' })
+    // 三者失败都不改会话状态机（仍停在进入时的 loading）
+    expect(auth.state).toBe('loading')
+  })
+
+  it('requestAccess：5xx 且响应体无 error 字段时回落「访问服务暂不可用」（非 JSON/空体告警不裸奔）', async () => {
+    stubMe(503, {})
+    const { useAuthStore } = await import('../src/stores/auth.js')
+    const auth = useAuthStore()
+    await auth.initialize()
+    expect(auth.state).toBe('service-error')
+  })
+
+  it('inviteGateRequired=false（静态版）：signIn 成功后仍 open，不发门禁请求', async () => {
+    flags.required = false
+    flags.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { session: { access_token: 'tok-s', user: { email: 's@b.c' } } },
+      error: null
+    })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { useAuthStore } = await import('../src/stores/auth.js')
+    const auth = useAuthStore()
+    await auth.signIn({ email: ' s@b.c ', password: 'password-8' })
+    expect(auth.state).toBe('open')
+    expect(auth.email).toBe('s@b.c')
+    expect(auth.session?.access_token).toBe('tok-s')
+    expect(fetchMock).not.toHaveBeenCalled() // updateAccess 在非门禁模式下短路
+  })
+
+  it('inviteGateRequired=false（静态版）：signOut 清会话、状态保持 open（无 signed-out 语义）', async () => {
+    flags.required = false
+    const { useAuthStore } = await import('../src/stores/auth.js')
+    const auth = useAuthStore()
+    auth.session = { access_token: 'tok-s', user: { email: 's@b.c' } }
+    await auth.signOut()
+    expect(flags.auth.signOut).toHaveBeenCalledTimes(1)
+    expect(auth.session).toBeNull()
+    expect(auth.email).toBe('')
+    expect(auth.state).toBe('open')
   })
 })
