@@ -61,4 +61,32 @@ describe('mirror 聚合', () => {
     expect(freq[freq.length - 2].key).toBe('2026-08-22')
     expect(freq[freq.length - 2].count).toBe(0)
   })
+
+  it('dailyFreq：窗口外记录不计入，键从旧到新排列且末位是今天', () => {
+    const old = [r([{ cardId: 'major-00', reversed: false }], null, Date.parse('2026-01-01T12:00:00'))]
+    const freq = dailyFreq(old, 3, new Date('2026-07-04T12:00:00'))
+    expect(freq.map((f) => f.count)).toEqual([0, 0, 0])
+    expect(freq.map((f) => f.key)).toEqual(['2026-07-02', '2026-07-03', '2026-07-04'])
+  })
+
+  it('topCards：并列次数保持首次出现顺序（稳定排序），空记录返回空数组', () => {
+    const rs = [
+      r([{ cardId: 'cups-02', reversed: false }], null, 1),
+      r([{ cardId: 'wands-03', reversed: false }], null, 2)
+    ]
+    expect(topCards(rs)).toEqual([
+      { cardId: 'cups-02', count: 1 },
+      { cardId: 'wands-03', count: 1 }
+    ])
+    expect(topCards([])).toEqual([])
+  })
+
+  it('未知花色前缀不落入任何花色桶；未知领域字符串计入综合', () => {
+    expect(suitDist([r([{ cardId: 'foo-01', reversed: false }], null, 1)])).toEqual({
+      major: 0, wands: 0, cups: 0, swords: 0, pentacles: 0
+    })
+    expect(domainDist([r([], 'other', 1)])).toEqual({
+      love: 0, career: 0, wealth: 0, study: 0, general: 1
+    })
+  })
 })

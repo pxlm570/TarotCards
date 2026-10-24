@@ -18,9 +18,10 @@ vi.mock('../src/lib/ai-client.js', () => ({
   AI_NOT_CONFIGURED: 'AI_NOT_CONFIGURED',
   AI_TIMEOUT_STATUS: 408, // use-stream.js 会导入它，mock 必须一并提供（缺失时取值即抛错）
   AIError: class AIError extends Error {
-    constructor(status, message) {
+    constructor(status, message, userMessage) {
       super(message)
       this.status = status
+      this.userMessage = userMessage // 流中服务端错误透传（use-stream 优先展示）
     }
   }
 }))
@@ -177,5 +178,88 @@ describe('useStream', () => {
     release()
     await flush(6)
     expect(stream.text.value).toBe('你') // 没有第二路流叠加
+  })
+
+  // ---- 补充：错误分类剩余分支、参数透传与卸载/中止守卫 ----
+
+  it('无 userMessage 的 AIError 按状态码分类：401 密钥无效、0 落网络、500 落请求失败', async () => {
+    streamChatMock.behavior = async function* () { throw new AIError(401, 'bad key') }
+    const { stream } = mountHost()
+    await flush()
+    expect(stream.error.value).toBe('密钥无效')
+
+    streamChatMock.behavior = async function* () { throw new AIError(0, 'conn reset') }
+    stream.start()
+    await flush()
+    expect(stream.error.value).toBe('请求失败（网络）')
+
+    streamChatMock.behavior = async function* () { throw new AIError(500, 'oops') }
+    stream.start()
+    await flush()
+    expect(stream.error.value).toBe('请求失败（500）')
+  })
+
+  it('流中服务端错误携带 userMessage 时原样优先展示（半截文本保留）', async () => {
+    streamChatMock.behavior = async function* () {
+      yield '半截'
+      throw new AIError(0, '余额不足', '余额不足')
+    }
+    const { stream } = mountHost()
+    await flush()
+    expect(stream.text.value).toBe('半截')
+    expect(stream.error.value).toBe('余额不足')
+  })
+
+  it('非 AIError 的普通异常落网络错误兜底文案', async () => {
+    streamChatMock.behavior = async function* () { throw new TypeError('boom') }
+    const { stream } = mountHost()
+    await flush()
+    expect(stream.error.value).toBe('网络错误，请检查 baseUrl 或网络。')
+  })
+
+  it('start 把 tier/forceCustom 与 getMessages 结果原样透传给 streamChat', async () => {
+    let captured = null
+    streamChatMock.behavior = (opts) => {
+      captured = opts
+      return (async function* () { /* 空流 */ })()
+    }
+    mountHost({ tier: 'deep', forceCustom: true })
+    await flush()
+    expect(captured.tier).toBe('deep')
+    expect(captured.forceCustom).toBe(true)
+    expect(captured.messages).toEqual([{ role: 'user', content: 'hi' }])
+    expect(captured.signal).toBeTruthy()
+  })
+
+  it('卸载后再 start 直接短路，不再发起流', async () => {
+    streamChatMock.behavior = vi.fn(() => (async function* () { yield 'x' })())
+    const { wrapper, stream } = mountHost()
+    wrapper.unmount()
+    streamChatMock.behavior.mockClear()
+    await stream.start()
+    await flush() // 等挂载即流的那一路（含被中止的收尾）落定
+    expect(streamChatMock.behavior).not.toHaveBeenCalled()
+    expect(stream.streaming.value).toBe(false)
+  })
+
+  it('上游不理会中止信号时，迟到增量被循环守卫丢弃且不算完成', async () => {
+    let release
+    const onDone = vi.fn()
+    streamChatMock.behavior = () =>
+      (async function* () {
+        yield '半截'
+        await new Promise((r) => { release = r })
+        yield '迟到'
+      })()
+    const { stream } = mountHost({ onDone })
+    await flush()
+    expect(stream.text.value).toBe('半截')
+    stream.stop()
+    release()
+    await flush()
+    expect(stream.text.value).toBe('半截')
+    expect(stream.cancelled.value).toBe(true)
+    expect(onDone).not.toHaveBeenCalled()
+    expect(stream.streaming.value).toBe(false)
   })
 })
