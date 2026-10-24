@@ -5,7 +5,6 @@ import { ref, watch } from 'vue'
 import { buildClarifyMessages } from '../lib/ai-prompts.js'
 import { useStream } from '../composables/use-stream.js'
 import { useEscClose } from '../composables/use-esc-close.js'
-import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   question: { type: String, required: true }
