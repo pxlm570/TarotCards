@@ -54,6 +54,20 @@ describe('spaced-repetition', () => {
     expect(c.due - now).toBeGreaterThanOrEqual(2.5 * DAY - 1000)
   })
 
+  it('未知评分落到「认识」档（good 分支兜底），不误走 again/hard', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-25T12:00:00'))
+    const now = Date.now()
+    const c = { ...newCard(), interval: 4, reps: 3, ease: 2.5 }
+    const r = review(c, 'ez') // 非三档的脏评分
+    expect(r.interval).toBe(10) // interval * ease（hard 会是 6，again 会是 0）
+    expect(r.reps).toBe(4)
+    expect(r.due - now).toBeGreaterThanOrEqual(10 * DAY - 1000)
+    const fresh = review(newCard(), undefined)
+    expect(fresh.interval).toBe(1) // 0 → 1 起跳同样生效
+    expect(fresh.reps).toBe(1)
+  })
+
   it('dueCards 只返回已到期（due ≤ now）的卡', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-07-25T12:00:00'))

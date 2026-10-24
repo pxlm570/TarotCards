@@ -39,4 +39,10 @@ describe('calcMaxStreak', () => {
     expect(calcMaxStreak(['2026-07-01'])).toBe(1)
     expect(calcMaxStreak([])).toBe(0)
   })
+
+  it('两段等长连胜取该长度；重复日期不虚增天数', () => {
+    expect(calcMaxStreak(['2026-07-01', '2026-07-02', '2026-07-10', '2026-07-11'])).toBe(2)
+    expect(calcMaxStreak(['2026-07-01', '2026-07-01', '2026-07-02', '2026-07-02'])).toBe(2)
+    expect(calcStreak(['2026-07-01', '2026-07-01', '2026-07-02'], '2026-07-02')).toBe(2)
+  })
 })

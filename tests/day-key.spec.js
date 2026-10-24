@@ -26,6 +26,13 @@ describe('day-key：凌晨 4 点分界', () => {
     expect(currentDayKey(new Date('2026-03-01T04:00:00'))).toBe('2026-03-01')
   })
 
+  it('闰年边界：2 月 29 日存在，3 月 1 日凌晨归 2/29（非闰年归 2/28）', () => {
+    expect(currentDayKey(new Date('2024-02-29T12:00:00'))).toBe('2024-02-29')
+    expect(currentDayKey(new Date('2024-02-29T00:30:00'))).toBe('2024-02-28') // 闰日凌晨同样归前一天
+    expect(currentDayKey(new Date('2024-03-01T03:59:00'))).toBe('2024-02-29')
+    expect(currentDayKey(new Date('2024-03-01T04:00:00'))).toBe('2024-03-01')
+  })
+
   it('默认取当前时间', () => {
     expect(typeof currentDayKey()).toBe('string')
     expect(currentDayKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)

@@ -84,6 +84,11 @@ describe('createReadingRecord / resolveReadingSpread 边界',()=>{
   expect(good.isDaily).toBe(false)
   expect(good.domain).toBe('关系')
  })
+ it('note 缺省得空串，domain 缺省归 null',()=>{
+  const r=createReadingRecord({spreadId:'s',drawn:[],question:'',isDaily:false},'r3')
+  expect(r.note).toBe('')
+  expect(r.domain).toBeNull()
+ })
  it('snapshot 与 spreadId 不一致回退注册表，都无则 null',()=>{
   const snap=snapshotSpread(spreadWith([pos('p1')]))
   const registry=[{id:'single',name:'单牌',positions:[]}]

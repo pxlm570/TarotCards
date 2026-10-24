@@ -32,6 +32,16 @@ describe('deck-order：牌库切换列表展示顺序', () => {
     expect(orderFaces(noLocal).map((x) => x.id)).toEqual(['rws', 'rws-sepia', 'night-mural', 'neon-glow'])
   })
 
+  it('退化输入：空列表、全锁/全不锁、单一皮肤均原样返回不炸', () => {
+    const isLocked = (b) => b.unlock > 0
+    expect(orderBacks([], isLocked)).toEqual([])
+    expect(orderBacks([{ id: 'l1', unlock: 7 }, { id: 'l2', unlock: 30 }], isLocked).map((x) => x.id)).toEqual(['l1', 'l2'])
+    expect(orderBacks([{ id: 'a' }, { id: 'b' }], isLocked).map((x) => x.id)).toEqual(['a', 'b'])
+    expect(orderFaces([])).toEqual([])
+    expect(orderFaces([{ id: 'neon-glow' }]).map((x) => x.id)).toEqual(['neon-glow'])
+    expect(orderFaces([{ id: 'future-skin' }]).map((x) => x.id)).toEqual(['future-skin'])
+  })
+
   it('未列入的新皮肤插在绚烂霓虹之前，组内保持注册表序', () => {
     const withNew = ['rws', 'new-a', 'rws-sepia', 'neon-glow', 'new-b'].map((id) => ({ id }))
     expect(orderFaces(withNew).map((x) => x.id)).toEqual(['rws', 'rws-sepia', 'new-a', 'new-b', 'neon-glow'])
