@@ -49,4 +49,19 @@ describe('achievements store', () => {
     expect(s.unlocked).toContain('no-such')
     expect(s.justUnlocked).toEqual([])
   })
+
+  it('持久化内容为损坏 JSON 时回落默认，不炸 store', () => {
+    localStorage.setItem('tarot.achievements.v1', '{broken json')
+    const s = useAchievementsStore()
+    expect(s.unlocked).toEqual([])
+    expect(s.count).toBe(0)
+    expect(s.unlock('ch-01-done')).toBe(true)
+  })
+
+  it('持久化内容形状非法时按 sanitize 归一为默认', () => {
+    localStorage.setItem('tarot.achievements.v1', JSON.stringify({ unlocked: 'not-an-array', extra: 1 }))
+    const s = useAchievementsStore()
+    expect(s.unlocked).toEqual([])
+    expect(s.count).toBe(0)
+  })
 })

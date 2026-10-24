@@ -26,6 +26,14 @@ describe('deck-loader 错误路径', () => {
     await expect(loader.listBacks()).rejects.toThrow('加载牌背索引失败：404')
   })
 
+  it('listDecks：local-index.json 网络异常时按无本地皮肤处理', async () => {
+    // 区别于 404：fetch 直接 reject（网络断开）也要静默跳过，不拖垮皮肤列表
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/decks/local-index.json')
+      ? Promise.reject(new Error('网络断开'))
+      : jsonResponse(['rws'])))
+    await expect(loader.listDecks()).resolves.toEqual(['rws'])
+  })
+
   it('loadDeck：manifest 非 2xx 时报错带皮肤 id', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ error: 'boom' }, 500)))
     await expect(loader.loadDeck('rws')).rejects.toThrow('加载皮肤 rws 失败：500')

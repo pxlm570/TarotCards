@@ -112,6 +112,42 @@ describe('useDeck：牌面/牌背独立', () => {
     expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws')
   })
 
+  it('牌面加载失败：error 置位且 cardUrl 安全空串，retry() 恢复后清 error', async () => {
+    const goodFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/decks/index.json')
+      ? Promise.reject(new Error('网络断开'))
+      : goodFetch(url)))
+    const d = deck.useDeck()
+    expect(d.backUrl()).toBe('') // 牌背尚未就绪时的安全空串
+    await vi.waitFor(() => expect(d.error.value).toBeTruthy())
+    expect(d.manifest.value).toBeNull()
+    expect(d.cardUrl('major-00')).toBe('') // 无 manifest 时不抛崩
+    // 网络恢复后 retry 重载成功，error 清空
+    vi.stubGlobal('fetch', goodFetch)
+    d.retry()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    expect(d.error.value).toBeNull()
+    expect(d.cardUrl('major-00')).toContain('/decks/rws/major-00.webp')
+    expect(d.cardUrl('no-such-card')).toBe('') // 未知牌 id 回空串而非抛崩
+  })
+
+  it('牌背加载失败：backItem 保持 null 且 backUrl 空串，恢复后重进可重试', async () => {
+    const goodFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/backs/index.json')
+      ? Promise.reject(new Error('网络断开'))
+      : goodFetch(url)))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS)) // 牌面不受牌背失败影响
+    await new Promise((resolve) => setTimeout(resolve, 0)) // 让牌背请求失败落地
+    expect(d.backItem.value).toBeNull()
+    expect(d.backUrl()).toBe('')
+    // backsLoading 已在 finally 清零 → 下次进入页面自动重试
+    vi.stubGlobal('fetch', goodFetch)
+    deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    expect(d.backUrl()).toContain('/backs/star-gold.webp')
+  })
+
   it('cardsFrom 循环引用时抛明确错误而非无限递归（审查修复）', async () => {
     vi.resetModules()
     mockFetch(
