@@ -10,6 +10,7 @@ import { useProfileStore } from '../stores/profile.js'
 import { useAuthStore } from '../stores/auth.js'
 import { customAIAllowed } from '../lib/supabase.js'
 import { birthCards } from '../lib/birth-cards.js'
+import { formatDayKey } from '../lib/day-key.js'
 import { useDeck } from '../lib/use-deck.js'
 import { version } from '../../package.json'
 import XpBar from '../components/XpBar.vue'
@@ -49,8 +50,7 @@ function isRealDate(s) {
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
 }
 function localToday() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return formatDayKey(new Date())
 }
 const todayStr = localToday()
 const birthdayValid = computed(() => BIRTH_RE.test(birthdayInput.value) && isRealDate(birthdayInput.value) && birthdayInput.value <= localToday())
