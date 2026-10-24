@@ -65,4 +65,12 @@ describe('spaced-repetition', () => {
     ]
     expect(dueCards(cards).map((c) => c.id).sort()).toEqual(['a', 'c'])
   })
+
+  it('dueCards 空输入返回空，且第二参数自定义 now 生效', () => {
+    const t0 = Date.parse('2026-07-25T12:00:00')
+    expect(dueCards([], t0)).toEqual([])
+    const cards = [{ id: 'a', due: t0 + DAY }]
+    expect(dueCards(cards, t0)).toEqual([]) // 未到期
+    expect(dueCards(cards, t0 + DAY).map((c) => c.id)).toEqual(['a']) // 到期边界含等于
+  })
 })

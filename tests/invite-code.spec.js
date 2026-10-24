@@ -41,6 +41,10 @@ describe('邀请码格式', () => {
     ])
   })
 
+  it('24 位但含非十六进制字符 → 不按旧码补虚线形态，只回归一化单候选', () => {
+    expect(inviteCodeCandidates('zz12-cd34-ef56-7890-1234-5678')).toEqual(['ZZ12CD34EF56789012345678'])
+  })
+
   it('哈希与旧实现一致（sha256 hex）', () => {
     expect(inviteCodeHash('K7Q4XB')).toBe(createHash('sha256').update('K7Q4XB').digest('hex'))
   })

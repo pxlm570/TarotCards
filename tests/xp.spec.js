@@ -38,6 +38,13 @@ describe('levelProgress', () => {
     expect(p.span).toBe(threshold(3) - threshold(2)) // 300-100=200
     expect(p.pct).toBe(0)
   })
+  it('本级中途：into/span/pct 按当前级区间线性推进', () => {
+    const p = levelProgress(250) // 2 级区间 [100, 300]，走到 150/200
+    expect(p.level).toBe(2)
+    expect(p.into).toBe(150)
+    expect(p.span).toBe(200)
+    expect(p.pct).toBe(0.75)
+  })
   it('满级时 pct=1', () => {
     const p = levelProgress(threshold(22))
     expect(p.level).toBe(22)
