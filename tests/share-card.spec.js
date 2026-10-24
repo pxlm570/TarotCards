@@ -1,6 +1,6 @@
 // 分享卡片（M5 Task 2）：纯布局与截断函数。
 import { describe, it, expect } from 'vitest'
-import { truncate, buildShareLayout, SHARE_W } from '../src/lib/share-card.js'
+import { truncate, buildShareLayout, SHARE_W, SHARE_H } from '../src/lib/share-card.js'
 
 const spread = { positions: [{ key: 'past', label: '过去' }, { key: 'present', label: '现在' }] }
 const reading = {
@@ -81,5 +81,39 @@ describe('share-card', () => {
     // 单牌也被 Math.min 压到 400 上限（而非占满 720 高）
     const single = buildShareLayout({ question: '', cards: [cards[0]] }, spread, {})
     expect(single.positions[0].h).toBe(400)
+  })
+})
+
+// 布局边界（2026-10-24 补薄弱分支）：问题区起点、卡框比例、省略参数的默认口径
+describe('share-card：布局边界', () => {
+  it('画布尺寸 1080×1350（4:5）', () => {
+    expect(SHARE_W).toBe(1080)
+    expect(SHARE_H).toBe(1350)
+  })
+
+  it('includeQuestion 决定牌面区起点：true 360 / false 300', () => {
+    expect(buildShareLayout(reading, spread, { includeQuestion: true }).positions[0].y).toBe(360)
+    expect(buildShareLayout(reading, spread, { includeQuestion: false }).positions[0].y).toBe(300)
+  })
+
+  it('includeQuestion=true 但问题为空/缺失：question 为空串', () => {
+    expect(buildShareLayout({ cards: reading.cards }, spread, { includeQuestion: true }).question).toBe('')
+    expect(buildShareLayout({ question: '', cards: reading.cards }, spread, { includeQuestion: true }).question).toBe('')
+  })
+
+  it('options 省略：includeQuestion 视为 falsy（无问题、牌区起点 300）', () => {
+    const omitted = buildShareLayout(reading, spread)
+    expect(omitted.question).toBe('')
+    expect(omitted.positions[0].y).toBe(300)
+    const empty = buildShareLayout(reading, spread, {})
+    expect(empty.question).toBe('')
+    expect(empty.positions[0].y).toBe(300)
+  })
+
+  it('单牌卡框比例贴合 300/527（真牌面 cover 裁剪的基准比例）', () => {
+    const p = buildShareLayout({ question: '', cards: [reading.cards[0]] }, spread, {}).positions[0]
+    expect(p.h).toBe(400)
+    expect(p.w).toBeCloseTo(400 * (300 / 527), 6)
+    expect(p.w / p.h).toBeCloseTo(300 / 527, 6)
   })
 })

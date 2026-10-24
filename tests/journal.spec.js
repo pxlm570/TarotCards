@@ -9,7 +9,8 @@ import {
   deleteReading,
   getDailyDraw,
   setDailyDraw,
-  count
+  count,
+  JOURNAL_MAX
 } from '../src/lib/journal-store.js'
 
 function sample(overrides = {}) {
@@ -120,6 +121,27 @@ describe('journal-store', () => {
     expect(getById('r0')).toBeUndefined()
     expect(getDailyDraw('2026-07-25')).toBeUndefined() // 不再「已打卡→点进去是空记录」
   })
+
+  it('JOURNAL_MAX 容量上限为 500', () => {
+    expect(JOURNAL_MAX).toBe(500)
+  })
+
+  it('listReadings offset 越界返回空数组（分页翻到底不炸）', () => {
+    saveReading(sample({ id: 'a' }))
+    expect(listReadings({ offset: 999 })).toEqual([])
+    expect(listReadings({ offset: 1 })).toEqual([]) // 恰好越界一位
+  })
+
+  it('deleteReading 同步清理指向该记录的 dailyDraws 引用，其他日期不受影响', () => {
+    saveReading(sample({ id: 'a' }))
+    saveReading(sample({ id: 'b' }))
+    setDailyDraw('2026-10-24', 'a')
+    setDailyDraw('2026-10-25', 'b')
+    deleteReading('a')
+    expect(getById('a')).toBeUndefined()
+    expect(getDailyDraw('2026-10-24')).toBeUndefined()
+    expect(getDailyDraw('2026-10-25')).toBe('b')
+  })
 })
 
 // saveNote 首次标记（评审 2026-09-06）：解读页据此决定发不发 XP，反复「编辑→再存」不可刷分
@@ -145,5 +167,58 @@ describe('journal store：saveNote 首次标记', () => {
     s.saveNote(r.id, '有内容')
     s.saveNote(r.id, '')
     expect(s.saveNote(r.id, '重新写')).toBe(true)
+  })
+})
+
+// Pinia 包装层（2026-10-24 补薄弱分支）：remove / markDaily / dailyReading / count
+// 与存储层同口径（删除连带清打卡引用、悬空引用读取期清理）
+describe('journal store：remove / markDaily / dailyReading / count', () => {
+  beforeEach(async () => {
+    localStorage.clear()
+    const { setActivePinia, createPinia } = await import('pinia')
+    setActivePinia(createPinia())
+  })
+
+  async function freshStore() {
+    const { useJournalStore } = await import('../src/stores/journal.js')
+    return useJournalStore()
+  }
+
+  it('count getter 随 addReading/remove 实时同步', async () => {
+    const s = await freshStore()
+    expect(s.count).toBe(0)
+    s.addReading(sample({ id: 'a' }))
+    s.addReading(sample({ id: 'b' }))
+    expect(s.count).toBe(2)
+    s.remove('a')
+    expect(s.count).toBe(1)
+    expect(s.readings.map((r) => r.id)).toEqual(['b'])
+  })
+
+  it('markDaily 落库并刷新状态；dailyReading 有 id 返回记录、无 id 返回 null', async () => {
+    const s = await freshStore()
+    expect(s.dailyReading('2026-10-24')).toBeNull()
+    s.addReading(sample({ id: 'a' }))
+    s.markDaily('2026-10-24', 'a')
+    expect(s.dailyDraws['2026-10-24']).toBe('a')
+    expect(s.dailyReading('2026-10-24')?.id).toBe('a')
+    expect(s.dailyReading('2026-10-25')).toBeNull()
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).dailyDraws['2026-10-24']).toBe('a')
+  })
+
+  it('remove 同步清掉当日打卡引用，dailyReading 回落 null（与存储层同口径）', async () => {
+    const s = await freshStore()
+    s.addReading(sample({ id: 'a' }))
+    s.markDaily('2026-10-24', 'a')
+    s.remove('a')
+    expect(s.dailyDraws['2026-10-24']).toBeUndefined()
+    expect(s.dailyReading('2026-10-24')).toBeNull()
+  })
+
+  it('dailyDraws 指向已不存在的记录：读取期清理，dailyReading 返回 null', async () => {
+    localStorage.setItem('tarot.journal.v1', JSON.stringify({ readings: [], dailyDraws: { '2026-10-24': 'ghost' } }))
+    const s = await freshStore()
+    expect(s.dailyDraws['2026-10-24']).toBeUndefined()
+    expect(s.dailyReading('2026-10-24')).toBeNull()
   })
 })
