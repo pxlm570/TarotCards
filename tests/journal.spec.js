@@ -142,6 +142,33 @@ describe('journal-store', () => {
     expect(getDailyDraw('2026-10-24')).toBeUndefined()
     expect(getDailyDraw('2026-10-25')).toBe('b')
   })
+
+  it('setDailyDraw 同一 dayKey 再写覆盖旧引用，readings 不受影响', () => {
+    saveReading(sample({ id: 'a' }))
+    saveReading(sample({ id: 'b' }))
+    setDailyDraw('2026-10-24', 'a')
+    setDailyDraw('2026-10-24', 'b')
+    expect(getDailyDraw('2026-10-24')).toBe('b')
+    expect(count()).toBe(2)
+  })
+
+  it('deleteReading 不存在的 id：仍返回 true 且库存内容零变化', () => {
+    saveReading(sample({ id: 'a' }))
+    setDailyDraw('2026-10-24', 'a')
+    const before = JSON.parse(localStorage.getItem('tarot.journal.v1'))
+    expect(deleteReading('ghost')).toBe(true)
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1'))).toEqual(before)
+  })
+
+  it('listReadings limit=0 返回空数组（slice(0, 0)）', () => {
+    saveReading(sample({ id: 'a' }))
+    expect(listReadings({ limit: 0 })).toEqual([])
+  })
+
+  it('saveReading 原样返回入库对象（调用方可直接使用返回值）', () => {
+    const input = sample({ id: 'ret' })
+    expect(saveReading(input)).toBe(input)
+  })
 })
 
 // saveNote 首次标记（评审 2026-09-06）：解读页据此决定发不发 XP，反复「编辑→再存」不可刷分
