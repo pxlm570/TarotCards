@@ -157,6 +157,28 @@ describe('learning store', () => {
     vi.useRealTimers()
   })
 
+  it('completeLesson 对未知章节 / 未知 lesson 抛错且不改进度', () => {
+    const s = useLearningStore()
+    expect(() => s.completeLesson('ch-99', 'x')).toThrow('未知章节')
+    expect(() => s.completeLesson('ch-01', 'no-such-lesson')).toThrow('未知 lesson')
+    expect(s.totalDoneCount).toBe(0)
+    expect(s.totalReviews).toBe(0)
+  })
+
+  it('reset 恢复初始状态并清掉持久化键', () => {
+    const s = useLearningStore()
+    s.completeLesson('ch-01', L1[0])
+    s.rateCard('major-00', 'good')
+    expect(localStorage.getItem('tarot.learning.v1')).not.toBeNull()
+    s.reset()
+    expect(s.totalDoneCount).toBe(0)
+    expect(s.totalReviews).toBe(0)
+    expect(s.sr).toEqual({})
+    expect(s.reviewLog).toEqual({})
+    expect(s.unlocked).toEqual(['ch-01'])
+    expect(localStorage.getItem('tarot.learning.v1')).toBeNull()
+  })
+
   it('毕业后 graduated 为 true 且不抛错（回归：箭头 getter 里 this 是 undefined）', () => {
     const s = useLearningStore()
     for (const [ch, ids] of ALL_CHAPTERS) completeChapter(s, ch, ids)

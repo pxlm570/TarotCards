@@ -92,6 +92,30 @@ describe('useRitualToday：今日限定判定与置顶', () => {
   })
 })
 
+describe('useRitualToday ritualIcon：生日=星、节气=太阳、月相=月亮、不命中回落月亮', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it.each([
+    ['2026-03-20', 'sun'], // spring-equinox
+    ['2028-06-21', 'sun'], // summer-solstice
+    ['2027-09-23', 'sun'], // autumn-equinox
+    ['2026-12-22', 'sun'], // winter-solstice
+    ['2026-08-13', 'moon'], // new-moon
+    ['2026-08-28', 'moon'], // full-moon
+    ['2026-08-20', 'moon'] // 不命中（ritualToday=null）也回落 moon，不抛错
+  ])('%s → %s', (day, icon) => {
+    expect(useRitualToday(day).ritualIcon.value).toBe(icon)
+  })
+
+  it('生日窗口内 → star', () => {
+    useProfileStore().setBirthday('1990-08-15')
+    expect(useRitualToday('2026-08-15').ritualIcon.value).toBe('star')
+  })
+})
+
 describe('useRitualToday 生产路径（不传 dayKey）：跨 4 点自动换日（Task 1）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
