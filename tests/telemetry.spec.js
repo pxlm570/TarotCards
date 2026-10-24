@@ -76,3 +76,43 @@ describe('telemetry：批量上报', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
+
+// 静默失败契约：统计永不影响功能（2026-09-26 红线）。空事件名不入队不发请求；
+// flush 遇网络故障整批丢弃不重试（队列在 try 之前已 splice 清空）。
+describe('telemetry：静默失败与非法事件名', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    flags.token = 'tok-1'
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('空事件名（空串/null）不入队不发请求', async () => {
+    const { track, flush } = await importFresh()
+    const fetchMock = vi.fn(async () => ({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    track('', '/spoof')
+    track(null, '/spoof')
+    expect(fetchMock).not.toHaveBeenCalled()
+    // 队列里只有后补的合法事件 → 空名确实没入队
+    track('page_view', '/')
+    await flush()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).events).toEqual([{ name: 'page_view', path: '/' }])
+  })
+
+  it('flush 时 fetch 抛错 → 静默不炸，整批丢弃不重试', async () => {
+    const { track, flush } = await importFresh()
+    const fetchMock = vi.fn(async () => {
+      throw new Error('network down')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    track('page_view', '/')
+    await flush() // 不抛即静默
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await flush() // 队列已清空：第二次 flush 不再发请求
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

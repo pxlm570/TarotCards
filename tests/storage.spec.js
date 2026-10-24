@@ -2,7 +2,7 @@
 // UI 照常报「已保存」——用户刷新即丢数据且无线索。告警经 setStorageWarnHandler 注入
 // （避免 storage→feedback 循环依赖），15s 节流防批量写刷屏。
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { safeParse, safeGetItem, safeRemoveItem, safeKeys, safeSetItem, saveSettings, setStorageWarnHandler } from '../src/lib/storage.js'
+import { safeParse, safeGetItem, safeRemoveItem, safeKeys, safeSetItem, saveSettings, setStorageWarnHandler, FLOW_KEY, loadFlow, saveFlow, clearFlow } from '../src/lib/storage.js'
 
 describe('storage：写失败告警', () => {
   afterEach(() => {
@@ -100,5 +100,51 @@ describe('storage：防御助手', () => {
     const hostile = new Proxy({}, { ownKeys() { throw new DOMException('blocked', 'SecurityError') } })
     vi.stubGlobal('localStorage', hostile)
     expect(safeKeys()).toEqual([])
+  })
+})
+
+// flow 动线状态（sessionStorage）：读写容错与旧键清理契约。会话级存储与 localStorage
+// 同属 Storage.prototype，抛错模拟沿用本文件既有的 prototype spy 手法。
+describe('storage：flow 读写与清理', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    sessionStorage.clear()
+  })
+
+  it('saveFlow 写入 sessionStorage，loadFlow 读回同一对象', () => {
+    const flow = { phase: 'picking', spreadId: 'three-cards', entryPath: '/' }
+    saveFlow(flow)
+    expect(sessionStorage.getItem(FLOW_KEY)).toBe(JSON.stringify(flow))
+    expect(loadFlow()).toEqual(flow)
+  })
+
+  it('坏 JSON 与键缺失 → loadFlow 返回 null', () => {
+    sessionStorage.setItem(FLOW_KEY, '{oops')
+    expect(loadFlow()).toBeNull()
+    sessionStorage.removeItem(FLOW_KEY)
+    expect(loadFlow()).toBeNull()
+  })
+
+  it('getItem 抛 SecurityError（iOS 阻 Cookie 同族）→ loadFlow 返回 null', () => {
+    sessionStorage.setItem(FLOW_KEY, JSON.stringify({ phase: 'picking' }))
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(loadFlow()).toBeNull()
+  })
+
+  it('setItem 抛 QuotaExceeded → saveFlow 静默不炸', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota exceeded', 'QuotaExceededError')
+    })
+    expect(() => saveFlow({ phase: 'picking' })).not.toThrow()
+  })
+
+  it('clearFlow 同时清 FLOW_KEY 与旧版 practice-pending 键', () => {
+    sessionStorage.setItem(FLOW_KEY, JSON.stringify({ phase: 'picking' }))
+    sessionStorage.setItem('tarot.practice-pending.v1', JSON.stringify({ practiceTask: 'x' }))
+    clearFlow()
+    expect(sessionStorage.getItem(FLOW_KEY)).toBeNull()
+    expect(sessionStorage.getItem('tarot.practice-pending.v1')).toBeNull()
   })
 })
