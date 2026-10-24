@@ -5,6 +5,7 @@ import { loadAiConfig, resolveAiConfig } from '../_lib/ai-config.js'
 import { shanghaiDayAndMonthKeys } from '../_lib/shanghai-day.js'
 
 const MAX_MESSAGES = 24
+const MAX_MESSAGE_CHARS = 12000
 const MAX_TOTAL_CHARS = 24000
 
 function validateMessages(messages) {
@@ -12,7 +13,7 @@ function validateMessages(messages) {
   let totalChars = 0
   for (const message of messages) {
     if (!message || !['system', 'user', 'assistant'].includes(message.role) || typeof message.content !== 'string') return false
-    if (message.content.length > 12000) return false
+    if (message.content.length > MAX_MESSAGE_CHARS) return false
     totalChars += message.content.length
     if (totalChars > MAX_TOTAL_CHARS) return false
   }
