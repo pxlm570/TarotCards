@@ -29,4 +29,57 @@ describe('share-card', () => {
     const l = buildShareLayout(reading, spread, { includeQuestion: false })
     expect(l.question).toBe('')
   })
+
+  it('truncate 假值早退返回空串', () => {
+    expect(truncate('', 30)).toBe('')
+    expect(truncate(null, 30)).toBe('')
+    expect(truncate(undefined, 30)).toBe('')
+    expect(truncate(0, 30)).toBe('')
+  })
+
+  it('问题 30 字上限：恰好 30 原样、31 字截为 29 字加省略号、短问题原样', () => {
+    const q30 = '一二三四五六七八九十'.repeat(3)
+    const l30 = buildShareLayout({ question: q30, cards: [reading.cards[0]] }, spread, { includeQuestion: true })
+    expect(l30.question).toBe(q30) // 恰好 30 字不截断
+
+    // 31 个不重复汉字：输出锁 29 原字 + …（旧 40 字上限会尾部裁切，故收紧为 30）
+    const q31 = Array.from({ length: 31 }, (_, i) => String.fromCharCode(0x4e00 + i)).join('')
+    const l31 = buildShareLayout({ question: q31, cards: [reading.cards[0]] }, spread, { includeQuestion: true })
+    expect(l31.question).toBe(q31.slice(0, 29) + '…')
+    expect(l31.question).toHaveLength(30)
+    expect(l31.question).not.toContain(q31[30]) // 第 31 个原字符不得出现
+
+    const lShort = buildShareLayout({ question: '今天运势如何', cards: [reading.cards[0]] }, spread, { includeQuestion: true })
+    expect(lShort.question).toBe('今天运势如何')
+  })
+
+  it('未知 positionKey 与无 spread 时牌位标签为空串且不炸', () => {
+    const r = { question: '', cards: [{ cardId: 'major-05', positionKey: 'no-such-key', reversed: false }] }
+    expect(buildShareLayout(r, spread, {}).positions[0].label).toBe('')
+    expect(() => buildShareLayout(r, null, {})).not.toThrow()
+    expect(buildShareLayout(r, null, {}).positions[0].label).toBe('')
+    expect(buildShareLayout(r, undefined, {}).positions[0].label).toBe('')
+  })
+
+  it('空 cards 时 positions 为空且 keywords 为空数组', () => {
+    const l = buildShareLayout({ question: '', cards: [] }, spread, {})
+    expect(l.positions).toHaveLength(0)
+    expect(l.keywords).toEqual([])
+  })
+
+  it('多牌时卡高不超 400 上限、逐位递增且水平居中', () => {
+    const cards = Array.from({ length: 5 }, (_, i) => ({ cardId: `major-0${i}`, positionKey: 'past', reversed: false }))
+    const l = buildShareLayout({ question: '', cards }, spread, {})
+    expect(l.keywords).toEqual(['星语塔罗'])
+    for (const p of l.positions) {
+      expect(p.h).toBeLessThanOrEqual(400)
+      expect(Math.abs(p.x + p.w / 2 - SHARE_W / 2)).toBeLessThan(2)
+    }
+    for (let i = 1; i < l.positions.length; i++) {
+      expect(l.positions[i].y).toBeGreaterThan(l.positions[i - 1].y)
+    }
+    // 单牌也被 Math.min 压到 400 上限（而非占满 720 高）
+    const single = buildShareLayout({ question: '', cards: [cards[0]] }, spread, {})
+    expect(single.positions[0].h).toBe(400)
+  })
 })
