@@ -17,6 +17,12 @@ describe('stats：dayKeyOf / buildDaySeries', () => {
     expect(dayKeyOf('2026-09-26T12:00:00Z')).toBe('2026-09-26')
   })
 
+  it('非法时间戳返回空串（不炸，脏行落不进任何一天）', () => {
+    expect(dayKeyOf('not-a-date')).toBe('')
+    expect(dayKeyOf('')).toBe('')
+    expect(dayKeyOf(undefined)).toBe('')
+  })
+
   it('buildDaySeries 生成最近 N 天连续序列（含今天）', () => {
     const series = buildDaySeries(3, '2026-09-27')
     expect(series.map((d) => d.day)).toEqual(['2026-09-25', '2026-09-26', '2026-09-27'])
@@ -126,5 +132,11 @@ describe('stats：summarizeInvites', () => {
   it('长期有效标志：有效期跨度 ≥3 年为 true（「长期」=3650 天），短码为 false', () => {
     const list = summarizeInvites(invites, emailById, '2026-09-26')
     expect(list.map((r) => r.longTerm)).toEqual([true, true, false, false])
+  })
+
+  it('过期判定是严格大于：expires_at 恰好等于 now 即已过期，前 1 秒仍可用', () => {
+    const row = { code_hash: 'eee111222333', redeemed_by: null, created_at: '2026-09-20T00:00:00Z', expires_at: '2026-09-26T00:00:00Z' }
+    expect(summarizeInvites([row], emailById, '2026-09-26T00:00:00Z')[0].status).toBe('expired')
+    expect(summarizeInvites([row], emailById, '2026-09-25T23:59:59Z')[0].status).toBe('available')
   })
 })

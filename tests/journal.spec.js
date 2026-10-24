@@ -74,6 +74,33 @@ describe('journal-store', () => {
     expect(getDailyDraw('2026-07-26')).toBeUndefined()
   })
 
+  it('updateNote 对不存在的 id 返回 false 且不写库', () => {
+    saveReading(sample({ id: 'a' }))
+    const before = localStorage.getItem('tarot.journal.v1')
+    expect(updateNote('ghost', 'x')).toBe(false)
+    expect(getById('a').note).toBe('')
+    expect(localStorage.getItem('tarot.journal.v1')).toBe(before)
+  })
+
+  it('saveReading 相同 id 覆盖原位（不新增、不把旧记录顶到最前）', () => {
+    saveReading(sample({ id: 'a', ts: 100 }))
+    saveReading(sample({ id: 'b', ts: 200 }))
+    saveReading(sample({ id: 'a', ts: 100, question: '新' }))
+    expect(count()).toBe(2)
+    expect(getById('a').question).toBe('新')
+    // 存储序原位更新（[b, a]），覆盖不会 unshift 到最前；listReadings 按 ts 排序同序
+    expect(JSON.parse(localStorage.getItem('tarot.journal.v1')).readings.map((r) => r.id)).toEqual(['b', 'a'])
+    expect(listReadings().map((r) => r.id)).toEqual(['b', 'a'])
+  })
+
+  it('损坏 JSON 经 sanitize 回空库，且可立即重建写入', () => {
+    localStorage.setItem('tarot.journal.v1', '{oops')
+    expect(loadJournal()).toEqual({ readings: [], dailyDraws: {} })
+    expect(count()).toBe(0)
+    saveReading(sample({ id: 'a' }))
+    expect(getById('a')).toBeTruthy()
+  })
+
   it('getById 不存在时返回 undefined', () => {
     expect(getById('no-such')).toBeUndefined()
   })

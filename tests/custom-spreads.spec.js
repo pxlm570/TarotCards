@@ -6,6 +6,7 @@ import {
   getCustomSpread,
   saveCustomSpread,
   deleteCustomSpread,
+  sanitizeCustomSpreads,
   MAX_CUSTOM_SPREADS,
   CUSTOM_SPREADS_KEY
 } from '../src/lib/custom-spreads.js'
@@ -146,5 +147,43 @@ describe('custom-spreads', () => {
     expect(listCustomSpreads()).toEqual([])
     const saved = saveCustomSpread({ name: '重建', positions: okPositions })
     expect(getCustomSpread(saved.id).name).toBe('重建')
+  })
+})
+
+// sanitizeCustomSpreads 是公开导出：备份导入与本机读取共用的逐条清洗入口
+describe('sanitizeCustomSpreads', () => {
+  const pos = () => [{ label: '位', x: 50, y: 50 }]
+
+  it('非数组（null / 对象 / 字符串）一律返回 null，不抛错', () => {
+    expect(sanitizeCustomSpreads(null)).toBe(null)
+    expect(sanitizeCustomSpreads({ id: 'custom-x', name: 'x', positions: pos() })).toBe(null)
+    expect(sanitizeCustomSpreads('[]')).toBe(null)
+  })
+
+  it(`超过上限截断保留前 ${MAX_CUSTOM_SPREADS} 条；同 id 重复以首条为准`, () => {
+    const dup = { id: 'custom-dup', name: '原版', positions: pos() }
+    const raw = [
+      dup,
+      { ...dup, name: '冒牌' },
+      ...Array.from({ length: MAX_CUSTOM_SPREADS + 2 }, (_, i) => ({ id: `custom-f${i}`, name: `阵${i}`, positions: pos() }))
+    ]
+    const out = sanitizeCustomSpreads(raw)
+    expect(out).toHaveLength(MAX_CUSTOM_SPREADS)
+    expect(out[0]).toMatchObject({ id: 'custom-dup', name: '原版' })
+    expect(out.filter((s) => s.id === 'custom-dup')).toHaveLength(1)
+  })
+
+  it('坏条目逐条跳过（坏前缀 / 空名 / 坏牌位）不牵连好条目；名称收敛、坏时间戳归 0', () => {
+    const out = sanitizeCustomSpreads([
+      { id: 'static-id', name: 'x', positions: pos() },
+      { id: 'custom-noname', name: '  ', positions: pos() },
+      { id: 'custom-badpos', name: 'x', positions: [{ label: ' ', x: 50, y: 50 }] },
+      { id: 'custom-ok', name: ' 好阵 ', positions: pos(), createdAt: 'oops', updatedAt: null }
+    ])
+    expect(out.map((s) => s.id)).toEqual(['custom-ok'])
+    expect(out[0].name).toBe('好阵')
+    expect(out[0].createdAt).toBe(0)
+    expect(out[0].updatedAt).toBe(0)
+    expect(out[0].positions.map((p) => p.key)).toEqual(['p1'])
   })
 })
