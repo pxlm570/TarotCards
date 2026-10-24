@@ -115,4 +115,27 @@ describe('telemetry：静默失败与非法事件名', () => {
     await flush() // 队列已清空：第二次 flush 不再发请求
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  // pagehide 兜底（模块加载时注册在 window 上）：用户直接关页/切走时，
+  // 不足阈值的尾部批次也要立即发出，不能等 5 秒定时器。
+  it('pagehide 触发立即上报尾部批次，队列清空后不再重复发', async () => {
+    const { track } = await importFresh()
+    const fetchMock = vi.fn(async () => ({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    track('page_view', '/reading')
+    track('share_card', '/reading')
+    window.dispatchEvent(new Event('pagehide'))
+    await vi.runOnlyPendingTimersAsync() // flush 异步，让微任务落地
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers.Authorization).toBe('Bearer tok-1')
+    expect(JSON.parse(init.body).events).toEqual([
+      { name: 'page_view', path: '/reading' },
+      { name: 'share_card', path: '/reading' }
+    ])
+    // 队列已空：再次 pagehide 与到点的 5 秒定时器都不再发请求
+    window.dispatchEvent(new Event('pagehide'))
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })

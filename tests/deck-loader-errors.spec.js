@@ -44,3 +44,33 @@ describe('deck-loader 错误路径', () => {
     expect(() => loader.cardImageUrl(manifest, 'cups-05')).toThrow('皮肤 rws 缺少牌面：cups-05')
   })
 })
+
+// cardsFrom 成功路径（换背不换面的皮肤包机制）：继承基底 cards、保留自身 back，
+// 二次加载命中 manifest 缓存不再发请求。循环引用失败分支见 use-deck.spec。
+describe('deck-loader cardsFrom 继承', () => {
+  beforeEach(async () => {
+    vi.resetModules()
+    loader = await import('../src/lib/deck-loader.js')
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      const u = String(url)
+      if (u.includes('/decks/base-a/manifest.json')) {
+        return jsonResponse({ id: 'base-a', name: '基底', back: 'a-back.webp', cards: { 'major-00': 'm0.webp' } })
+      }
+      if (u.includes('/decks/skin-b/manifest.json')) {
+        return jsonResponse({ id: 'skin-b', name: '只换背', back: 'b-back.webp', cardsFrom: 'base-a' })
+      }
+      return jsonResponse({ error: 'not found' }, 404)
+    }))
+  })
+
+  it('cardsFrom 指向基底：cards 继承、back 与 id 保留自身；缓存命中不重拉', async () => {
+    const b = await loader.loadDeck('skin-b')
+    expect(b.cards).toEqual({ 'major-00': 'm0.webp' })
+    expect(b.back).toBe('b-back.webp')
+    expect(b.id).toBe('skin-b')
+    // 文件名随基底、URL 路径随皮肤自己
+    expect(loader.cardImageUrl(b, 'major-00')).toBe('/decks/skin-b/m0.webp')
+    await loader.loadDeck('skin-b')
+    expect(vi.mocked(globalThis.fetch).mock.calls).toHaveLength(2) // 两份 manifest 各一次
+  })
+})

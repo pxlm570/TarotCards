@@ -142,11 +142,49 @@ describe('custom-spreads', () => {
     expect(() => saveCustomSpread({ name: '超了', positions: okPositions })).toThrow()
   })
 
+  it('稳定 key：乱序稀疏 key（p3 在前 p1 在后）原样保留，新增行取全组最大 +1', () => {
+    const created = saveCustomSpread({
+      name: '乱序',
+      positions: [
+        { key: 'p3', label: '三', x: 90, y: 90 },
+        { key: 'p1', label: '一', x: 10, y: 10 }
+      ]
+    })
+    expect(created.positions.map((p) => p.key)).toEqual(['p3', 'p1'])
+    const updated = saveCustomSpread({
+      id: created.id,
+      name: '乱序',
+      positions: [
+        { key: 'p3', label: '三', x: 90, y: 90 },
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { label: '新位', x: 50, y: 50 }
+      ]
+    })
+    expect(updated.positions.map((p) => p.key)).toEqual(['p3', 'p1', 'p4'])
+  })
+
+  it('脏输入类型：name/label 非字符串（数字、缺失）按空名拒绝而非抛 TypeError', () => {
+    expect(() => saveCustomSpread({ name: 123, positions: okPositions })).toThrow(/名称不能为空/)
+    expect(() => saveCustomSpread({ positions: okPositions })).toThrow(/名称不能为空/)
+    expect(() =>
+      saveCustomSpread({ name: 'x', positions: [{ label: null, x: 50, y: 50 }] })
+    ).toThrow(/第 1 个牌位名称不能为空/)
+  })
+
   it('容错：损坏 JSON 视为空库，不抛错', () => {
     localStorage.setItem(CUSTOM_SPREADS_KEY, '{oops')
     expect(listCustomSpreads()).toEqual([])
     const saved = saveCustomSpread({ name: '重建', positions: okPositions })
     expect(getCustomSpread(saved.id).name).toBe('重建')
+  })
+
+  it('容错：存储为合法 JSON 但非数组（对象/字符串）视为空库，且随后可正常重建', () => {
+    localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify({ oops: true }))
+    expect(listCustomSpreads()).toEqual([])
+    localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify('custom-x'))
+    expect(getCustomSpread('custom-x')).toBe(null)
+    const saved = saveCustomSpread({ name: '重来', positions: okPositions })
+    expect(listCustomSpreads().map((s) => s.id)).toEqual([saved.id])
   })
 })
 

@@ -140,4 +140,14 @@ describe('feedback：动效降级', () => {
     saveSettings({ reducedMotion: true }) // 设置显式降级优先于系统
     expect(scrollBehavior()).toBe('auto')
   })
+
+  it('matchMedia 抛异常时按「不降级」处理，applyMotionPreference 落 full 不炸', () => {
+    window.matchMedia = vi.fn(() => {
+      throw new Error('媒体查询不支持')
+    })
+    expect(prefersReducedMotion()).toBe(false)
+    applyMotionPreference()
+    expect(document.documentElement.getAttribute('data-motion')).toBe('full')
+    expect(scrollBehavior()).toBe('smooth')
+  })
 })

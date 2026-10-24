@@ -1,7 +1,7 @@
 // storage.js loadSettings 逐字段校验（评审 2026-09-06 修复项）：存储里的坏值
 //（null/类型漂移/枚举外值/旧版本残留）不得覆盖默认值，未知键一律丢弃。
 // 端点变更清 key 的行为见 review-boundaries.spec，此处不重复。
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { DEFAULT_SETTINGS, loadSettings } from '../src/lib/storage.js'
 
 const KEY = 'tarot.settings.v1'
@@ -87,5 +87,16 @@ describe('loadSettings：逐字段坏值回落默认', () => {
 
   it('空存储 → 全默认', () => {
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS)
+  })
+
+  it('localStorage 被禁（getItem 抛 SecurityError）→ 全默认不炸（iOS 阻 Cookie 场景）', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    try {
+      expect(loadSettings()).toEqual(DEFAULT_SETTINGS)
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

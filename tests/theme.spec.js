@@ -168,4 +168,20 @@ describe('theme：边界与降级', () => {
     expect(() => initTheme()).not.toThrow()
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
   })
+
+  it('Safari ≤13 旧监听 API（addListener/removeListener）：能绑定，重复 init 先解绑再绑', () => {
+    // 桩只带旧 API：走 initTheme 的 addListener 分支与 unbind 的 removeListener 分支
+    let added = 0
+    let removed = 0
+    window.matchMedia = vi.fn(() => ({
+      matches: false,
+      addListener: () => { added++ },
+      removeListener: () => { removed++ }
+    }))
+    initTheme()
+    expect(added).toBe(1)
+    initTheme() // HMR/重复初始化：摘掉旧监听再挂新的，不叠加
+    expect(removed).toBe(1)
+    expect(added).toBe(2)
+  })
 })

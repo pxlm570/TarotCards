@@ -160,6 +160,11 @@ describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
     expect(buildConfigPatch({ daily_deep_limit: '' }).ok).toBe(false)
   })
 
+  it('字符串字段传非字符串（数字/对象）显式拒绝并指名，不静默 String() 化', () => {
+    expect(buildConfigPatch({ model_standard: 123 })).toEqual({ ok: false, error: 'model_standard 不能为空' })
+    expect(buildConfigPatch({ base_url: { url: 'https://x' } })).toEqual({ ok: false, error: 'base_url 不能为空' })
+  })
+
   it('非法数值拒绝：负数/非有限数', () => {
     expect(buildConfigPatch({ price_deep_in: -1 }).ok).toBe(false)
     expect(buildConfigPatch({ price_deep_in: 'abc' }).ok).toBe(false)

@@ -59,6 +59,13 @@ describe('requireOwner', () => {
     expect(await requireOwner(reqWithToken('tok'))).toEqual({ status: 403, error: '仅站长可访问' })
   })
 
+  it('账号无 email（匿名/手机号认证等）→ 按 403 处理而非空引用炸掉', async () => {
+    const { requireOwner } = await freshOwner()
+    state.getUser = { data: { user: { id: 'u1', email: null } }, error: null }
+    vi.stubEnv('ADMIN_EMAIL', 'owner@x.com')
+    expect(await requireOwner(reqWithToken('tok'))).toEqual({ status: 403, error: '仅站长可访问' })
+  })
+
   it('站长邮箱大小写与首尾空白归一后放行，返回 user 与 client', async () => {
     const { requireOwner } = await freshOwner()
     state.getUser = { data: { user: { id: 'u1', email: '  Owner@X.COM ' } }, error: null }

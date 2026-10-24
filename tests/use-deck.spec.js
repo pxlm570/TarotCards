@@ -162,6 +162,76 @@ describe('useDeck：牌面/牌背独立', () => {
     await expect(loader.loadDeck('a')).rejects.toThrow('循环引用')
   })
 
+  it('switchFace 同 id 且牌面已就绪：no-op，不重拉 manifest', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.switchFace('rws')
+    expect(d.manifest.value).toEqual(RWS) // 幂等：不置空等待重载
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('switchBack 同 id 且牌背已就绪：no-op，不重拉牌背注册表', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.switchBack('star-gold')
+    expect(d.backItem.value?.id).toBe('star-gold')
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('牌背请求进行中重复 useDeck()：backsLoading 守卫挡住重复请求', async () => {
+    let resolveBacks
+    let backsCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/backs/index.json')) {
+        backsCalls++
+        return new Promise((resolve) => { resolveBacks = resolve })
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    deck.useDeck() // 牌背尚未就绪：同一次加载中重入不得重发
+    expect(backsCalls).toBe(1)
+    resolveBacks(jsonResponse(BACKS))
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    expect(backsCalls).toBe(1)
+  })
+
+  it('retry() 在牌面已就绪时 no-op，不发任何请求', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.retry()
+    expect(d.manifest.value).toEqual(RWS)
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('换皮肤后旧请求失败：error 不被旧请求污染，新皮肤正常就绪', async () => {
+    let rejectFirstIndex
+    let indexCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/decks/index.json')) {
+        indexCalls++
+        return indexCalls === 1
+          ? new Promise((_, reject) => { rejectFirstIndex = reject })
+          : jsonResponse(['rws', 'rws-sepia'])
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(indexCalls).toBe(1))
+    d.switchFace('rws-sepia') // 旧索引请求还在路上时换皮肤
+    await vi.waitFor(() => expect(indexCalls).toBe(2))
+    rejectFirstIndex(new Error('旧请求网络断开'))
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(SEPIA))
+    await new Promise((resolve) => setTimeout(resolve, 0)) // 让旧链路的 rejection 走完
+    expect(d.error.value).toBeNull() // 失败的是已作废的请求，不得置 error
+    expect(d.faceId.value).toBe('rws-sepia')
+  })
+
   it('local-index.json 存在时本地皮肤并入列表（与公开索引去重），缺失时静默跳过', async () => {
     const LOCAL = { id: 'my-local', name: '本地皮肤', back: 'back.webp', cards: { 'major-00': 'm0.webp' } }
     vi.resetModules()
