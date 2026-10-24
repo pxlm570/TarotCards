@@ -2,16 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { bearerToken, readJson, sendJson } from '../_lib/http.js'
 import { getAuthorizedUser } from '../_lib/supabase.js'
 import { loadAiConfig, resolveAiConfig } from '../_lib/ai-config.js'
+import { shanghaiDayAndMonthKeys } from '../_lib/shanghai-day.js'
 
 const MAX_MESSAGES = 24
 const MAX_TOTAL_CHARS = 24000
-
-function shanghaiDayAndMonth() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).formatToParts(new Date()).map((part) => [part.type, part.value]))
-  return { day: `${parts.year}-${parts.month}-${parts.day}`, month: `${parts.year}-${parts.month}-01` }
-}
 
 function validateMessages(messages) {
   if (!Array.isArray(messages) || messages.length < 1 || messages.length > MAX_MESSAGES) return false
@@ -98,7 +92,7 @@ export default async function handler(req, res) {
     if (ai.error) return sendJson(res, 503, { error: '默认 AI 暂未启用' })
 
     requestId = randomUUID()
-    const { day, month } = shanghaiDayAndMonth()
+    const { day, month } = shanghaiDayAndMonthKeys()
     estimatedCost = estimateMicroYuan(ai, body.messages)
     // 按人按天限额（普通/深度各自计数），用量成本仅记录不拦截
     const { data: reservation, error: reservationError } = await access.client.rpc('reserve_ai_request', {
