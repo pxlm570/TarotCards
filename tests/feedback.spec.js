@@ -7,7 +7,8 @@ import {
   toasts,
   TOAST_MS,
   prefersReducedMotion,
-  applyMotionPreference
+  applyMotionPreference,
+  scrollBehavior
 } from '../src/lib/feedback.js'
 import { saveSettings } from '../src/lib/storage.js'
 
@@ -55,6 +56,18 @@ describe('feedback：触感', () => {
     expect(() => tap()).not.toThrow()
     expect(tap()).toBe(false)
   })
+
+  it('navigator.vibrate 抛异常时 tap 吞掉异常返回 false', () => {
+    Object.defineProperty(navigator, 'vibrate', {
+      value: () => {
+        throw new Error('振动接口异常')
+      },
+      configurable: true,
+      writable: true
+    })
+    expect(() => tap()).not.toThrow()
+    expect(tap()).toBe(false)
+  })
 })
 
 describe('feedback：轻提示', () => {
@@ -79,6 +92,27 @@ describe('feedback：轻提示', () => {
     const b = toast('完成了', 'success')
     expect(a).not.toBe(b)
     expect(toasts[1].type).toBe('success')
+  })
+
+  it('warn 档入队后类型标记为 warn', () => {
+    toast('注意', 'warn')
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0].text).toBe('注意')
+    expect(toasts[0].type).toBe('warn')
+  })
+
+  it('toast 已被清空后超时回调不炸，也不误删后来入队的提示', () => {
+    toast('会被先清掉')
+    toasts.splice(0, toasts.length) // 视图批量清队先于超时发生
+    vi.advanceTimersByTime(TOAST_MS - 1)
+    const freshId = toast('后入队的')
+    // 旧 toast 的超时到点（新 toast 还没到点）：i===-1 分支不得动队列——
+    // 若漏了守卫，splice(-1,1) 会把队尾的新提示误删
+    vi.advanceTimersByTime(1)
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0].id).toBe(freshId)
+    vi.advanceTimersByTime(TOAST_MS + 50) // 新 toast 自己的超时正常出队
+    expect(toasts).toHaveLength(0)
   })
 })
 
@@ -110,5 +144,32 @@ describe('feedback：动效降级', () => {
     saveSettings({ reducedMotion: true })
     applyMotionPreference()
     expect(document.documentElement.getAttribute('data-motion')).toBe('reduced')
+  })
+
+  it('scrollBehavior：正常动效返回 smooth，系统或设置降级时返回 auto', () => {
+    expect(scrollBehavior()).toBe('smooth')
+    stubReduceMotion(true) // 系统开启减弱动效
+    expect(scrollBehavior()).toBe('auto')
+    stubReduceMotion(false)
+    saveSettings({ reducedMotion: true }) // 设置显式降级优先于系统
+    expect(scrollBehavior()).toBe('auto')
+  })
+
+  it('matchMedia 抛异常时按「不降级」处理，applyMotionPreference 落 full 不炸', () => {
+    window.matchMedia = vi.fn(() => {
+      throw new Error('媒体查询不支持')
+    })
+    expect(prefersReducedMotion()).toBe(false)
+    applyMotionPreference()
+    expect(document.documentElement.getAttribute('data-motion')).toBe('full')
+    expect(scrollBehavior()).toBe('smooth')
+  })
+
+  it('宿主没有 matchMedia（老 WebView）时同样按「不降级」处理', () => {
+    window.matchMedia = undefined
+    expect(prefersReducedMotion()).toBe(false)
+    applyMotionPreference()
+    expect(document.documentElement.getAttribute('data-motion')).toBe('full')
+    expect(scrollBehavior()).toBe('smooth')
   })
 })

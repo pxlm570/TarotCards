@@ -61,6 +61,21 @@ describe('评审：数据与会话边界', () => {
   expect(reading.consumePractice()?.lessonId).toBe('ch-01-l5')
   expect(reading.consumePractice()).toBeNull()
  })
+ it('startPractice 拒绝牌阵不匹配/非实战课/未知课时，失败不吞进行中的局', () => {
+  const reading=useReadingStore()
+  // ch-01-l5 实战绑定 single：换牌阵即拒
+  expect(()=>reading.startPractice('ch-01','ch-01-l5','time-flow')).toThrow('实战任务与牌阵不匹配')
+  // ch-01-l1 是看图课，不是实战
+  expect(()=>reading.startPractice('ch-01','ch-01-l1','single')).toThrow('实战任务与牌阵不匹配')
+  // 未知章节/未知课时：lesson 查不到同样拒
+  expect(()=>reading.startPractice('ch-99','ch-99-l1','single')).toThrow('实战任务与牌阵不匹配')
+  expect(()=>reading.startPractice('ch-01','no-such-lesson','single')).toThrow('实战任务与牌阵不匹配')
+  // 校验先于 reset：失败不得重置已开局
+  reading.selectSpread('single')
+  expect(()=>reading.startPractice('ch-01','ch-01-l5','time-flow')).toThrow('实战任务与牌阵不匹配')
+  expect(reading.phase).toBe('spreadSelected')
+  expect(reading.practiceTask).toBeNull()
+ })
  it('愚人段落绑定愚人插图，不轮换为世界', () => {
   const steps=articleSteps(chapters[1].lessons[0].blocks)
   const step=steps.find(s=>s.block.text?.startsWith('愚人代表'))

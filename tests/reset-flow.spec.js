@@ -133,6 +133,44 @@ describe('AccessView 忘记密码与确认重发', () => {
     expect(wrapper.text()).toContain('邮箱或密码不正确')
     wrapper.unmount()
   })
+
+  it('操作频繁（rate limit）→ 中文提示', async () => {
+    stub.signInError = { message: 'Rate limit exceeded' }
+    const wrapper = await mountAccess()
+    await wrapper.find('#password').setValue('password-8')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('操作太频繁，请稍后再试')
+    wrapper.unmount()
+  })
+
+  it('邮箱已注册（already registered）→ 引导直接登录', async () => {
+    stub.signInError = { message: 'User already registered' }
+    const wrapper = await mountAccess()
+    await wrapper.find('#password').setValue('password-8')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('该邮箱已注册，请直接登录')
+    wrapper.unmount()
+  })
+
+  it('未知英文错误原文透传；空消息回落通用文案', async () => {
+    stub.signInError = { message: 'Some unexpected provider error' }
+    let wrapper = await mountAccess()
+    await wrapper.find('#password').setValue('password-8')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Some unexpected provider error')
+    wrapper.unmount()
+
+    stub.signInError = { message: '' }
+    wrapper = await mountAccess()
+    await wrapper.find('#password').setValue('password-8')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('登录失败，请检查邮箱和密码')
+    wrapper.unmount()
+  })
 })
 
 describe('ResetPasswordView 设置新密码', () => {

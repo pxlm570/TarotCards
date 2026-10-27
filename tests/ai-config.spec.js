@@ -116,6 +116,13 @@ describe('ai-config：maskApiKey', () => {
     expect(maskApiKey('short')).toBe('••••')
     expect(maskApiKey('')).toBe('（未设置）')
   })
+
+  it('null/undefined 视为未设置；8 位整段掩码、9 位起才露首尾', () => {
+    expect(maskApiKey(null)).toBe('（未设置）')
+    expect(maskApiKey(undefined)).toBe('（未设置）')
+    expect(maskApiKey('12345678')).toBe('••••') // 恰好 8 位仍在 <=8 全掩码边界内
+    expect(maskApiKey('123456789')).toBe('1234…89')
+  })
 })
 
 describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
@@ -151,6 +158,11 @@ describe('ai-config：buildConfigPatch（站长 GUI 表单补丁）', () => {
     expect(buildConfigPatch({ model_standard: '  ' }).ok).toBe(false)
     expect(buildConfigPatch({ max_tokens_deep: '' }).ok).toBe(false)
     expect(buildConfigPatch({ daily_deep_limit: '' }).ok).toBe(false)
+  })
+
+  it('字符串字段传非字符串（数字/对象）显式拒绝并指名，不静默 String() 化', () => {
+    expect(buildConfigPatch({ model_standard: 123 })).toEqual({ ok: false, error: 'model_standard 不能为空' })
+    expect(buildConfigPatch({ base_url: { url: 'https://x' } })).toEqual({ ok: false, error: 'base_url 不能为空' })
   })
 
   it('非法数值拒绝：负数/非有限数', () => {

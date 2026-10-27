@@ -102,3 +102,86 @@ describe('theme：落到 DOM', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
   })
 })
+
+// 边界与降级分支（2026-10-24 补薄弱覆盖）：宿主缺 matchMedia / matchMedia 抛错 /
+// 监听卫生 / 手动锁定不被系统覆盖 / theme-color meta 自建
+describe('theme：边界与降级', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    delete window.matchMedia
+    document.documentElement.removeAttribute('data-theme')
+    document.querySelector('meta[name="theme-color"]')?.remove()
+  })
+
+  it('THEME_BG 与 tokens.css 的 --bg 对齐（浅色米白 / 暗夜藏青）', () => {
+    expect(THEME_BG.light).toBe('#FAF6ED')
+    expect(THEME_BG.dark).toBe('#0F1523')
+  })
+
+  it('setTheme 非法值回落 auto：按系统解析生效并持久化为 auto', () => {
+    stubSystemDark(true)
+    expect(setTheme('紫色')).toBe('dark')
+    expect(loadSettings().theme).toBe('auto')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('applyTheme 在无 theme-color meta 时创建挂载，已有则复用不新增', () => {
+    expect(document.querySelector('meta[name="theme-color"]')).toBeNull()
+    expect(applyTheme('dark')).toBe('dark')
+    const meta = document.querySelector('meta[name="theme-color"]')
+    expect(meta.getAttribute('content')).toBe(THEME_BG.dark)
+    applyTheme('light')
+    expect(document.querySelectorAll('meta[name="theme-color"]')).toHaveLength(1)
+    expect(document.querySelector('meta[name="theme-color"]').content).toBe(THEME_BG.light)
+  })
+
+  it('initTheme 无 matchMedia：不抛，无偏好按浅色、有偏好按已存值应用', () => {
+    saveSettings({ theme: 'dark' })
+    expect(() => initTheme()).not.toThrow()
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    localStorage.clear()
+    expect(() => initTheme()).not.toThrow()
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+  })
+
+  it('重复 initTheme 不叠加媒体查询监听（HMR / 测试场景）', () => {
+    const listeners = stubSystemDark(false)
+    initTheme()
+    initTheme()
+    expect(listeners.size).toBe(1)
+  })
+
+  it('手动锁定 dark：系统偏好变化回调按已存偏好重算，仍 dark 不跟随系统', () => {
+    const listeners = stubSystemDark(true)
+    saveSettings({ theme: 'dark' })
+    initTheme()
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    stubSystemDark(false) // 系统切浅
+    listeners.forEach((fn) => fn({ matches: false }))
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('matchMedia 抛错：resolveTheme / initTheme 静默降级不炸', () => {
+    window.matchMedia = vi.fn(() => { throw new Error('媒体查询不支持') })
+    expect(resolveTheme('auto')).toBe('light')
+    saveSettings({ theme: 'dark' })
+    expect(() => initTheme()).not.toThrow()
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('Safari ≤13 旧监听 API（addListener/removeListener）：能绑定，重复 init 先解绑再绑', () => {
+    // 桩只带旧 API：走 initTheme 的 addListener 分支与 unbind 的 removeListener 分支
+    let added = 0
+    let removed = 0
+    window.matchMedia = vi.fn(() => ({
+      matches: false,
+      addListener: () => { added++ },
+      removeListener: () => { removed++ }
+    }))
+    initTheme()
+    expect(added).toBe(1)
+    initTheme() // HMR/重复初始化：摘掉旧监听再挂新的，不叠加
+    expect(removed).toBe(1)
+    expect(added).toBe(2)
+  })
+})

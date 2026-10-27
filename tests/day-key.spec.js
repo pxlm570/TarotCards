@@ -1,7 +1,7 @@
 // 打卡日以凌晨 4 点为界：dayKey =（now - 4 小时）的本地日期。
 // 睡前 0-2 点使用场景：23:59 与次日 00:30 视为同一个「夜晚」。
 import { describe, it, expect } from 'vitest'
-import { currentDayKey } from '../src/lib/day-key.js'
+import { currentDayKey, formatDayKey } from '../src/lib/day-key.js'
 
 describe('day-key：凌晨 4 点分界', () => {
   it('04:00 整属于当天', () => {
@@ -26,8 +26,30 @@ describe('day-key：凌晨 4 点分界', () => {
     expect(currentDayKey(new Date('2026-03-01T04:00:00'))).toBe('2026-03-01')
   })
 
+  it('闰年边界：2 月 29 日存在，3 月 1 日凌晨归 2/29（非闰年归 2/28）', () => {
+    expect(currentDayKey(new Date('2024-02-29T12:00:00'))).toBe('2024-02-29')
+    expect(currentDayKey(new Date('2024-02-29T00:30:00'))).toBe('2024-02-28') // 闰日凌晨同样归前一天
+    expect(currentDayKey(new Date('2024-03-01T03:59:00'))).toBe('2024-02-29')
+    expect(currentDayKey(new Date('2024-03-01T04:00:00'))).toBe('2024-03-01')
+  })
+
   it('默认取当前时间', () => {
     expect(typeof currentDayKey()).toBe('string')
     expect(currentDayKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
+describe('formatDayKey：本地日期 pad', () => {
+  it('年-月-日两位补齐，不做 -4h 偏移', () => {
+    expect(formatDayKey(new Date('2026-07-05T03:30:00'))).toBe('2026-07-05')
+    expect(formatDayKey(new Date('2026-01-09T23:00:00'))).toBe('2026-01-09')
+  })
+
+  it('currentDayKey 等于 formatDayKey(now - 4h)', () => {
+    const now = new Date('2026-07-25T03:30:00')
+    const shifted = new Date(now)
+    shifted.setHours(shifted.getHours() - 4)
+    expect(currentDayKey(now)).toBe(formatDayKey(shifted))
+    expect(currentDayKey(now)).toBe('2026-07-24')
   })
 })

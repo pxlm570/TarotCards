@@ -76,3 +76,66 @@ describe('telemetry：批量上报', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
+
+// 静默失败契约：统计永不影响功能（2026-09-26 红线）。空事件名不入队不发请求；
+// flush 遇网络故障整批丢弃不重试（队列在 try 之前已 splice 清空）。
+describe('telemetry：静默失败与非法事件名', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    flags.token = 'tok-1'
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('空事件名（空串/null）不入队不发请求', async () => {
+    const { track, flush } = await importFresh()
+    const fetchMock = vi.fn(async () => ({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    track('', '/spoof')
+    track(null, '/spoof')
+    expect(fetchMock).not.toHaveBeenCalled()
+    // 队列里只有后补的合法事件 → 空名确实没入队
+    track('page_view', '/')
+    await flush()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).events).toEqual([{ name: 'page_view', path: '/' }])
+  })
+
+  it('flush 时 fetch 抛错 → 静默不炸，整批丢弃不重试', async () => {
+    const { track, flush } = await importFresh()
+    const fetchMock = vi.fn(async () => {
+      throw new Error('network down')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    track('page_view', '/')
+    await flush() // 不抛即静默
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await flush() // 队列已清空：第二次 flush 不再发请求
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  // pagehide 兜底（模块加载时注册在 window 上）：用户直接关页/切走时，
+  // 不足阈值的尾部批次也要立即发出，不能等 5 秒定时器。
+  it('pagehide 触发立即上报尾部批次，队列清空后不再重复发', async () => {
+    const { track } = await importFresh()
+    const fetchMock = vi.fn(async () => ({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    track('page_view', '/reading')
+    track('share_card', '/reading')
+    window.dispatchEvent(new Event('pagehide'))
+    await vi.runOnlyPendingTimersAsync() // flush 异步，让微任务落地
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers.Authorization).toBe('Bearer tok-1')
+    expect(JSON.parse(init.body).events).toEqual([
+      { name: 'page_view', path: '/reading' },
+      { name: 'share_card', path: '/reading' }
+    ])
+    // 队列已空：再次 pagehide 与到点的 5 秒定时器都不再发请求
+    window.dispatchEvent(new Event('pagehide'))
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

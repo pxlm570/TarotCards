@@ -3,7 +3,7 @@
 //        + 练习模式（静态，先写自己的理解再对比官方）+ 感想（M1 仅内存）+ 详情弹层。
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../../data/cards.json'
+import { cardById } from '../../lib/cards.js'
 import { useReadingStore } from '../../stores/reading.js'
 import { useLearningStore } from '../../stores/learning.js'
 import { useJournalStore } from '../../stores/journal.js'
@@ -75,8 +75,6 @@ onMounted(() => {
     }
   }
 })
-
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 
 // 首句提取不用 lookbehind 正则：Safari 16.0-16.3 运行时 new RegExp 抛 SyntaxError 会白屏
 function firstSentence(text) {

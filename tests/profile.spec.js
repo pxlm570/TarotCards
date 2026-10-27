@@ -25,6 +25,16 @@ describe('profile store', () => {
     expect(saved.xp).toBe(15)
   })
 
+  it('addXp 负数不穿底：加到负值时归零并按 0 持久化', () => {
+    const s = useProfileStore()
+    s.addXp(10)
+    expect(s.xp).toBe(10)
+    expect(s.addXp(-100)).toBe(0)
+    expect(s.xp).toBe(0)
+    const saved = JSON.parse(localStorage.getItem('tarot.profile.v1'))
+    expect(saved.xp).toBe(0)
+  })
+
   it('setBirthday 保存', () => {
     const s = useProfileStore()
     s.setBirthday('1990-05-23')
@@ -66,5 +76,35 @@ describe('profile store：存量坏数据兜底', () => {
     expect(s.xp).toBe(0)
     expect(s.maxStreak).toBe(0)
     expect(s.addXp(5)).toBe(5)
+  })
+
+  it('坏 JSON 回落默认值，且随后可正常写入', () => {
+    localStorage.setItem('tarot.profile.v1', '{oops')
+    setActivePinia(createPinia())
+    const s = useProfileStore()
+    expect(s.xp).toBe(0)
+    expect(s.birthday).toBe('')
+    expect(s.maxStreak).toBe(0)
+    expect(s.addXp(3)).toBe(3)
+  })
+
+  it('非对象 JSON（数组/字符串/数字）回落默认值', () => {
+    for (const bad of [JSON.stringify([1, 2]), JSON.stringify('hello'), JSON.stringify(42)]) {
+      localStorage.setItem('tarot.profile.v1', bad)
+      setActivePinia(createPinia())
+      const s = useProfileStore()
+      expect(s.xp).toBe(0)
+      expect(s.birthday).toBe('')
+      expect(s.maxStreak).toBe(0)
+    }
+  })
+
+  it('birthday 非字符串置空但其余字段保留（不因生日坏而整包拒绝）', () => {
+    localStorage.setItem('tarot.profile.v1', JSON.stringify({ xp: 20, maxStreak: 2, birthday: 19990523 }))
+    setActivePinia(createPinia())
+    const s = useProfileStore()
+    expect(s.xp).toBe(20)
+    expect(s.maxStreak).toBe(2)
+    expect(s.birthday).toBe('')
   })
 })

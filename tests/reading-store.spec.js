@@ -219,6 +219,39 @@ describe('reading store：状态机', () => {
     expect(store.phase).toBe('idle')
   })
 
+  it('hasActiveReading：idle 且无残留 flow → false，且不改动状态', () => {
+    const store = useReadingStore()
+    expect(store.hasActiveReading()).toBe(false)
+    expect(store.phase).toBe('idle')
+    expect(sessionStorage.getItem(FLOW_KEY)).toBeNull()
+  })
+
+  it('hasActiveReading：动线中（spreadSelected 起）→ true', () => {
+    const store = useReadingStore()
+    store.selectSpread(SPREAD_3)
+    store.beginBreathing()
+    expect(store.hasActiveReading()).toBe(true)
+  })
+
+  it('hasActiveReading：idle 但有可恢复 flow → 经 tryRestore 恢复并返回 true；坏 flow → false', () => {
+    const first = useReadingStore()
+    first.selectSpread(SPREAD_3)
+    first.beginBreathing()
+    first.toQuestion()
+    setActivePinia(createPinia())
+    const fresh = useReadingStore()
+    expect(fresh.phase).toBe('idle')
+    expect(fresh.hasActiveReading()).toBe(true)
+    expect(fresh.phase).toBe('questioning') // 判定过程已顺带恢复本局
+
+    // 牌阵已不存在的坏 flow：恢复失败不算进行中（守卫应重定向首页）
+    saveFlow({ phase: 'questioning', spreadId: 'no-such-spread' })
+    setActivePinia(createPinia())
+    const broken = useReadingStore()
+    expect(broken.hasActiveReading()).toBe(false)
+    expect(broken.phase).toBe('idle')
+  })
+
   it('domain 枚举校验：非法值抛错，null（随心抽）合法', () => {
     const store = useReadingStore()
     store.selectSpread(SPREAD_3)

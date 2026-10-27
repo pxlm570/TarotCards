@@ -1,7 +1,7 @@
 // 站长 GUI 配置端点（2026-09-25 用户要求表单化，替代/并存于 npm run ai:config）：
 // GET 返回脱敏配置与缺口清单，POST 白名单合并保存（不整行覆盖，api_key 留空=不改）。
 // 门禁见 _lib/owner.js——普通成员拿到 403，前端据此不渲染表单。
-import { bearerToken, readJson, sendJson } from '../_lib/http.js'
+import { readJson, sendJson } from '../_lib/http.js'
 import { requireOwner } from '../_lib/owner.js'
 import {
   AI_CONFIG_KEY,

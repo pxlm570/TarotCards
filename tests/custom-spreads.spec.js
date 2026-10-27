@@ -6,6 +6,7 @@ import {
   getCustomSpread,
   saveCustomSpread,
   deleteCustomSpread,
+  sanitizeCustomSpreads,
   MAX_CUSTOM_SPREADS,
   CUSTOM_SPREADS_KEY
 } from '../src/lib/custom-spreads.js'
@@ -141,10 +142,86 @@ describe('custom-spreads', () => {
     expect(() => saveCustomSpread({ name: '超了', positions: okPositions })).toThrow()
   })
 
+  it('稳定 key：乱序稀疏 key（p3 在前 p1 在后）原样保留，新增行取全组最大 +1', () => {
+    const created = saveCustomSpread({
+      name: '乱序',
+      positions: [
+        { key: 'p3', label: '三', x: 90, y: 90 },
+        { key: 'p1', label: '一', x: 10, y: 10 }
+      ]
+    })
+    expect(created.positions.map((p) => p.key)).toEqual(['p3', 'p1'])
+    const updated = saveCustomSpread({
+      id: created.id,
+      name: '乱序',
+      positions: [
+        { key: 'p3', label: '三', x: 90, y: 90 },
+        { key: 'p1', label: '一', x: 10, y: 10 },
+        { label: '新位', x: 50, y: 50 }
+      ]
+    })
+    expect(updated.positions.map((p) => p.key)).toEqual(['p3', 'p1', 'p4'])
+  })
+
+  it('脏输入类型：name/label 非字符串（数字、缺失）按空名拒绝而非抛 TypeError', () => {
+    expect(() => saveCustomSpread({ name: 123, positions: okPositions })).toThrow(/名称不能为空/)
+    expect(() => saveCustomSpread({ positions: okPositions })).toThrow(/名称不能为空/)
+    expect(() =>
+      saveCustomSpread({ name: 'x', positions: [{ label: null, x: 50, y: 50 }] })
+    ).toThrow(/第 1 个牌位名称不能为空/)
+  })
+
   it('容错：损坏 JSON 视为空库，不抛错', () => {
     localStorage.setItem(CUSTOM_SPREADS_KEY, '{oops')
     expect(listCustomSpreads()).toEqual([])
     const saved = saveCustomSpread({ name: '重建', positions: okPositions })
     expect(getCustomSpread(saved.id).name).toBe('重建')
+  })
+
+  it('容错：存储为合法 JSON 但非数组（对象/字符串）视为空库，且随后可正常重建', () => {
+    localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify({ oops: true }))
+    expect(listCustomSpreads()).toEqual([])
+    localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify('custom-x'))
+    expect(getCustomSpread('custom-x')).toBe(null)
+    const saved = saveCustomSpread({ name: '重来', positions: okPositions })
+    expect(listCustomSpreads().map((s) => s.id)).toEqual([saved.id])
+  })
+})
+
+// sanitizeCustomSpreads 是公开导出：备份导入与本机读取共用的逐条清洗入口
+describe('sanitizeCustomSpreads', () => {
+  const pos = () => [{ label: '位', x: 50, y: 50 }]
+
+  it('非数组（null / 对象 / 字符串）一律返回 null，不抛错', () => {
+    expect(sanitizeCustomSpreads(null)).toBe(null)
+    expect(sanitizeCustomSpreads({ id: 'custom-x', name: 'x', positions: pos() })).toBe(null)
+    expect(sanitizeCustomSpreads('[]')).toBe(null)
+  })
+
+  it(`超过上限截断保留前 ${MAX_CUSTOM_SPREADS} 条；同 id 重复以首条为准`, () => {
+    const dup = { id: 'custom-dup', name: '原版', positions: pos() }
+    const raw = [
+      dup,
+      { ...dup, name: '冒牌' },
+      ...Array.from({ length: MAX_CUSTOM_SPREADS + 2 }, (_, i) => ({ id: `custom-f${i}`, name: `阵${i}`, positions: pos() }))
+    ]
+    const out = sanitizeCustomSpreads(raw)
+    expect(out).toHaveLength(MAX_CUSTOM_SPREADS)
+    expect(out[0]).toMatchObject({ id: 'custom-dup', name: '原版' })
+    expect(out.filter((s) => s.id === 'custom-dup')).toHaveLength(1)
+  })
+
+  it('坏条目逐条跳过（坏前缀 / 空名 / 坏牌位）不牵连好条目；名称收敛、坏时间戳归 0', () => {
+    const out = sanitizeCustomSpreads([
+      { id: 'static-id', name: 'x', positions: pos() },
+      { id: 'custom-noname', name: '  ', positions: pos() },
+      { id: 'custom-badpos', name: 'x', positions: [{ label: ' ', x: 50, y: 50 }] },
+      { id: 'custom-ok', name: ' 好阵 ', positions: pos(), createdAt: 'oops', updatedAt: null }
+    ])
+    expect(out.map((s) => s.id)).toEqual(['custom-ok'])
+    expect(out[0].name).toBe('好阵')
+    expect(out[0].createdAt).toBe(0)
+    expect(out[0].updatedAt).toBe(0)
+    expect(out[0].positions.map((p) => p.key)).toEqual(['p1'])
   })
 })

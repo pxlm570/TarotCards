@@ -3,14 +3,14 @@
 // 用户的 AI 端点，后续占卜提问全部流向第三方且毫无察觉。改为：解析暂存 -> 跳设置页
 // 出「应用/放弃」确认条（AiView 消费）。
 // 暂存走 sessionStorage（关标签即弃，确认是即时动作不留尾）；sessionStorage 在
-// iOS 阻 Cookie 等场景同样可能被禁，本地 try/catch 兜底（同 lib/practice.js 口径）。
+// iOS 阻 Cookie 等场景同样可能被禁，本地 try/catch 兜底（同 storage.js safe 封装口径）。
 const KEY = 'tarot.import-pending.v1'
 
 export const IMPORT_PENDING_KEY = KEY
 
-function getSession(json) {
+function getSession(key) {
   try {
-    return sessionStorage.getItem(json)
+    return sessionStorage.getItem(key)
   } catch {
     return null
   }

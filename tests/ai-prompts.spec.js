@@ -154,3 +154,45 @@ describe('buildGreetingMessages：问候随人格', () => {
     expect(g[0].content).not.toContain('一、解读方法论')
   })
 })
+
+describe('ai-prompts 脏输入兜底', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('drawn 含未知 cardId 时该行整体跳过，不抛错', () => {
+    const msgs = buildReadingMessages({
+      question: 'q',
+      domain: null,
+      spread,
+      drawn: [{ cardId: 'ghost-99', positionKey: 'past', reversed: false }],
+      cardsData: cards
+    })
+    expect(msgs[1].content).toContain('牌面如下：')
+    expect(msgs[1].content).not.toContain('【') // 未知牌不渲染任何牌位行
+  })
+
+  it('positionKey 无匹配牌位时牌位标号为空串（不炸）', () => {
+    const msgs = buildReadingMessages({
+      question: 'q',
+      domain: null,
+      spread,
+      drawn: [{ cardId: 'major-01', positionKey: 'no-such', reversed: false }],
+      cardsData: cards
+    })
+    expect(msgs[1].content).toContain('【】魔术师（正位）：创造')
+  })
+
+  it('我先解：未知 cardId 回退显示原始 id 而非炸掉', () => {
+    const msgs = buildSelfReadMessages({
+      drawn: [{ cardId: 'ghost-99', reversed: false }],
+      cardsData: cards,
+      userInterpretation: '感觉是张好牌'
+    })
+    expect(msgs[1].content).toContain('ghost-99')
+  })
+
+  it('persona 值非法时回退温柔人格', () => {
+    saveSettings({ persona: 'wizard' })
+    const g = buildGreetingMessages('你好')
+    expect(g[0].content).toContain('温柔治愈')
+  })
+})

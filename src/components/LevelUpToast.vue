@@ -3,10 +3,9 @@
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useProfileStore } from '../stores/profile.js'
 import { levelProgress, levelCardId } from '../lib/xp.js'
-import cardsData from '../data/cards.json'
+import { cardById } from '../lib/cards.js'
 import AppIcon from './AppIcon.vue'
 
-const cardById = new Map(cardsData.map((c) => [c.id, c]))
 const profile = useProfileStore()
 
 const show = ref(false)

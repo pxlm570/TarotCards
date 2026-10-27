@@ -6,7 +6,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
-const flags = vi.hoisted(() => ({ custom: true, defaultEnabled: true }))
+const flags = vi.hoisted(() => {
+  const defaultClient = {
+    auth: {
+      getSession: vi.fn(async () => ({ data: { session: { access_token: 'tok' } }, error: null })),
+      onAuthStateChange: vi.fn()
+    }
+  }
+  return { custom: true, defaultEnabled: true, defaultClient, client: defaultClient }
+})
 
 vi.mock('../src/lib/supabase.js', () => ({
   isSupabaseConfigured: true,
@@ -17,11 +25,8 @@ vi.mock('../src/lib/supabase.js', () => ({
   get customAIAllowed() {
     return flags.custom
   },
-  supabase: {
-    auth: {
-      getSession: vi.fn(async () => ({ data: { session: { access_token: 'tok' } } })),
-      onAuthStateChange: vi.fn()
-    }
+  get supabase() {
+    return flags.client
   }
 }))
 
@@ -60,6 +65,7 @@ describe('customAIAllowed=false：统一走默认 AI', () => {
     // isolate:false 共享注册表：flags 回默认值，防止同 worker 后续文件被污染
     flags.custom = true
     flags.defaultEnabled = true
+    flags.client = flags.defaultClient
   })
 
   it('ai-client：设置残留 custom 模式时仍 POST /api/ai/chat 默认代理', async () => {
@@ -101,5 +107,50 @@ describe('customAIAllowed=false：统一走默认 AI', () => {
     expect(store.hasAI).toBe(false)
     store.update({ baseUrl: 'https://a.b', model: 'm', apiKey: 'k' })
     expect(store.hasAI).toBe(true)
+  })
+})
+
+describe('默认 AI 代理的错误分支（useDefault 路径前置守卫）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    flags.custom = true
+    flags.defaultEnabled = true
+    flags.client = flags.defaultClient
+  })
+
+  it('tier=deep 透传为请求体 mode deep（standard 已由上面用例覆盖）', async () => {
+    flags.custom = false
+    const { streamChat, saveSettings } = await importFresh()
+    saveSettings({ aiMode: 'custom' })
+    const fetchMock = vi.fn(async () => sseResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    for await (const _ of streamChat({ messages: [], tier: 'deep' })) { /* noop */ }
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).mode).toBe('deep')
+  })
+
+  it('会话缺 token -> AIError 401，userMessage 引导重新登录', async () => {
+    flags.custom = false
+    flags.client.auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+    const { streamChat, saveSettings } = await importFresh()
+    saveSettings({ aiMode: 'custom' })
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({
+      status: 401,
+      userMessage: '请重新登录后使用 AI。'
+    })
+  })
+
+  it('supabase 未配置 -> AIError 503「默认 AI 服务暂不可用」', async () => {
+    flags.custom = false
+    flags.client = null
+    const { streamChat, saveSettings } = await importFresh()
+    saveSettings({ aiMode: 'custom' })
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({
+      status: 503,
+      userMessage: '默认 AI 服务暂不可用。'
+    })
   })
 })

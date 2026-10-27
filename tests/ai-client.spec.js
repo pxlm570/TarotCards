@@ -173,4 +173,73 @@ describe('ai-client', () => {
     await expect(gen.next()).rejects.toBeInstanceOf(AIError)
     await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({ message: 'Overloaded' })
   })
+
+  // ---- 补充：非 2xx 响应体 userMessage 提取、坏行容错与终止事件形态 ----
+
+  it('非 2xx JSON 响应体提取 userMessage：字符串与 {message} 对象两种形态', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false, status: 429, body: null, text: async () => JSON.stringify({ error: '请求过于频繁' })
+    })))
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({
+      status: 429,
+      userMessage: '请求过于频繁'
+    })
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false, status: 402, body: null, text: async () => JSON.stringify({ error: { message: '余额耗尽' } })
+    })))
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({
+      status: 402,
+      userMessage: '余额耗尽'
+    })
+  })
+
+  it('非 2xx 且响应体读不出来：按空文本兜底，不产生 userMessage', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false, status: 500, body: null, text: async () => { throw new Error('stream closed') }
+    })))
+    const err = await streamChat({ messages: [] }).next().catch((e) => e)
+    expect(err).toBeInstanceOf(AIError)
+    expect(err.status).toBe(500)
+    expect(err.message).toBe('')
+    expect(err.userMessage).toBeUndefined()
+  })
+
+  it('200 但无响应体：AIError 携带 text 内容，不进入流解析', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, body: null, text: async () => '空响应体' })))
+    await expect(streamChat({ messages: [] }).next()).rejects.toMatchObject({ message: '空响应体' })
+  })
+
+  it('SSE 坏 JSON 行被跳过，后续增量照常产出', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sseResponse([
+      'data: {broken-json\n\n',
+      'data: {"choices":[{"delta":{"content":"好"}}]}\n\n',
+      'data: [DONE]\n\n'
+    ])))
+    const out = []
+    for await (const d of streamChat({ messages: [] })) out.push(d)
+    expect(out.join('')).toBe('好')
+  })
+
+  it('流中 error 为字符串形式同样抛 AIError（status 0 + userMessage 透传）', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sseResponse(['data: {"error":"额度已用尽"}\n\n'])))
+    const err = await streamChat({ messages: [] }).next().catch((e) => e)
+    expect(err).toBeInstanceOf(AIError)
+    expect(err.status).toBe(0)
+    expect(err.message).toBe('额度已用尽')
+    expect(err.userMessage).toBe('额度已用尽')
+  })
+
+  it('Anthropic：input_json_delta 不产出增量，message_delta 终止流', async () => {
+    saveSettings({ baseUrl: 'https://x.com/anthropic', model: 'm', apiKey: 'k' })
+    vi.stubGlobal('fetch', vi.fn(async () => sseResponse([
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"结尾"}}\n\n',
+      'data: {"type":"content_block_delta","delta":{"type":"input_json_delta","partial_json":"{}"}}\n\n',
+      'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n\n',
+      'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"不应出现"}}\n\n'
+    ])))
+    const out = []
+    for await (const d of streamChat({ messages: [] })) out.push(d)
+    expect(out.join('')).toBe('结尾')
+  })
 })

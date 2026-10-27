@@ -2,23 +2,18 @@ import { randomUUID } from 'node:crypto'
 import { bearerToken, readJson, sendJson } from '../_lib/http.js'
 import { getAuthorizedUser } from '../_lib/supabase.js'
 import { loadAiConfig, resolveAiConfig } from '../_lib/ai-config.js'
+import { shanghaiDayAndMonthKeys } from '../_lib/shanghai-day.js'
 
 const MAX_MESSAGES = 24
+const MAX_MESSAGE_CHARS = 12000
 const MAX_TOTAL_CHARS = 24000
-
-function shanghaiDayAndMonth() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).formatToParts(new Date()).map((part) => [part.type, part.value]))
-  return { day: `${parts.year}-${parts.month}-${parts.day}`, month: `${parts.year}-${parts.month}-01` }
-}
 
 function validateMessages(messages) {
   if (!Array.isArray(messages) || messages.length < 1 || messages.length > MAX_MESSAGES) return false
   let totalChars = 0
   for (const message of messages) {
     if (!message || !['system', 'user', 'assistant'].includes(message.role) || typeof message.content !== 'string') return false
-    if (message.content.length > 12000) return false
+    if (message.content.length > MAX_MESSAGE_CHARS) return false
     totalChars += message.content.length
     if (totalChars > MAX_TOTAL_CHARS) return false
   }
@@ -75,6 +70,25 @@ export default async function handler(req, res) {
   let providerFailed = false
   let disconnected = false
   const controller = new AbortController()
+
+  // SSE 载荷统一改写：捕获 usage、供应商错误换成品牌文案、剥掉模型标识。
+  // 返回 { done: true }（[DONE] 终止标记）、{ line }（改写后的 data: 行）或 null（非 JSON，按原文透传）。
+  const rewriteSsePacket = (payload) => {
+    if (payload === '[DONE]') return { done: true }
+    try {
+      const packet = JSON.parse(payload)
+      if (packet.usage) usage = packet.usage
+      if (packet.error) {
+        providerFailed = true
+        packet.error = { type: 'server_error', message: 'AI 服务暂时不可用，请稍后重试。' }
+      }
+      delete packet.model
+      return { line: `data: ${JSON.stringify(packet)}` }
+    } catch {
+      return null
+    }
+  }
+
   res.on('close', () => {
     if (!res.writableEnded) {
       disconnected = true
@@ -98,7 +112,7 @@ export default async function handler(req, res) {
     if (ai.error) return sendJson(res, 503, { error: '默认 AI 暂未启用' })
 
     requestId = randomUUID()
-    const { day, month } = shanghaiDayAndMonth()
+    const { day, month } = shanghaiDayAndMonthKeys()
     estimatedCost = estimateMicroYuan(ai, body.messages)
     // 按人按天限额（普通/深度各自计数），用量成本仅记录不拦截
     const { data: reservation, error: reservationError } = await access.client.rpc('reserve_ai_request', {
@@ -168,23 +182,13 @@ export default async function handler(req, res) {
           outgoing += `${rawLine}\n`
           continue
         }
-        const payload = line.slice(5).trim()
-        if (payload === '[DONE]') {
+        const rewritten = rewriteSsePacket(line.slice(5).trim())
+        if (rewritten?.done) {
           completed = !providerFailed
           outgoing += `${rawLine}\n`
-          continue
-        }
-        try {
-          const packet = JSON.parse(payload)
-          if (packet.usage) usage = packet.usage
-          if (packet.error) {
-            providerFailed = true
-            packet.error = { type: 'server_error', message: 'AI 服务暂时不可用，请稍后重试。' }
-          }
-          // 统一品牌文案；模型标识留在服务端，不随 SSE 返回给浏览器。
-          delete packet.model
-          outgoing += `data: ${JSON.stringify(packet)}\n`
-        } catch {
+        } else if (rewritten) {
+          outgoing += `${rewritten.line}\n`
+        } else {
           outgoing += `${rawLine}\n`
         }
       }
@@ -193,21 +197,14 @@ export default async function handler(req, res) {
     if (buffer && !disconnected) {
       const line = buffer.trim()
       if (line.startsWith('data:')) {
-        const payload = line.slice(5).trim()
-        if (payload === '[DONE]') completed = !providerFailed
-        else {
-          try {
-            const packet = JSON.parse(payload)
-            if (packet.usage) usage = packet.usage
-            if (packet.error) {
-              providerFailed = true
-              packet.error = { type: 'server_error', message: 'AI 服务暂时不可用，请稍后重试。' }
-            }
-            delete packet.model
-            res.write(`data: ${JSON.stringify(packet)}\n\n`)
-          } catch {
-            res.write(`${buffer}\n`)
-          }
+        const rewritten = rewriteSsePacket(line.slice(5).trim())
+        if (rewritten?.done) {
+          // 上游以未换行的 [DONE] 收尾时只标记完成、不补发终止标记（维持既有行为）
+          completed = !providerFailed
+        } else if (rewritten) {
+          res.write(`${rewritten.line}\n\n`)
+        } else {
+          res.write(`${buffer}\n`)
         }
       } else res.write(`${buffer}\n`)
     }

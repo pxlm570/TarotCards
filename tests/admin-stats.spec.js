@@ -17,6 +17,12 @@ describe('stats：dayKeyOf / buildDaySeries', () => {
     expect(dayKeyOf('2026-09-26T12:00:00Z')).toBe('2026-09-26')
   })
 
+  it('非法时间戳返回空串（不炸，脏行落不进任何一天）', () => {
+    expect(dayKeyOf('not-a-date')).toBe('')
+    expect(dayKeyOf('')).toBe('')
+    expect(dayKeyOf(undefined)).toBe('')
+  })
+
   it('buildDaySeries 生成最近 N 天连续序列（含今天）', () => {
     const series = buildDaySeries(3, '2026-09-27')
     expect(series.map((d) => d.day)).toEqual(['2026-09-25', '2026-09-26', '2026-09-27'])
@@ -126,5 +132,95 @@ describe('stats：summarizeInvites', () => {
   it('长期有效标志：有效期跨度 ≥3 年为 true（「长期」=3650 天），短码为 false', () => {
     const list = summarizeInvites(invites, emailById, '2026-09-26')
     expect(list.map((r) => r.longTerm)).toEqual([true, true, false, false])
+  })
+
+  it('过期判定是严格大于：expires_at 恰好等于 now 即已过期，前 1 秒仍可用', () => {
+    const row = { code_hash: 'eee111222333', redeemed_by: null, created_at: '2026-09-20T00:00:00Z', expires_at: '2026-09-26T00:00:00Z' }
+    expect(summarizeInvites([row], emailById, '2026-09-26T00:00:00Z')[0].status).toBe('expired')
+    expect(summarizeInvites([row], emailById, '2026-09-25T23:59:59Z')[0].status).toBe('available')
+  })
+
+  it('now 缺省按 0（epoch）兜底判定：调用方漏传不炸，判定基准退回 1970 年', () => {
+    const rows = [
+      // 1970 年后的到期时间相对 epoch 都算「未过期」——漏传 now 只会误判宽松，不会崩
+      { code_hash: 'fff000111222', redeemed_by: null, created_at: '2026-01-01T00:00:00Z', expires_at: '2026-02-01T00:00:00Z' },
+      { code_hash: 'aaa000111222', redeemed_by: null, created_at: '1960-01-01T00:00:00Z', expires_at: '1969-12-31T23:59:59Z' }
+    ]
+    const list = summarizeInvites(rows, new Map(), undefined)
+    expect(list.map((r) => r.status)).toEqual(['available', 'expired'])
+    // longTerm 只看 created→expires 跨度，与 now 无关：十年跨度的过期码依旧标长期
+    expect(list.map((r) => r.longTerm)).toEqual([false, true])
+  })
+})
+
+describe('stats：空与脏输入兜底', () => {
+  const dayKeys = ['2026-09-26', '2026-09-27']
+
+  it('null/空数组不炸：四个聚合都返回零值空结构', () => {
+    for (const rows of [null, []]) {
+      const agg = aggregateAiUsage(rows, '2026-09-27', dayKeys)
+      expect(agg.callsToday).toBe(0)
+      expect(agg.callsTodayStandard).toBe(0)
+      expect(agg.callsTodayDeep).toBe(0)
+      expect(agg.usersToday).toBe(0)
+      expect(agg.perDay).toEqual({ '2026-09-26': 0, '2026-09-27': 0 })
+      expect(agg.perDayStandard).toEqual({ '2026-09-26': 0, '2026-09-27': 0 })
+      expect(agg.perDayDeep).toEqual({ '2026-09-26': 0, '2026-09-27': 0 })
+      expect(agg.perUser).toEqual([])
+      expect(agg.costCnyTotal).toBe(0)
+
+      expect(costPerDay(rows, dayKeys).perDayCny).toEqual({ '2026-09-26': 0, '2026-09-27': 0 })
+
+      const act = aggregateActivity(rows, '2026-09-27', dayKeys)
+      expect(act.perDay).toEqual({ '2026-09-26': 0, '2026-09-27': 0 })
+      expect(act.dauToday).toBe(0)
+      expect(act.features).toEqual([])
+    }
+    expect(summarizeInvites(null, new Map(), '2026-09-27')).toEqual([])
+    expect(summarizeInvites([], new Map(), '2026-09-27')).toEqual([])
+  })
+
+  it('成功调用成本为 NaN/负数/0 时贡献 0，调用次数照常统计', () => {
+    const rows = [
+      { user_id: 'u1', mode: 'standard', state: 'succeeded', used_on: '2026-09-27', actual_cost_micro_yuan: NaN },
+      { user_id: 'u2', mode: 'standard', state: 'succeeded', used_on: '2026-09-27', actual_cost_micro_yuan: -500 },
+      { user_id: 'u3', mode: 'deep', state: 'succeeded', used_on: '2026-09-27', actual_cost_micro_yuan: 0 },
+      { user_id: 'u4', mode: 'standard', state: 'succeeded', used_on: '2026-09-27', actual_cost_micro_yuan: null, reserved_cost_micro_yuan: null }
+    ]
+    const agg = aggregateAiUsage(rows, '2026-09-27', dayKeys)
+    expect(agg.callsToday).toBe(4)
+    expect(agg.costCnyTotal).toBe(0)
+    expect(agg.perUser.every((u) => u.costCny === 0)).toBe(true)
+    // costPerDay 同口径：脏成本行不计，正常行不受影响
+    const cost = costPerDay([...rows, { state: 'succeeded', used_on: '2026-09-26', actual_cost_micro_yuan: 1000 }], dayKeys)
+    expect(cost.perDayCny['2026-09-26']).toBeCloseTo(0.001, 6)
+    expect(cost.perDayCny['2026-09-27']).toBe(0)
+  })
+
+  it('used_on 在 dayKeys 窗口外：不进 perDay，但 perUser/总成本照常计入（看板按 30 天查询窗口取数）', () => {
+    const rows = [
+      { user_id: 'u1', mode: 'standard', state: 'succeeded', used_on: '2026-09-20', actual_cost_micro_yuan: 3000 },
+      { user_id: 'u1', mode: 'deep', state: 'pending', used_on: '2026-09-27', reserved_cost_micro_yuan: 100 }
+    ]
+    const agg = aggregateAiUsage(rows, '2026-09-27', dayKeys)
+    expect(agg.perDay).toEqual({ '2026-09-26': 0, '2026-09-27': 1 })
+    expect(agg.perDay['2026-09-20']).toBeUndefined()
+    const u1 = agg.perUser.find((u) => u.user_id === 'u1')
+    expect(u1).toMatchObject({ standard: 1, deep: 1, total: 2 })
+    expect(u1.costCny).toBeCloseTo(0.003, 6)
+    expect(agg.costCnyTotal).toBeCloseTo(0.003, 6)
+    expect(agg.callsToday).toBe(1)
+  })
+
+  it('summarizeInvites 脏行：缺 code_hash 尾巴为空串，兑换人不在邮箱映射为空邮箱', () => {
+    const list = summarizeInvites([
+      { redeemed_by: 'u1', created_at: '2026-09-20T00:00:00Z', expires_at: '2099-01-01T00:00:00Z' },
+      { code_hash: 'xyz', redeemed_by: 'ghost', created_at: '2026-09-20T00:00:00Z', expires_at: '2099-01-01T00:00:00Z' }
+    ], new Map(), '2026-09-27')
+    expect(list[0].tail).toBe('')
+    expect(list[0].redeemedEmail).toBe('')
+    expect(list[1].status).toBe('redeemed')
+    expect(list[1].tail).toBe('xyz')
+    expect(list[1].redeemedEmail).toBe('')
   })
 })

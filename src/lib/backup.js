@@ -2,7 +2,7 @@
 // 导入收口（评审 2026-09-06）：备份是唯一绕过 store 校验直达 localStorage 的写入通道，
 // 各键逐一经 sanitizer 归一——结构非法的键跳过（返回跳过清单交 UI 提示），坏值回默认，
 // journal 条目级过滤（缺 cards/ts 崩 Mirror/时间线），dailyDraws 悬空引用随淘汰同步清理。
-import { safeGetItem, safeSetItem, clearFlow } from './storage.js'
+import { safeGetItem, safeSetItem, safeParse, clearFlow } from './storage.js'
 import { JOURNAL_MAX, loadJournal } from './journal-store.js'
 import { sanitizeLearning } from './learning-data.js'
 import { sanitizeCustomSpreads } from './custom-spreads.js'
@@ -19,15 +19,6 @@ const KEYS = [
   'tarot.custom-spreads.v1',
   'tarot.challenge.v1'
 ]
-
-function safeParse(json) {
-  if (!json) return null
-  try {
-    return JSON.parse(json)
-  } catch {
-    return null
-  }
-}
 
 export function collectBackup() {
   const data = {}

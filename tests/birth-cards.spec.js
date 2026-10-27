@@ -28,3 +28,29 @@ describe('birthCards 锁定用例', () => {
     expect(r.personality).toBe(r.soul)
   })
 })
+
+describe('birthCards 多轮各位相加', () => {
+  it('1956-12-31 → 1999 → 28 → 10/1（两次降位）', () => {
+    const r = birthCards(1956, 12, 31)
+    expect(r.personality).toBe(10)
+    expect(r.soul).toBe(1)
+    expect(r.display).toBe('10/1')
+    expect(r.majors).toEqual(['major-10', 'major-01'])
+  })
+
+  it('1906-12-31 → 1949 → 23 → 5（多轮后落单牌）', () => {
+    const r = birthCards(1906, 12, 31)
+    expect(r.personality).toBe(5)
+    expect(r.soul).toBe(5)
+    expect(r.display).toBe('5')
+    expect(r.majors).toEqual(['major-05'])
+  })
+
+  it('1906-12-21 → 1939 → 22 特例（经各位相加落到 22，非直接和）', () => {
+    const r = birthCards(1906, 12, 21)
+    expect(r.display).toBe('22/4')
+    expect(r.personality).toBe(22)
+    expect(r.soul).toBe(4)
+    expect(r.majors).toEqual(['major-00', 'major-04'])
+  })
+})

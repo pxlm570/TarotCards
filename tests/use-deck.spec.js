@@ -112,6 +112,42 @@ describe('useDeck：牌面/牌背独立', () => {
     expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws')
   })
 
+  it('牌面加载失败：error 置位且 cardUrl 安全空串，retry() 恢复后清 error', async () => {
+    const goodFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/decks/index.json')
+      ? Promise.reject(new Error('网络断开'))
+      : goodFetch(url)))
+    const d = deck.useDeck()
+    expect(d.backUrl()).toBe('') // 牌背尚未就绪时的安全空串
+    await vi.waitFor(() => expect(d.error.value).toBeTruthy())
+    expect(d.manifest.value).toBeNull()
+    expect(d.cardUrl('major-00')).toBe('') // 无 manifest 时不抛崩
+    // 网络恢复后 retry 重载成功，error 清空
+    vi.stubGlobal('fetch', goodFetch)
+    d.retry()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    expect(d.error.value).toBeNull()
+    expect(d.cardUrl('major-00')).toContain('/decks/rws/major-00.webp')
+    expect(d.cardUrl('no-such-card')).toBe('') // 未知牌 id 回空串而非抛崩
+  })
+
+  it('牌背加载失败：backItem 保持 null 且 backUrl 空串，恢复后重进可重试', async () => {
+    const goodFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => String(url).includes('/backs/index.json')
+      ? Promise.reject(new Error('网络断开'))
+      : goodFetch(url)))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS)) // 牌面不受牌背失败影响
+    await new Promise((resolve) => setTimeout(resolve, 0)) // 让牌背请求失败落地
+    expect(d.backItem.value).toBeNull()
+    expect(d.backUrl()).toBe('')
+    // backsLoading 已在 finally 清零 → 下次进入页面自动重试
+    vi.stubGlobal('fetch', goodFetch)
+    deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    expect(d.backUrl()).toContain('/backs/star-gold.webp')
+  })
+
   it('cardsFrom 循环引用时抛明确错误而非无限递归（审查修复）', async () => {
     vi.resetModules()
     mockFetch(
@@ -124,6 +160,114 @@ describe('useDeck：牌面/牌背独立', () => {
     )
     const loader = await import('../src/lib/deck-loader.js')
     await expect(loader.loadDeck('a')).rejects.toThrow('循环引用')
+  })
+
+  it('switchFace 同 id 且牌面已就绪：no-op，不重拉 manifest', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.switchFace('rws')
+    expect(d.manifest.value).toEqual(RWS) // 幂等：不置空等待重载
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('switchBack 同 id 且牌背已就绪：no-op，不重拉牌背注册表', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.switchBack('star-gold')
+    expect(d.backItem.value?.id).toBe('star-gold')
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('牌背请求进行中重复 useDeck()：backsLoading 守卫挡住重复请求', async () => {
+    let resolveBacks
+    let backsCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/backs/index.json')) {
+        backsCalls++
+        return new Promise((resolve) => { resolveBacks = resolve })
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    deck.useDeck() // 牌背尚未就绪：同一次加载中重入不得重发
+    expect(backsCalls).toBe(1)
+    resolveBacks(jsonResponse(BACKS))
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    expect(backsCalls).toBe(1)
+  })
+
+  it('retry() 在牌面已就绪时 no-op，不发任何请求', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    d.retry()
+    expect(d.manifest.value).toEqual(RWS)
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it('换皮肤后旧请求失败：error 不被旧请求污染，新皮肤正常就绪', async () => {
+    let rejectFirstIndex
+    let indexCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/decks/index.json')) {
+        indexCalls++
+        return indexCalls === 1
+          ? new Promise((_, reject) => { rejectFirstIndex = reject })
+          : jsonResponse(['rws', 'rws-sepia'])
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(indexCalls).toBe(1))
+    d.switchFace('rws-sepia') // 旧索引请求还在路上时换皮肤
+    await vi.waitFor(() => expect(indexCalls).toBe(2))
+    rejectFirstIndex(new Error('旧请求网络断开'))
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(SEPIA))
+    await new Promise((resolve) => setTimeout(resolve, 0)) // 让旧链路的 rejection 走完
+    expect(d.error.value).toBeNull() // 失败的是已作废的请求，不得置 error
+    expect(d.faceId.value).toBe('rws-sepia')
+  })
+
+  it('旧索引请求「成功」晚到：作废请求的成功响应同样无效，不回退 rws、不写坏 settings', async () => {
+    let resolveStaleIndex
+    let indexCalls = 0
+    const priorFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/decks/index.json')) {
+        indexCalls++
+        return indexCalls === 1
+          ? new Promise((resolve) => { resolveStaleIndex = resolve })
+          : jsonResponse(['rws', 'rws-sepia'])
+      }
+      return priorFetch(url)
+    }))
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(indexCalls).toBe(1))
+    d.switchFace('rws-sepia')
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(SEPIA))
+    // 旧索引此刻才到，且清单里没有 rws-sepia——作废守卫若失效，会误判「皮肤已移除」
+    // 而回退 rws 并把 settings.deckId 写坏
+    resolveStaleIndex(jsonResponse(['rws']))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(d.faceId.value).toBe('rws-sepia')
+    expect(d.manifest.value).toEqual(SEPIA)
+    expect(JSON.parse(localStorage.getItem('tarot.settings.v1')).deckId).toBe('rws-sepia')
+  })
+
+  it('牌背已就绪时再次进入页面（useDeck 重入）：不重拉注册表也不重拉牌面', async () => {
+    const d = deck.useDeck()
+    await vi.waitFor(() => expect(d.backItem.value?.id).toBe('star-gold'))
+    await vi.waitFor(() => expect(d.manifest.value).toEqual(RWS))
+    const callsBefore = vi.mocked(globalThis.fetch).mock.calls.length
+    deck.useDeck() // 组件重挂载走 useDeck：backItem 已匹配 backId 须直接复用
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(d.backItem.value?.id).toBe('star-gold')
+    expect(d.manifest.value).toEqual(RWS)
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBefore)
   })
 
   it('local-index.json 存在时本地皮肤并入列表（与公开索引去重），缺失时静默跳过', async () => {

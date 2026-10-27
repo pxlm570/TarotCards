@@ -1,12 +1,7 @@
 import { bearerToken, sendJson } from '../_lib/http.js'
 import { getAuthorizedUser } from '../_lib/supabase.js'
 import { loadAiConfig, resolveAiConfig } from '../_lib/ai-config.js'
-
-function shanghaiDay() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(new Date())
-}
+import { shanghaiDayKey } from '../_lib/shanghai-day.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return sendJson(res, 405, { error: '仅支持 GET' })
@@ -27,7 +22,7 @@ export default async function handler(req, res) {
     const { error: cleanupError } = await access.client.rpc('cleanup_stale_ai_reservations')
     if (cleanupError) throw new Error('AI 状态清理失败')
 
-    const day = shanghaiDay()
+    const day = shanghaiDayKey()
     // 失败的请求不计入当日次数（与预留函数口径一致：pending+succeeded 才占额）
     const { data, error } = await access.client
       .from('ai_usage_events')

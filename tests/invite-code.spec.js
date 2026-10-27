@@ -41,6 +41,16 @@ describe('邀请码格式', () => {
     ])
   })
 
+  it('24 位但含非十六进制字符 → 不按旧码补虚线形态，只回归一化单候选', () => {
+    expect(inviteCodeCandidates('zz12-cd34-ef56-7890-1234-5678')).toEqual(['ZZ12CD34EF56789012345678'])
+  })
+
+  it('非字符串入参：数字 body.code 走 String 归一；空码候选为单个空形态', () => {
+    // redeem 直收 JSON body.code，客户端误发数字时不得抛错，须落到 400 校验
+    expect(normalizeInviteCode(123456)).toBe('123456')
+    expect(inviteCodeCandidates('')).toEqual([''])
+  })
+
   it('哈希与旧实现一致（sha256 hex）', () => {
     expect(inviteCodeHash('K7Q4XB')).toBe(createHash('sha256').update('K7Q4XB').digest('hex'))
   })
